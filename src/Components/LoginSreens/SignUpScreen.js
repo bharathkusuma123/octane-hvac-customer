@@ -44,7 +44,7 @@ const SignUpScreen = () => {
 
       if (matchedUser) {
         // Proceed to OTP screen
-        navigate("/otp");
+navigate("/customer-data", { state: { user: matchedUser } });
       } else {
         alert("No matching customer found with provided mobile and email.");
       }
