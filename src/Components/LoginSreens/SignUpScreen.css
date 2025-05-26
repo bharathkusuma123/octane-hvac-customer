@@ -10,8 +10,8 @@
 .signup-card {
   background-color: #fff;
   border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 400px;
   text-align: center;
@@ -20,41 +20,75 @@
 
 .back-button {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 15px;
+  left: 15px;
   border: none;
   background: none;
   font-size: 1.2rem;
   cursor: pointer;
   color: #333;
+  padding: 5px;
+}
+
+.back-button:hover {
+  color: #0096d6;
 }
 
 .signup-logo-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .signup-logo {
   width: 120px;
   height: 50px;
   object-fit: contain;
-  margin-bottom: 8px;
+  margin-bottom: 15px;
 }
 
 .signup-title {
   font-size: 22px;
   font-weight: bold;
+  color: #333;
+  margin: 0;
 }
 
 .signup-input-wrapper {
-  background-color: #e8edf1;
+  background-color: #f0f4f8;
   border-radius: 12px;
-  padding: 10px 15px;
-  margin: 10px 0;
+  padding: 12px 15px;
+  margin: 15px 0;
   display: flex;
   align-items: center;
+  transition: all 0.3s ease;
+  gap:10px;
+}
+
+.sign-input {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  width: 100%;
+  outline: none;
+  padding-left: 10px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+/* .signup-input-wrapper input {
+  flex: 1; 
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  outline: none;
+  color: #333;
+} */
+
+
+.signup-input-wrapper:focus-within {
+  box-shadow: 0 0 0 2px #0096d6;
 }
 
 .input-icon {
@@ -69,9 +103,16 @@
   font-size: 16px;
   width: 100%;
   outline: none;
+  color: #333;
 }
 
-.signup-submit-button {
+.signup-input-wrapper input::placeholder {
+  color: #888;
+}
+
+
+
+.sign-submit-button {
   width: 100%;
   background-color: #0096d6;
   padding: 15px;
@@ -80,6 +121,5 @@
   color: white;
   font-weight: bold;
   font-size: 16px;
-  margin-top: 20px;
   cursor: pointer;
 }

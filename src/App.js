@@ -6,7 +6,6 @@ import ForgotPasswordScreen from './Components/LoginSreens/ForgotPasswordScreen'
 import OTPVerificationScreen from './Components/LoginSreens/OTPVerificationScreen';
 import SecurityQuestionsScreen from './Components/LoginSreens/SecurityQuestionsScreen';
 import SignUpScreen from './Components/LoginSreens/SignUpScreen'
-import SetForgotPasswordScreen from './Components/LoginSreens/SetForgotPasswordScreen'
 import SignupSetPassword from './Components/LoginSreens/SignupSetPassword';
 import './App.css';
 
@@ -21,8 +20,6 @@ function App() {
           <Route path="/otp" element={<OTPVerificationScreen />} />
           <Route path="/security" element={<SecurityQuestionsScreen />} />
           <Route path="/signup" element={<SignUpScreen />} />
-          <Route path="/set-forgot-password" element={<SetForgotPasswordScreen />} />
-
           <Route path="/set-sign-password" element={<SignupSetPassword />} />
 
         </Routes>

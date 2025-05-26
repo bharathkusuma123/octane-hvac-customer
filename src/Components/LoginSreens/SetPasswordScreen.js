@@ -71,15 +71,6 @@
 
 // export default SetPasswordScreen;
 
-
-
-
-
-
-
-
-
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
@@ -114,11 +105,11 @@ const SetPasswordScreen = () => {
         <h4 className="setpass-title">Set New Password</h4>
 
         <form onSubmit={handleSubmit}>
-          <div className="setpass-input-wrapper">
-            <FaLock className="input-icon" />
+          <div className="set-input-wrapper">
+            <FaLock className="input-icon-inside" />
             <input
               type="password"
-              className="setpass-input"
+              className="pass-input"
               placeholder="Enter Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -126,11 +117,11 @@ const SetPasswordScreen = () => {
             />
           </div>
 
-          <div className="setpass-input-wrapper">
-            <FaLock className="input-icon" />
+          <div className="set-input-wrapper">
+            <FaLock className="input-icon-inside" />
             <input
               type="password"
-              className="setpass-input"
+              className="pass-input"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -148,4 +139,3 @@ const SetPasswordScreen = () => {
 };
 
 export default SetPasswordScreen;
-

@@ -22,7 +22,6 @@ const SignupSetPassword = () => {
     }
 
     // Submit logic here (e.g., save to Firebase or API)
-
     navigate("/"); // Navigate to login or home page
   };
 
@@ -77,11 +76,12 @@ const SignupSetPassword = () => {
 
           <h4 className="signup-title mt-4">Set New Password</h4>
 
-          <div className="signup-input-wrapper">
-            <FaLock className="input-icon" />
+          {/* Password Field */}
+          <div className="mb-3 position-relative">
+            <FaLock className="position-absolute input-icon-global" />
             <input
               type="password"
-              className="signup-input"
+              className="form-control ps-5 signup-input"
               placeholder="Enter Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -89,11 +89,12 @@ const SignupSetPassword = () => {
             />
           </div>
 
-          <div className="signup-input-wrapper">
-            <FaLock className="input-icon" />
+          {/* Confirm Password Field */}
+          <div className="mb-3 position-relative">
+            <FaLock className="position-absolute input-icon-global" />
             <input
               type="password"
-              className="signup-input"
+              className="form-control ps-5 signup-input"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -101,7 +102,7 @@ const SignupSetPassword = () => {
             />
           </div>
 
-          <button type="submit" className="signup-submit-button shadow mt-3">
+          <button type="submit" className="sign-submit-button shadow">
             Submit
           </button>
         </form>

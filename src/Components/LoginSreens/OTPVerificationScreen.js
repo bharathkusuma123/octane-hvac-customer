@@ -94,7 +94,7 @@ const OTPVerificationScreen = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="otp-input-wrapper">
-            <i className="bi bi-shield-lock-fill input-icon"></i>
+            <i className="bi bi-shield-lock-fill input-icon-inside"></i>
             <input
               type="text"
               className="otp-input"

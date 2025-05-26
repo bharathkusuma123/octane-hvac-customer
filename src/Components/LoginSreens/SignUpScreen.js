@@ -1,102 +1,40 @@
-// import React, { useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import "bootstrap/dist/css/bootstrap.min.css";
-// import logo from "../../Logos/hvac-logo-new.jpg"; // Ensure this path is correct
-
-// const SignUpScreen = () => {
-//   const [mobile, setMobile] = useState("");
-//   const [email, setEmail] = useState("");
-//   const navigate = useNavigate();
-
-//   const handleSubmit = (e) => {
-//     e.preventDefault();
-//     navigate("/otp");
-//   };
-
-//   return (
-//     <div className="container d-flex justify-content-center align-items-center vh-100 ">
-//       <div className="card p-4 position-relative shadow" style={{ width: "100%", maxWidth: "400px" }}>
-        
-//         {/* Back Button */}
-//         <button 
-//           className="btn btn-link position-absolute top-0 start-0 m-2 text-dark"
-//           onClick={() => navigate(-1)}
-//         >
-//           <i className="bi bi-arrow-left" style={{ fontSize: "1.2rem" }}></i>
-//         </button>
-
-//         <div className="text-center mb-4">
-//           <img src={logo} alt="Logo" className="img-fluid mb-2"   style={{ maxHeight: "60px" }} />
-//           <h3 className="fw-bold">Sign Up</h3>
-//         </div>
-
-//         <form onSubmit={handleSubmit}>
-//           <div className="mb-3">
-//             <input
-//               type="tel"
-//               className="form-control"
-//               placeholder="Enter Mobile Number"
-//               value={mobile}
-//               onChange={(e) => setMobile(e.target.value)}
-//               required
-//             />
-//           </div>
-
-//           <div className="mb-3">
-//             <input
-//               type="email"
-//               className="form-control"
-//               placeholder="Enter Email"
-//               value={email}
-//               onChange={(e) => setEmail(e.target.value)}
-//               required
-//             />
-//           </div>
-
-//           <button type="submit" className="btn btn-primary w-100">
-//             Submit
-//           </button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default SignUpScreen;
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../Logos/hvac-logo-new.jpg";
-import "./SignUpScreen.css"; // Import the CSS
+import { FaArrowLeft } from "react-icons/fa";
+import "./SignUpScreen.css";
 
 const SignUpScreen = () => {
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
 
+  const handleMobileChange = (e) => {
+    const value = e.target.value;
+    // Allow only digits and max 10 characters
+    if (/^\d{0,10}$/.test(value)) {
+      setMobile(value);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (mobile.length !== 10) {
+      alert("Mobile number must be exactly 10 digits.");
+      return;
+    }
+
+    // Proceed to next screen
     navigate("/otp");
   };
 
   return (
     <div className="signup-container">
       <div className="signup-card">
-        <button className="back-button" onClick={() => navigate(-1)}>
-          <i className="bi bi-arrow-left"></i>
-        </button>
+          <button className="otp-back-button" onClick={() => navigate(-1)}>
+              <FaArrowLeft size={20} />
+          </button>
 
         <div className="signup-logo-container">
           <img src={logo} alt="Logo" className="signup-logo" />
@@ -105,12 +43,13 @@ const SignUpScreen = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="signup-input-wrapper">
-            <i className="bi bi-phone-fill input-icon"></i>
+            <i className="bi bi-telephone-fill input-icon"></i>
             <input
               type="tel"
+              className="sign-input"
               placeholder="Enter Mobile Number"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
+              onChange={handleMobileChange}
               required
             />
           </div>
@@ -121,12 +60,13 @@ const SignUpScreen = () => {
               type="email"
               placeholder="Enter Email"
               value={email}
+              className="sign-input"
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
 
-          <button type="submit" className="signup-submit-button shadow">
+          <button type="submit" className="sign-submit-button shadow">
             Submit
           </button>
         </form>
