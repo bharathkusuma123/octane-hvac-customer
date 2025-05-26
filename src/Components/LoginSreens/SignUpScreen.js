@@ -7,6 +7,7 @@ import "./SignUpScreen.css";
 const SignUpScreen = () => {
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleMobileChange = (e) => {
@@ -17,7 +18,7 @@ const SignUpScreen = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (mobile.length !== 10) {
@@ -25,16 +26,41 @@ const SignUpScreen = () => {
       return;
     }
 
-    // Proceed to next screen
-    navigate("/otp");
+    setLoading(true);
+    try {
+      const response = await fetch("http://175.29.21.7:8006/users/");
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      const users = await response.json();
+
+      // Find user with matching mobile, email and role Customer
+      const matchedUser = users.find(
+        (user) =>
+          user.mobile_no === mobile &&
+          user.email.toLowerCase() === email.toLowerCase() &&
+          user.role === "Customer"
+      );
+
+      if (matchedUser) {
+        // Proceed to OTP screen
+        navigate("/otp");
+      } else {
+        alert("No matching customer found with provided mobile and email.");
+      }
+    } catch (error) {
+      alert("Error checking user details. Please try again later.");
+      console.error("Error fetching users:", error);
+    }
+    setLoading(false);
   };
 
   return (
     <div className="signup-container">
       <div className="signup-card">
-          <button className="otp-back-button" onClick={() => navigate(-1)}>
-              <FaArrowLeft size={20} />
-          </button>
+        <button className="otp-back-button" onClick={() => navigate(-1)}>
+          <FaArrowLeft size={20} />
+        </button>
 
         <div className="signup-logo-container">
           <img src={logo} alt="Logo" className="signup-logo" />
@@ -66,8 +92,8 @@ const SignUpScreen = () => {
             />
           </div>
 
-          <button type="submit" className="sign-submit-button shadow">
-            Submit
+          <button type="submit" className="sign-submit-button shadow" disabled={loading}>
+            {loading ? "Checking..." : "Submit"}
           </button>
         </form>
       </div>
