@@ -1,18 +1,21 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
-import logo from "../../Logos/hvac-logo-new.jpg";
-import "./SignupSetPassword.css";
 
-const SignupSetPassword = () => {
+import logo from "../../Logos/hvac-logo-new.jpg";
+import "./SecurityQuestionsScreen.css"; // Keep this
+import "./SetPasswordScreen.css"; // Import the password field styles
+
+const SecurityQuestionsScreen = () => {
   const [q1, setQ1] = useState("pet");
   const [q2, setQ2] = useState("school");
   const [a1, setA1] = useState("");
   const [a2, setA2] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const a2InputRef = useRef(null);
   const navigate = useNavigate();
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -20,34 +23,36 @@ const SignupSetPassword = () => {
       alert("Passwords do not match!");
       return;
     }
-
-    // Submit logic here (e.g., save to Firebase or API)
-    navigate("/"); // Navigate to login or home page
+    navigate("/"); // Navigate to login page
   };
 
   return (
-    <div className="signup-container">
-      <div className="signup-card">
-        <button className="signup-back-button" onClick={() => navigate(-1)}>
+    <div className="security-container">
+      <div className="security-card">
+        <button className="security-back-button" onClick={() => navigate(-1)}>
           <FaArrowLeft size={20} />
         </button>
 
-        <div className="signup-logo-container">
-          <img src={logo} alt="HVAC Logo" className="signup-logo" />
+        <div className="security-logo-container">
+          <img src={logo} alt="HVAC Logo" className="security-logo" />
         </div>
 
-        <h4 className="signup-title">Security Questions</h4>
+        <h4 className="security-title">Security Questions</h4>
 
         <form onSubmit={handleSubmit}>
-          <label className="signup-label">Security Question 1</label>
-          <select className="signup-select" value={q1} onChange={(e) => setQ1(e.target.value)}>
+          <label className="security-label">Security Question 1</label>
+          <select
+            className="security-select"
+            value={q1}
+            onChange={(e) => setQ1(e.target.value)}
+          >
             <option value="pet">What is your pet's name?</option>
             <option value="birthplace">What is your birthplace?</option>
           </select>
 
           <input
             type="text"
-            className="signup-input"
+            className="security-input"
             placeholder="Answer"
             value={a1}
             onChange={(e) => setA1(e.target.value)}
@@ -59,29 +64,35 @@ const SignupSetPassword = () => {
             }}
           />
 
-          <label className="signup-label mt-3">Security Question 2</label>
-          <select className="signup-select" value={q2} onChange={(e) => setQ2(e.target.value)}>
+          <label className="security-label mt-3">Security Question 2</label>
+          <select
+            className="security-select"
+            value={q2}
+            onChange={(e) => setQ2(e.target.value)}
+          >
             <option value="school">What is your school name?</option>
             <option value="mother">What is your mother's maiden name?</option>
           </select>
 
           <input
             type="text"
-            className="signup-input"
+            className="security-input"
             placeholder="Answer"
             value={a2}
             onChange={(e) => setA2(e.target.value)}
             ref={a2InputRef}
           />
 
-          <h4 className="signup-title mt-4">Set New Password</h4>
+          <hr />
 
-          {/* Password Field */}
-          <div className="mb-3 position-relative">
-            <FaLock className="position-absolute input-icon-global" />
+          {/* Add password fields from SetPasswordScreen */}
+          <h5 className="security-label mt-3">Set Your Password</h5>
+
+          <div className="set-input-wrapper">
+            <FaLock className="input-icon-inside" />
             <input
               type="password"
-              className="form-control ps-5 signup-input"
+              className="pass-input"
               placeholder="Enter Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -89,12 +100,11 @@ const SignupSetPassword = () => {
             />
           </div>
 
-          {/* Confirm Password Field */}
-          <div className="mb-3 position-relative">
-            <FaLock className="position-absolute input-icon-global" />
+          <div className="set-input-wrapper">
+            <FaLock className="input-icon-inside" />
             <input
               type="password"
-              className="form-control ps-5 signup-input"
+              className="pass-input"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -102,7 +112,7 @@ const SignupSetPassword = () => {
             />
           </div>
 
-          <button type="submit" className="sign-submit-button shadow">
+          <button type="submit" className="setpass-submit-button shadow mt-3">
             Submit
           </button>
         </form>
@@ -111,4 +121,4 @@ const SignupSetPassword = () => {
   );
 };
 
-export default SignupSetPassword;
+export default SecurityQuestionsScreen;
