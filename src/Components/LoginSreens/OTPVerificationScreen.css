@@ -1,0 +1,85 @@
+.otp-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f6f9fc;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.otp-card {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  text-align: center;
+}
+
+.otp-back-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #333;
+}
+
+.otp-logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.otp-logo {
+  width: 120px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.otp-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.otp-input-wrapper {
+  background-color: #e8edf1;
+  border-radius: 12px;
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  font-size: 18px;
+  margin-right: 10px;
+  color: #555;
+}
+
+.otp-input {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  width: 100%;
+  outline: none;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.otp-submit-button {
+  width: 100%;
+  background-color: #0096d6;
+  padding: 15px;
+  border-radius: 12px;
+  border: none;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+}
