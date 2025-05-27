@@ -35,7 +35,7 @@ const handleLogin = async (e) => {
         localStorage.setItem("userRole", "customer");
          localStorage.setItem("userId", user.user_id);    
       localStorage.setItem("userMobile", user.mobile_no);
-        navigate("/customer-dashboard", { state: { userMobile: user.mobile_no } });
+        navigate("/dashboard", { state: { userMobile: user.mobile_no } });
         console.log("User data from API:", user);
         console.log("Stored userId:", localStorage.getItem("userId"));
       } else {
