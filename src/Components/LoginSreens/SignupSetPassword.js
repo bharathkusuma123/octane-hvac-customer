@@ -3,12 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
 
 import logo from "../../Logos/hvac-logo-new.jpg";
-import "./SecurityQuestionsScreen.css"; // Keep this
-import "./SetPasswordScreen.css"; // Import the password field styles
+import "./SecurityQuestionsScreen.css";
+import "./SetPasswordScreen.css";
+
+const SECURITY_QUESTION_CHOICES = [
+  "What is your mother’s maiden name?",
+  "What was the name of your first pet?",
+  "What was your first car?",
+  "What is the name of the town where you were born?",
+  "What was your childhood nickname?",
+];
 
 const SecurityQuestionsScreen = () => {
-  const [q1, setQ1] = useState("pet");
-  const [q2, setQ2] = useState("school");
+  const [q1, setQ1] = useState("");
+  const [q2, setQ2] = useState("");
   const [a1, setA1] = useState("");
   const [a2, setA2] = useState("");
   const a2InputRef = useRef(null);
@@ -23,6 +31,8 @@ const SecurityQuestionsScreen = () => {
       alert("Passwords do not match!");
       return;
     }
+    // Add further validation if needed
+
     navigate("/"); // Navigate to login page
   };
 
@@ -45,9 +55,14 @@ const SecurityQuestionsScreen = () => {
             className="security-select"
             value={q1}
             onChange={(e) => setQ1(e.target.value)}
+            required
           >
-            <option value="pet">What is your pet's name?</option>
-            <option value="birthplace">What is your birthplace?</option>
+            <option value="">Select Question 1</option>
+            {SECURITY_QUESTION_CHOICES.map((question, idx) => (
+              <option key={idx} value={question}>
+                {question}
+              </option>
+            ))}
           </select>
 
           <input
@@ -62,6 +77,7 @@ const SecurityQuestionsScreen = () => {
                 a2InputRef.current?.focus();
               }
             }}
+            required
           />
 
           <label className="security-label mt-3">Security Question 2</label>
@@ -69,9 +85,14 @@ const SecurityQuestionsScreen = () => {
             className="security-select"
             value={q2}
             onChange={(e) => setQ2(e.target.value)}
+            required
           >
-            <option value="school">What is your school name?</option>
-            <option value="mother">What is your mother's maiden name?</option>
+            <option value="">Select Question 2</option>
+            {SECURITY_QUESTION_CHOICES.map((question, idx) => (
+              <option key={idx} value={question}>
+                {question}
+              </option>
+            ))}
           </select>
 
           <input
@@ -81,11 +102,11 @@ const SecurityQuestionsScreen = () => {
             value={a2}
             onChange={(e) => setA2(e.target.value)}
             ref={a2InputRef}
+            required
           />
 
           <hr />
 
-          {/* Add password fields from SetPasswordScreen */}
           <h5 className="security-label mt-3">Set Your Password</h5>
 
           <div className="set-input-wrapper">
