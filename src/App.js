@@ -9,7 +9,7 @@ import SignUpScreen from './Components/LoginSreens/SignUpScreen'
 import SignupSetPassword from './Components/LoginSreens/SignupSetPassword';
 import CustomerData from './Components/LoginSreens/CusotmerData'
 import Dashboard from './Components/Screens/Dashboard'
-
+import Navbar from './Components/Screens/Navbar/Navbar';
 import './App.css';
 
 function App() {
@@ -27,7 +27,7 @@ function App() {
           <Route path="/customer-data" element={<CustomerData />} />
           <Route path="/customer-dashboard" element={<Dashboard />} />
 
-
+<Route path="/navbar" element={<Navbar />} />
 
         </Routes>
       </div>

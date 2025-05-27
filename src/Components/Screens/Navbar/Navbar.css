@@ -1,0 +1,51 @@
+/* Navbar.css */
+
+.navbar-container {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: white;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #ccc;
+  height: 60px;
+  z-index: 100;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.nav-item .icon {
+  font-size: 20px;
+}
+
+.nav-item.active {
+  color: #000;
+}
+
+.center-button {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #666;
+  color: white;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  z-index: 101;
+}
