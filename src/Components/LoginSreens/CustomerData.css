@@ -49,8 +49,9 @@
 .label {
   min-width: 130px;
   text-align: left;
-  font-weight: 700;
+  font-weight: 70;
   color: #333;
+  font-weight: 700;
 }
 
 .colon {
