@@ -8,6 +8,8 @@ import SecurityQuestionsScreen from './Components/LoginSreens/SecurityQuestionsS
 import SignUpScreen from './Components/LoginSreens/SignUpScreen'
 import SignupSetPassword from './Components/LoginSreens/SignupSetPassword';
 import CustomerData from './Components/LoginSreens/CusotmerData'
+import Dashboard from './Components/Screens/Dashboard'
+
 import './App.css';
 
 function App() {
@@ -23,6 +25,8 @@ function App() {
           <Route path="/signup" element={<SignUpScreen />} />
           <Route path="/set-sign-password" element={<SignupSetPassword />} />
           <Route path="/customer-data" element={<CustomerData />} />
+          <Route path="/customer-dashboard" element={<Dashboard />} />
+
 
 
         </Routes>
