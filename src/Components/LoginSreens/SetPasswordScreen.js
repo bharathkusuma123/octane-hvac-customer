@@ -74,12 +74,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import logo from "../../Logos/hvac-logo-new.jpg";
 import "./SetPasswordScreen.css";
 
 const SetPasswordScreen = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
@@ -105,28 +108,44 @@ const SetPasswordScreen = () => {
         <h4 className="setpass-title">Set New Password</h4>
 
         <form onSubmit={handleSubmit}>
+          {/* Password Field */}
           <div className="set-input-wrapper">
             <FaLock className="input-icon-inside" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               className="pass-input"
               placeholder="Enter Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <span
+              className="eye-icon"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </span>
           </div>
 
+          {/* Confirm Password Field */}
           <div className="set-input-wrapper">
             <FaLock className="input-icon-inside" />
             <input
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               className="pass-input"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
+            <span
+              className="eye-icon"
+              onClick={() =>
+                setShowConfirmPassword(!showConfirmPassword)
+              }
+            >
+              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+            </span>
           </div>
 
           <button type="submit" className="setpass-submit-button shadow">
@@ -139,3 +158,4 @@ const SetPasswordScreen = () => {
 };
 
 export default SetPasswordScreen;
+
