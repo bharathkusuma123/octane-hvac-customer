@@ -189,6 +189,7 @@ const SecurityQuestionsScreen = () => {
       security_question2: q2,
       security_answer2: a2,
       password: password,
+       is_registered_by_customer: true,
     };
 
     try {
