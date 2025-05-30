@@ -85,13 +85,18 @@
 
 
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import './ServiceRequestForm.css';
+import { AuthContext } from "../../AuthContext/AuthContext";
 
 const ServiceRequestForm = () => {
-  const userId = localStorage.getItem('userId'); // e.g., 'custid00066'
-  console.log("userid", userId);
+  const { user } = useContext(AuthContext);
+  // const userId = localStorage.getItem('userId'); // e.g., 'custid00066'
+ const userId = user?.user_id; // Use optional chaining to avoid crash if user is null
+const userName = user?.username;
+console.log("from context data",userId,userName);
+console.log("userdata",user);
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -142,8 +147,9 @@ const ServiceRequestForm = () => {
     status: 'Unassigned',
     source_type: 'Machine Alert',
     customer: userId,
-    created_by: "Mani",
-    updated_by: "Rajesh",
+    created_by: "Customer",
+    updated_by: "Customer",
+    requested_by: userId
   };
 
   try {
