@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import './Login.css';
 import { FaUser, FaLock } from 'react-icons/fa';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
@@ -9,6 +9,7 @@ import logo from '../../Logos/hvac-logo-new.jpg';
 import googleicon from '../../Logos/googleicon.png';
 import greenaire from '../../Logos/greenAire.png';
 import axios from "axios";
+import { AuthContext } from "../AuthContext/AuthContext";
 
 export default function Login() {
   const [mobile, setMobile] = useState('');
@@ -18,34 +19,39 @@ export default function Login() {
    const [error, setError] = useState("");
   const passwordRef = useRef();
   const navigate = useNavigate();
+   const { login } = useContext(AuthContext);
 
 const handleLogin = async (e) => {
   e.preventDefault();
 
- try {
-      
-      const response = await axios.post("http://175.29.21.7:8006/login/", {
-        mobile_no: mobile,   
-        password,
-      });
+  try {
+    const response = await axios.post("http://175.29.21.7:8006/login/", {
+      mobile_no: mobile,
+      password,
+    });
 
-      const user = response.data.data;
+    const user = response.data.data;
 
-      if (user.role === "Customer") {
-        localStorage.setItem("userRole", "customer");
-         localStorage.setItem("userId", user.user_id);    
+    if (user.role === "Customer") {
+      localStorage.setItem("userRole", "customer");
+      localStorage.setItem("userId", user.user_id);
       localStorage.setItem("userMobile", user.mobile_no);
-        navigate("/dashboard", { state: { userMobile: user.mobile_no } });
-        console.log("User data from API:", user);
-        console.log("Stored userId:", localStorage.getItem("userId"));
-      } else {
-        setError("User is not an Customer");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Invalid mobile number or password");
+      localStorage.setItem("userEmail", user.email);
+      localStorage.setItem("userName", user.username);
+
+      login(user); // ✅ Pass full user object to AuthContext
+
+      navigate("/dashboard", { state: { userMobile: user.mobile_no } });
+      console.log("User data from API:", user);
+    } else {
+      setError("User is not a Customer");
     }
-  };
+  } catch (err) {
+    console.error("Login error:", err);
+    setError("Invalid mobile number or password");
+  }
+};
+
 
 
   return (

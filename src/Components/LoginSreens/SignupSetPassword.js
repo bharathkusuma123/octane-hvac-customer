@@ -146,10 +146,10 @@
 
 
 
-
 import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 import logo from "../../Logos/hvac-logo-new.jpg";
 import "./SecurityQuestionsScreen.css";
@@ -170,6 +170,8 @@ const SecurityQuestionsScreen = () => {
   const [a2, setA2] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const a2InputRef = useRef(null);
   const navigate = useNavigate();
@@ -189,12 +191,12 @@ const SecurityQuestionsScreen = () => {
       security_question2: q2,
       security_answer2: a2,
       password: password,
-       is_registered_by_customer: true,
+      is_registered_by_customer: true,
     };
 
     try {
       const response = await fetch(`http://175.29.21.7:8006/users/${user_id}/`, {
-        method: "PUT", // or PATCH if your API supports partial update
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -227,7 +229,6 @@ const SecurityQuestionsScreen = () => {
         </div>
 
         <h4 className="security-title">Security Questions</h4>
-
         <p className="user-id-display">User ID: {user_id}</p>
 
         <form onSubmit={handleSubmit}>
@@ -293,25 +294,37 @@ const SecurityQuestionsScreen = () => {
           <div className="set-input-wrapper">
             <FaLock className="input-icon-inside" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               className="pass-input"
               placeholder="Enter Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <span
+              className="eye-icon-right"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </span>
           </div>
 
           <div className="set-input-wrapper">
             <FaLock className="input-icon-inside" />
             <input
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               className="pass-input"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
+            <span
+              className="eye-icon-right"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+            </span>
           </div>
 
           <button type="submit" className="setpass-submit-button shadow mt-3">
@@ -324,3 +337,4 @@ const SecurityQuestionsScreen = () => {
 };
 
 export default SecurityQuestionsScreen;
+

@@ -10,6 +10,7 @@ import SignupSetPassword from './Components/LoginSreens/SignupSetPassword';
 import CustomerData from './Components/LoginSreens/CusotmerData'
 import Dashboard from './Components/Screens/Dashboard'
 import Navbar from './Components/Screens/Navbar/Navbar';
+import AuthProvider from "./Components/AuthContext/AuthContext";
 import DashboardScreen from './Components/Screens/DashboardScreen/Dashboard';
 import MachineScreen from './Components/Screens/MachineScreen/Machine';
 import RequestScreen from './Components/Screens/RequestScreen/Request';
@@ -19,6 +20,7 @@ import './App.css';
 
 function App() {
   return (
+      <AuthProvider>
     <Router>
       <div className="App">
         <Routes>
@@ -45,6 +47,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </AuthProvider>
   );
 }
 
