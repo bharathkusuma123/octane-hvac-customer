@@ -9,17 +9,27 @@ const RequestScreen = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
   useEffect(() => {
+  const storedUser = localStorage.getItem("user");
+
+  if (storedUser) {
+    const { user_id } = JSON.parse(storedUser); // assuming user_id is stored here
+
     axios
       .get('http://175.29.21.7:8006/service-pools/')
       .then((response) => {
         if (response.data?.status === 'success') {
-          setRequests(response.data.data);
+          // Filter only requests made by this user
+          const filteredRequests = response.data.data.filter(
+            (req) => req.requested_by === user_id
+          );
+          setRequests(filteredRequests);
         }
       })
       .catch((error) => {
         console.error('Error fetching service requests:', error);
       });
-  }, []);
+  }
+}, []);
 
   const totalPages = Math.ceil(requests.length / rowsPerPage);
   const paginatedData = requests.slice(
