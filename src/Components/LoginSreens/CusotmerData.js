@@ -68,7 +68,7 @@ const CustomerData = () => {
   const user = state.user;
 
   const handleConfirm = () => {
-    navigate("/set-sign-password", { state: { user_id: user.user_id } });
+    navigate("/set-sign-password", { state: { user_id: user.customer_id } });
   };
 
   return (
@@ -81,7 +81,7 @@ const CustomerData = () => {
         <div className="otp-details">
           <div className="otp-row">
             <span className="label">User Id:</span>
-            <span className="value">{user.user_id}</span>
+            <span className="value">{user.customer_id}</span>
           </div>
           <div className="otp-row">
             <span className="label">User Name:</span>
@@ -97,7 +97,7 @@ const CustomerData = () => {
           </div>
           <div className="otp-row">
             <span className="label">Mobile:</span>
-            <span className="value">{user.mobile_no}</span>
+            <span className="value">{user.mobile}</span>
           </div>
           <div className="otp-row">
             <span className="label">City:</span>

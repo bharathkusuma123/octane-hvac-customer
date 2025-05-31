@@ -18,42 +18,41 @@ const SignUpScreen = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (mobile.length !== 10) {
-      alert("Mobile number must be exactly 10 digits.");
-      return;
+  if (mobile.length !== 10) {
+    alert("Mobile number must be exactly 10 digits.");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const response = await fetch("http://175.29.21.7:8006/customers/");
+    if (!response.ok) {
+      throw new Error("Failed to fetch users");
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://175.29.21.7:8006/users/");
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
-      }
-      const users = await response.json();
+    const result = await response.json();
+    const users = result.data || [];
 
-      // Find user with matching mobile, email and role Customer
-      const matchedUser = users.find(
-        (user) =>
-          user.mobile_no === mobile &&
-          user.email.toLowerCase() === email.toLowerCase() &&
-          user.role === "Customer"
-      );
+    const matchedUser = users.find(
+      (user) =>
+        user.mobile === mobile &&
+        user.email.toLowerCase() === email.toLowerCase()
+    );
 
-      if (matchedUser) {
-        // Proceed to OTP screen
-navigate("/customer-data", { state: { user: matchedUser } });
-      } else {
-        alert("No matching customer found with provided mobile and email.");
-      }
-    } catch (error) {
-      alert("Error checking user details. Please try again later.");
-      console.error("Error fetching users:", error);
+    if (matchedUser) {
+      navigate("/customer-data", { state: { user: matchedUser } });
+    } else {
+      alert("No matching customer found with provided mobile and email.");
     }
-    setLoading(false);
-  };
+  } catch (error) {
+    alert("Error checking user details. Please try again later.");
+    console.error("Error fetching users:", error);
+  }
+  setLoading(false);
+};
 
   return (
     <div className="signup-container">

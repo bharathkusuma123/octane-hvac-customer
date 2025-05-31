@@ -25,32 +25,31 @@ const handleLogin = async (e) => {
   e.preventDefault();
 
   try {
-    const response = await axios.post("http://175.29.21.7:8006/login/", {
-      mobile_no: mobile,
+    const response = await axios.post("http://175.29.21.7:8006/customer-login/", {
+      mobile: mobile,
       password,
     });
 
     const user = response.data.data;
 
-    if (user.role === "Customer") {
-      localStorage.setItem("userRole", "customer");
-      localStorage.setItem("userId", user.user_id);
-      localStorage.setItem("userMobile", user.mobile_no);
-      localStorage.setItem("userEmail", user.email);
-      localStorage.setItem("userName", user.username);
+    // localStorage.setItem("userRole", "customer");
+    localStorage.setItem("userId", user.customer_id);
+    localStorage.setItem("userMobile", user.mobile);
+    localStorage.setItem("userName", user.full_name);
+    localStorage.setItem("customerType", user.customer_type);
 
-      login(user); // ✅ Pass full user object to AuthContext
+    login(user); // Optional if you use context
 
-      navigate("/dashboard", { state: { userMobile: user.mobile_no } });
-      console.log("User data from API:", user);
-    } else {
-      setError("User is not a Customer");
-    }
+    // Navigate to dashboard
+    navigate("/dashboard", { state: { userMobile: user.mobile } });
+
+    console.log("User data from API:", user);
   } catch (err) {
     console.error("Login error:", err);
     setError("Invalid mobile number or password");
   }
 };
+
 
 
 

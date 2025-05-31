@@ -195,7 +195,7 @@ const SecurityQuestionsScreen = () => {
     };
 
     try {
-      const response = await fetch(`http://175.29.21.7:8006/users/${user_id}/`, {
+      const response = await fetch(`http://175.29.21.7:8006/customers/${user_id}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

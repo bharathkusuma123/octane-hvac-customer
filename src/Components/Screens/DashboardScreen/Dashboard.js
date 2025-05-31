@@ -7,12 +7,12 @@ const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
 
   useEffect(() => {
-    const userId = localStorage.getItem("userId");
+    const customerId = localStorage.getItem("userId"); // make sure you store this after login
 
-    if (userId) {
-      axios.get("http://175.29.21.7:8006/users/")
+    if (customerId) {
+      axios.get("http://175.29.21.7:8006/customers/")
         .then((res) => {
-          const matchedUser = res.data.find(user => user.user_id === userId);
+          const matchedUser = res.data.data.find(user => user.customer_id === customerId);
           if (matchedUser) {
             setUserDetails(matchedUser);
           }
@@ -30,24 +30,20 @@ const Dashboard = () => {
         <h2>Customer Dashboard</h2>
         {userDetails ? (
           <div className="user-details">
-            <p><strong>User ID:</strong> {userDetails.user_id}</p>
+            <p><strong>Customer ID:</strong> {userDetails.customer_id}</p>
             <p><strong>Username:</strong> {userDetails.username}</p>
             <p><strong>Full Name:</strong> {userDetails.full_name}</p>
             <p><strong>Email:</strong> {userDetails.email}</p>
-            <p><strong>Mobile No:</strong> {userDetails.mobile_no}</p>
+            <p><strong>Mobile No:</strong> {userDetails.mobile}</p>
             <p><strong>Telephone:</strong> {userDetails.telephone}</p>
             <p><strong>City:</strong> {userDetails.city}</p>
-            <p><strong>Country:</strong> {userDetails.country_code}</p>
-            {/* <p><strong>Customer Type:</strong> {userDetails.customer_type}</p> */}
-            {/* <p><strong>Status:</strong> {userDetails.status}</p>
-            <p><strong>Remarks:</strong> {userDetails.remarks}</p> */}
-            {/* <p><strong>Role:</strong> {userDetails.role}</p> */}
-            {/* <p><strong>Hourly Rate:</strong> {userDetails.hourly_rate}</p> */}
-            {/* <p><strong>Address:</strong> {userDetails.address}</p> */}
-            {/* <p><strong>Availability:</strong> {userDetails.availability}</p> */}
-            {/* <p><strong>Rating:</strong> {userDetails.rating}</p>
+            <p><strong>Country Code:</strong> {userDetails.country_code}</p>
+            <p><strong>Address:</strong> {userDetails.address}</p>
+            <p><strong>Customer Type:</strong> {userDetails.customer_type}</p>
+            <p><strong>Status:</strong> {userDetails.status}</p>
+            <p><strong>Remarks:</strong> {userDetails.remarks}</p>
             <p><strong>Created By:</strong> {userDetails.created_by}</p>
-            <p><strong>Updated By:</strong> {userDetails.updated_by}</p> */}
+            <p><strong>Updated By:</strong> {userDetails.updated_by}</p>
           </div>
         ) : (
           <p>Loading user details...</p>
