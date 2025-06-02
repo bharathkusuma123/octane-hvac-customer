@@ -113,7 +113,7 @@ console.log("userdata",user);
   useEffect(() => {
     const fetchServiceItems = async () => {
       try {
-        const response = await fetch('http://175.29.21.7:8006/service-items');
+        const response = await fetch('http://175.29.21.7:8006/service-items/');
         if (response.ok) {
           const result = await response.json(); // `result` is the full response object
           const serviceItemsArray = result.data; // Access the actual array
@@ -146,10 +146,10 @@ console.log("userdata",user);
     ...form,
     status: 'Unassigned',
     source_type: 'Machine Alert',
-    customer: userId,
+    customer: user?.customer_id,
     created_by: "Customer",
     updated_by: "Customer",
-    requested_by: userId
+    requested_by: user?.customer_id
   };
 
   try {
@@ -170,7 +170,7 @@ console.log("userdata",user);
         status: 'Unassigned',
         source_type: 'Machine Alert',
         service_item: '',
-        customer: userId,
+        customer: user?.customer_id,
       });
     } else {
       const errorData = await response.json();
@@ -184,7 +184,11 @@ console.log("userdata",user);
 
   return (
     <div className="service-form-container">
+      
       <h2 className="sr-heading">Service Request Form</h2>
+      <div className="customer-info">
+  {/* <strong>Customer ID:</strong> {user?.customer_id || 'Loading...'} */}
+</div>
       <form className="service-form" onSubmit={handleSubmit}>
        <div className="form-group select-wrapper">
   <label htmlFor="serviceItemId">Service Item ID</label>

@@ -1,26 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext} from 'react';
 import NavScreen from '../../Screens/Navbar/Navbar';
 import axios from 'axios';
 import './Request.css';
+import { AuthContext } from "../../AuthContext/AuthContext";
 
 const RequestScreen = () => {
   const [requests, setRequests] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  useEffect(() => {
-  const storedUser = localStorage.getItem("user");
+    const { user } = useContext(AuthContext);
+    // const userId = localStorage.getItem('userId'); // e.g., 'custid00066'
+   const userId = user?.user_id; // Use optional chaining to avoid crash if user is null
+  const userName = user?.username;
+  console.log("from context data",userId,userName);
+  console.log("userdata",user);
 
-  if (storedUser) {
-    const { user_id } = JSON.parse(storedUser); // assuming user_id is stored here
-
+useEffect(() => {
+  if (user?.customer_id) {
     axios
       .get('http://175.29.21.7:8006/service-pools/')
       .then((response) => {
         if (response.data?.status === 'success') {
-          // Filter only requests made by this user
           const filteredRequests = response.data.data.filter(
-            (req) => req.requested_by === user_id
+            (req) => req.customer === user.customer_id
           );
           setRequests(filteredRequests);
         }
@@ -29,7 +32,9 @@ const RequestScreen = () => {
         console.error('Error fetching service requests:', error);
       });
   }
-}, []);
+}, [user?.customer_id]);
+
+
 
   const totalPages = Math.ceil(requests.length / rowsPerPage);
   const paginatedData = requests.slice(
@@ -51,7 +56,7 @@ const RequestScreen = () => {
   return (
     <div className="request-screen-wrapper">
       <h2 className="text-center mb-4">Request Screen</h2>
-
+ <strong>Customer ID:</strong> {user?.customer_id || 'Loading...'}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <label>
           Show:{' '}
@@ -72,6 +77,7 @@ const RequestScreen = () => {
         <table className="table table-bordered table-hover table-striped mb-0">
           <thead className="table-dark">
             <tr>
+              <th>S.No</th>
               <th>Request ID</th>
               <th>Service Item ID</th>
               <th>Preferred Date</th>
@@ -89,6 +95,7 @@ const RequestScreen = () => {
             ) : (
               paginatedData.map((req, index) => (
                 <tr key={index}>
+                  <td>{index+1}</td>
                   <td>{req.request_id}</td>
                   <td>{req.service_item}</td>
                   <td>{req.preferred_date}</td>
