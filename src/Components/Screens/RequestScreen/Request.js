@@ -22,9 +22,10 @@ useEffect(() => {
       .get('http://175.29.21.7:8006/service-pools/')
       .then((response) => {
         if (response.data?.status === 'success') {
-          const filteredRequests = response.data.data.filter(
-            (req) => req.customer === user.customer_id
-          );
+         const filteredRequests = response.data.data
+            .filter((req) => req.customer === user.customer_id)
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort descending by created_at
+
           setRequests(filteredRequests);
         }
       })
