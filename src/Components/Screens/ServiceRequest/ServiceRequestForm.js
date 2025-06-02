@@ -118,7 +118,7 @@ console.log("userdata",user);
           const result = await response.json(); // `result` is the full response object
           const serviceItemsArray = result.data; // Access the actual array
 
-          const filteredItems = serviceItemsArray.filter(item => item.user === userId);
+          const filteredItems = serviceItemsArray.filter(item => item.customer === user?.customer_id);
           setServiceItems(filteredItems);
           console.log("Filtered Data:", filteredItems);
         } else {

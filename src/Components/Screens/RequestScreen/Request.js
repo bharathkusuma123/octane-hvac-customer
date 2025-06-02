@@ -56,7 +56,7 @@ useEffect(() => {
   return (
     <div className="request-screen-wrapper">
       <h2 className="text-center mb-4">Request Screen</h2>
- <strong>Customer ID:</strong> {user?.customer_id || 'Loading...'}
+ {/* <strong>Customer ID:</strong> {user?.customer_id || 'Loading...'} */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <label>
           Show:{' '}
