@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import { FaUserPlus } from 'react-icons/fa';
 import { AuthContext } from "../../AuthContext/AuthContext";
+import { useNavigate } from 'react-router-dom';
 import './ViewDelegate.css'; // Make sure to create/add these styles
 
 const AddDelegates = () => {
@@ -9,6 +10,7 @@ const AddDelegates = () => {
   const userId = user?.customer_id;
   const [delegates, setDelegates] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch delegates
   const fetchDelegates = async () => {
@@ -35,7 +37,7 @@ const AddDelegates = () => {
   const handleAddDelegate = () => {
     // Implement your add delegate logic here
     // This could navigate to a form or open a modal
-    console.log("Add delegate clicked");
+    navigate('/add-delegates');
   };
 
   return (
