@@ -17,7 +17,8 @@ import RequestScreen from './Components/Screens/RequestScreen/Request';
 import FeedbackScreen from './Components/Screens/FeedbackScreen/Feedback';
 import ServiceRequestForm from './Components/Screens/ServiceRequest/ServiceRequestForm';
 import './App.css';
-
+import ViewDelegates from './Components/Screens/Delegates/ViewDelegates';
+import AddDelegates from './Components/Screens/Delegates/AddDelegates';
 function App() {
   return (
       <AuthProvider>
@@ -41,8 +42,8 @@ function App() {
         <Route path="/request" element={<RequestScreen />} />
         <Route path="/feedback" element={<FeedbackScreen />} />
   <Route path="/service-form" element={<ServiceRequestForm />} />
-
-
+ <Route path="/view-delegates" element={<ViewDelegates />} />
+<Route path="/add-delegates" element={<AddDelegates />} />
 
         </Routes>
       </div>

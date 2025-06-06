@@ -19,6 +19,7 @@ const screens = [
   { label: 'Dashboard', name: '/dashboard', icon: <FaHome /> },
   { label: 'Machines', name: '/machine', icon: <FaCogs /> },
   { label: 'Requests', name: '/request', icon: <FaEnvelope /> },
+  { label: 'Delegates', name: '/view-delegates', icon: <FaEnvelope /> },
   { label: 'Feedback', name: '/feedback', icon: <FaCommentDots /> },
 ];
 
