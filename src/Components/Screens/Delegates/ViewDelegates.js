@@ -4,6 +4,7 @@ import { FaUserPlus } from 'react-icons/fa';
 import { AuthContext } from "../../AuthContext/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import './ViewDelegate.css'; // Make sure to create/add these styles
+import baseURL from '../../ApiUrl/Apiurl';
 
 const AddDelegates = () => {
   const { user } = useContext(AuthContext);
@@ -16,7 +17,7 @@ const AddDelegates = () => {
   const fetchDelegates = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://175.29.21.7:8006/delegates/?customer=${userId}`);
+      const response = await fetch(`${baseURL}/delegates/?customer=${userId}`);
       if (response.ok) {
         const data = await response.json();
         setDelegates(data.data || []);

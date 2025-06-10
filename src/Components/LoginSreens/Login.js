@@ -10,6 +10,7 @@ import googleicon from '../../Logos/googleicon.png';
 import greenaire from '../../Logos/greenAire.png';
 import axios from "axios";
 import { AuthContext } from "../AuthContext/AuthContext";
+import baseURL from '../ApiUrl/Apiurl';
 
 export default function Login() {
   const [mobile, setMobile] = useState('');
@@ -25,7 +26,7 @@ const handleLogin = async (e) => {
   e.preventDefault();
 
   try {
-    const response = await axios.post("http://175.29.21.7:8006/customer-login/", {
+    const response = await axios.post(`${baseURL}/customer-login/`, {
       mobile: mobile,
       password,
     });

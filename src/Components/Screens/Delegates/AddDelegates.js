@@ -4,6 +4,7 @@ import { FaUserPlus } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import './AddDelegate.css'
+import baseURL from '../../ApiUrl/Apiurl';
 
 const AddDelegate = () => {
   const { user } = useContext(AuthContext);
@@ -25,7 +26,7 @@ const AddDelegate = () => {
   useEffect(() => {
     const fetchServiceItems = async () => {
       try {
-        const response = await fetch('http://175.29.21.7:8006/service-items/');
+        const response = await fetch(`${baseURL}/service-items/`);
         if (response.ok) {
           const result = await response.json();
           const serviceItemsArray = result.data;
@@ -58,7 +59,7 @@ const AddDelegate = () => {
     };
 
     try {
-      const response = await fetch('http://175.29.21.7:8006/delegates/', {
+      const response = await fetch(`${baseURL}/delegates/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

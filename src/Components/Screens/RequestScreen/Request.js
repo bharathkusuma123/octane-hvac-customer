@@ -3,6 +3,7 @@ import NavScreen from '../../Screens/Navbar/Navbar';
 import axios from 'axios';
 import './Request.css';
 import { AuthContext } from "../../AuthContext/AuthContext";
+import baseURL from '../../ApiUrl/Apiurl';
 
 const RequestScreen = () => {
   const [requests, setRequests] = useState([]);
@@ -19,7 +20,7 @@ const RequestScreen = () => {
 useEffect(() => {
   if (user?.customer_id) {
     axios
-      .get('http://175.29.21.7:8006/service-pools/')
+      .get(`${baseURL}/service-pools/`)
       .then((response) => {
         if (response.data?.status === 'success') {
          const filteredRequests = response.data.data

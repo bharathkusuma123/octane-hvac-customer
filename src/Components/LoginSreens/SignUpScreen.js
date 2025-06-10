@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../../Logos/hvac-logo-new.jpg";
 import { FaArrowLeft } from "react-icons/fa";
 import "./SignUpScreen.css";
+import baseURL from "../ApiUrl/Apiurl";
 
 const SignUpScreen = () => {
   const [mobile, setMobile] = useState("");
@@ -28,7 +29,7 @@ const handleSubmit = async (e) => {
 
   setLoading(true);
   try {
-    const response = await fetch("http://175.29.21.7:8006/customers/");
+    const response = await fetch(`${baseURL}/customers/`);
     if (!response.ok) {
       throw new Error("Failed to fetch users");
     }

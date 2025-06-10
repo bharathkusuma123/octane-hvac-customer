@@ -154,6 +154,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import logo from "../../Logos/hvac-logo-new.jpg";
 import "./SecurityQuestionsScreen.css";
 import "./SetPasswordScreen.css";
+import baseURL from "../ApiUrl/Apiurl";
 
 const SECURITY_QUESTION_CHOICES = [
   "What is your mother’s maiden name?",
@@ -195,7 +196,7 @@ const SecurityQuestionsScreen = () => {
     };
 
     try {
-      const response = await fetch(`http://175.29.21.7:8006/customers/${user_id}/`, {
+      const response = await fetch(`${baseURL}/customers/${user_id}/`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -89,6 +89,7 @@ import React, { useEffect, useState, useContext } from 'react';
 import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import './ServiceRequestForm.css';
 import { AuthContext } from "../../AuthContext/AuthContext";
+import baseURL from '../../ApiUrl/Apiurl';
 
 const ServiceRequestForm = () => {
   const { user } = useContext(AuthContext);
@@ -113,7 +114,7 @@ console.log("userdata",user);
   useEffect(() => {
     const fetchServiceItems = async () => {
       try {
-        const response = await fetch('http://175.29.21.7:8006/service-items/');
+        const response = await fetch(`${baseURL}/service-items/`);
         if (response.ok) {
           const result = await response.json(); // `result` is the full response object
           const serviceItemsArray = result.data; // Access the actual array
@@ -153,7 +154,7 @@ console.log("userdata",user);
   };
 
   try {
-    const response = await fetch('http://175.29.21.7:8006/service-pools/', {
+    const response = await fetch(`${baseURL}/service-pools/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
