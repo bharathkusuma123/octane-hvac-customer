@@ -99,6 +99,7 @@ const ServiceRequestForm = () => {
 const userName = user?.username;
 console.log("from context data",userId,userName);
 console.log("userdata",user);
+  const [selectedCompany, setSelectedCompany] = useState(null);
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -112,28 +113,36 @@ console.log("userdata",user);
   const [serviceItems, setServiceItems] = useState([]);
   
 
-  useEffect(() => {
-    const fetchServiceItems = async () => {
-      try {
-        const response = await fetch(`${baseURL}/service-items/`);
-        if (response.ok) {
-          const result = await response.json(); // `result` is the full response object
-          const serviceItemsArray = result.data; // Access the actual array
+useEffect(() => {
+  const fetchServiceItems = async () => {
+    try {
+      const response = await fetch(`${baseURL}/service-items/`);
+      if (response.ok) {
+        const result = await response.json();
+        const serviceItemsArray = result.data;
 
+        // Find the service item that matches the user's customer_id
+        const userServiceItem = serviceItemsArray.find(item => item.customer === user?.customer_id);
+        
+        if (userServiceItem) {
+          // Set the company from the service item
+          setSelectedCompany(userServiceItem.company);
+          
+          // Filter items for display if needed
           const filteredItems = serviceItemsArray.filter(item => item.customer === user?.customer_id);
           setServiceItems(filteredItems);
           console.log("Filtered Data:", filteredItems);
-        } else {
-          console.error('Failed to fetch service items');
         }
-
-      } catch (error) {
-        console.error('Error fetching service items:', error);
+      } else {
+        console.error('Failed to fetch service items');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching service items:', error);
+    }
+  };
 
-    fetchServiceItems();
-  }, [userId]);
+  fetchServiceItems();
+}, [userId]);
 
 
   const handleChange = (e) => {
@@ -151,7 +160,8 @@ const handleSubmit = async (e) => {
     customer: user?.customer_id,
     created_by: "Customer",
     updated_by: "Customer",
-    requested_by: user?.customer_id
+    requested_by: user?.customer_id,
+    company: selectedCompany, 
   };
 
   try {
