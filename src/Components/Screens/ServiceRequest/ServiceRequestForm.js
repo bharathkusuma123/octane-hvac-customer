@@ -90,6 +90,7 @@ import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import './ServiceRequestForm.css';
 import { AuthContext } from "../../AuthContext/AuthContext";
 import baseURL from '../../ApiUrl/Apiurl';
+import Notification_Url from "../../ApiUrl/PushNotificanURL";
 
 const ServiceRequestForm = () => {
   const { user } = useContext(AuthContext);
@@ -139,7 +140,7 @@ console.log("userdata",user);
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
- const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   const payload = {
@@ -154,6 +155,7 @@ console.log("userdata",user);
   };
 
   try {
+    // Step 1: Submit service request
     const response = await fetch(`${baseURL}/service-pools/`, {
       method: 'POST',
       headers: {
@@ -164,6 +166,8 @@ console.log("userdata",user);
 
     if (response.ok) {
       alert('Service request submitted successfully!');
+
+      // Reset form
       setForm({
         request_details: '',
         preferred_date: '',
@@ -173,6 +177,37 @@ console.log("userdata",user);
         service_item: '',
         customer: user?.customer_id,
       });
+
+      // Step 2: Fetch all users to find Service Manager
+      const userResponse = await fetch('http://175.29.21.7:8006/users/');
+      const users = await userResponse.json();
+
+      const serviceManager = users.find(u => u.role === 'Service Manager' && u.fcm_token);
+
+      if (serviceManager) {
+        // Step 3: Send push notification
+        const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: serviceManager.fcm_token,
+            title: 'New Service Request',
+            body: `Service request raised by ${user?.customer_id}`,
+          }),
+        });
+
+        const notifyData = await notifyResponse.json();
+
+        if (notifyResponse.ok) {
+          console.log('Notification sent successfully:', notifyData);
+        } else {
+          console.error('Failed to send notification:', notifyData);
+        }
+      } else {
+        console.warn('No Service Manager with FCM token found.');
+      }
     } else {
       const errorData = await response.json();
       alert('Failed to submit request: ' + JSON.stringify(errorData));
@@ -182,6 +217,7 @@ console.log("userdata",user);
     alert('An error occurred. Please try again later.');
   }
 };
+
 
   return (
     <div className="service-form-container">

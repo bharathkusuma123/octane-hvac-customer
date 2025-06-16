@@ -11,6 +11,8 @@ import greenaire from '../../Logos/greenAire.png';
 import axios from "axios";
 import { AuthContext } from "../AuthContext/AuthContext";
 import baseURL from '../ApiUrl/Apiurl';
+import  Notification_Url from "../ApiUrl/PushNotificanURL";
+import { generateToken } from "../../Firebase/Firebase";
 
 export default function Login() {
   const [mobile, setMobile] = useState('');
@@ -24,32 +26,69 @@ export default function Login() {
 
 const handleLogin = async (e) => {
   e.preventDefault();
+  setError('');
 
   try {
+    // Generate FCM token
+    const fcmToken = await generateToken();
+
+    // Send login request with FCM token
     const response = await axios.post(`${baseURL}/customer-login/`, {
       mobile: mobile,
       password,
+      fcm_token: fcmToken || '',
     });
 
     const user = response.data.data;
 
-    // localStorage.setItem("userRole", "customer");
+    // Store user data in localStorage
     localStorage.setItem("userId", user.customer_id);
     localStorage.setItem("userMobile", user.mobile);
     localStorage.setItem("userName", user.full_name);
     localStorage.setItem("customerType", user.customer_type);
 
-    login(user); // Optional if you use context
+    login(user); // Optional if using context
 
     // Navigate to dashboard
     navigate("/dashboard", { state: { userMobile: user.mobile } });
 
     console.log("User data from API:", user);
+
+    // Send push notification after successful login
+    if (fcmToken) {
+      try {
+        const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: fcmToken,
+            title: 'Welcome to LandNest!',
+            body: 'You have successfully logged in.',
+          }),
+        });
+
+        const notifyData = await notifyResponse.json();
+
+        if (notifyResponse.ok) {
+          console.log('Notification sent successfully:', notifyData);
+        } else {
+          console.error('Failed to send notification:', notifyData);
+        }
+      } catch (notifyError) {
+        console.error('Error sending notification:', notifyError);
+      }
+    } else {
+      console.warn('No FCM token available for notification.');
+    }
+
   } catch (err) {
     console.error("Login error:", err);
     setError("Invalid mobile number or password");
   }
 };
+
 
 
 
