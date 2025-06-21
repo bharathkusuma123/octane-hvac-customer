@@ -19,9 +19,15 @@ import ServiceRequestForm from './Components/Screens/ServiceRequest/ServiceReque
 import './App.css';
 import ViewDelegates from './Components/Screens/Delegates/ViewDelegates';
 import AddDelegates from './Components/Screens/Delegates/AddDelegates';
+import { SnackbarProvider } from 'notistack'; 
 function App() {
   return (
       <AuthProvider>
+         <SnackbarProvider 
+        maxSnack={3} 
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        autoHideDuration={4000}
+      >
     <Router>
       <div className="App">
         <Routes>
@@ -48,6 +54,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </SnackbarProvider>
     </AuthProvider>
   );
 }

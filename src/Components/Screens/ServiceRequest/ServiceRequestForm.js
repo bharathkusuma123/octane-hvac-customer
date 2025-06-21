@@ -531,13 +531,16 @@ import './ServiceRequestForm.css';
 import { AuthContext } from '../../AuthContext/AuthContext';
 import baseURL from '../../ApiUrl/Apiurl';
 import Notification_Url from '../../ApiUrl/PushNotificanURL';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
+import { useSnackbar } from 'notistack'; // ← NEW
+import { useNavigate } from 'react-router-dom';
 const ServiceRequestForm = () => {
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const { enqueueSnackbar } = useSnackbar(); // ← Snackbar instance
+
   const userId = user?.user_id;
   const [selectedCompany, setSelectedCompany] = useState(null);
+
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -570,12 +573,11 @@ const ServiceRequestForm = () => {
             setServiceItems(filteredItems);
           }
         } else {
-          console.error('Failed to fetch service items');
-          toast.error('Failed to load service items');
+          enqueueSnackbar('Failed to load service items', { variant: 'error' });
         }
       } catch (error) {
         console.error('Error fetching service items:', error);
-        toast.error('Error loading service items');
+        enqueueSnackbar('Error loading service items', { variant: 'error' });
       }
     };
 
@@ -585,101 +587,82 @@ const ServiceRequestForm = () => {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const payload = {
+    request_id: Math.floor(Math.random() * 1000000),
+    ...form,
+    status: 'Unassigned',
+    source_type: 'Machine Alert',
+    customer: user?.customer_id,
+    created_by: 'Customer',
+    updated_by: 'Customer',
+    requested_by: user?.customer_id,
+    company: selectedCompany,
+  };
 
-    const payload = {
-      request_id: Math.floor(Math.random() * 1000000),
-      ...form,
-      status: 'Unassigned',
-      source_type: 'Machine Alert',
-      customer: user?.customer_id,
-      created_by: 'Customer',
-      updated_by: 'Customer',
-      requested_by: user?.customer_id,
-      company: selectedCompany,
-    };
+  try {
+    const response = await fetch(`${baseURL}/service-pools/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-    try {
-      const response = await fetch(`${baseURL}/service-pools/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+    if (response.ok) {
+      enqueueSnackbar('Service request submitted successfully!', { variant: 'success' });
+
+      setForm({
+        request_details: '',
+        preferred_date: '',
+        preferred_time: '',
+        status: 'Unassigned',
+        source_type: 'Machine Alert',
+        service_item: '',
+        customer: user?.customer_id,
       });
 
-      if (response.ok) {
-        toast.success('Service request submitted successfully!', {
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
+      // Delay navigation slightly so the user sees the message
+      setTimeout(() => {
+        navigate('/request');
+      }, 1500);
+
+      const userResponse = await fetch('http://175.29.21.7:8006/users/');
+      const users = await userResponse.json();
+
+      const serviceManager = users.find(
+        (u) => u.role === 'Service Manager' && u.fcm_token
+      );
+
+      if (serviceManager) {
+        const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: serviceManager.fcm_token,
+            title: 'New Service Request',
+            body: `Service request raised by ${user?.customer_id}`,
+          }),
         });
-        
-        setForm({
-          request_details: '',
-          preferred_date: '',
-          preferred_time: '',
-          status: 'Unassigned',
-          source_type: 'Machine Alert',
-          service_item: '',
-          customer: user?.customer_id,
-        });
 
-        const userResponse = await fetch('http://175.29.21.7:8006/users/');
-        const users = await userResponse.json();
-
-        const serviceManager = users.find(
-          (u) => u.role === 'Service Manager' && u.fcm_token
-        );
-
-        if (serviceManager) {
-          const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token: serviceManager.fcm_token,
-              title: 'New Service Request',
-              body: `Service request raised by ${user?.customer_id}`,
-            }),
-          });
-
-          const notifyData = await notifyResponse.json();
-          if (!notifyResponse.ok) {
-            console.error('Notification failed:', notifyData);
-            toast.warning('Service manager notification failed');
-          }
+        if (!notifyResponse.ok) {
+          enqueueSnackbar('Service manager notification failed', { variant: 'warning' });
         }
-      } else {
-        const errorData = await response.json();
-        toast.error(`Failed to submit request: ${errorData.message || 'Unknown error'}`, {
-          autoClose: 5000,
-        });
       }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      toast.error('An error occurred. Please try again later.', {
-        autoClose: 5000,
+    } else {
+      const errorData = await response.json();
+      enqueueSnackbar(`Failed to submit request: ${errorData.message || 'Unknown error'}`, {
+        variant: 'error',
       });
     }
-  };
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    enqueueSnackbar('An error occurred. Please try again later.', { variant: 'error' });
+  }
+};
 
   return (
     <div className="container service-request-form">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
       <div className="card">
         <div className="card-header">
           <h5 className="mb-1">Service Request Form</h5>
