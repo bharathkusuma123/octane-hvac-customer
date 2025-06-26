@@ -1,7 +1,4 @@
-
-
-// NavScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaHome,
@@ -10,13 +7,13 @@ import {
   FaCommentDots,
   FaPlus,
   FaBell,
-  FaSignOutAlt,
+  FaUserCircle, // 👈 Profile icon
 } from 'react-icons/fa';
 import './Navbar.css';
-import logo from '../../../Logos/hvac-logo-new.jpg'; // ✅ Adjust the path if your logo is elsewhere
+import logo from '../../../Logos/hvac-logo-new.jpg';
 
 const screens = [
-  { label: 'Dashboard', name: '/dashboard', icon: <FaHome /> },
+  { label: 'Dashboard', name: '/home', icon: <FaHome /> },
   { label: 'Machines', name: '/machine', icon: <FaCogs /> },
   { label: 'Requests', name: '/request', icon: <FaEnvelope /> },
   { label: 'Delegates', name: '/view-delegates', icon: <FaEnvelope /> },
@@ -27,16 +24,27 @@ const NavScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeIcon, setActiveIcon] = useState(location.pathname);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef();
 
   useEffect(() => {
     setActiveIcon(location.pathname);
   }, [location.pathname]);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleIconClick = (path) => {
     navigate(path);
   };
-
-
 
   return (
     <>
@@ -45,7 +53,29 @@ const NavScreen = () => {
         <img src={logo} alt="Logo" className="logo-img" />
         <div className="top-icons">
           <FaBell className="top-icon" onClick={() => alert('Notifications Clicked!')} />
-          <FaSignOutAlt className="top-icon" onClick={() => navigate('/')} />
+          
+          {/* Profile Dropdown */}
+          <div className="profile-dropdown" ref={profileRef}>
+            <FaUserCircle
+  className="top-icon"
+   style={{ fontSize: '26px' }}
+  onClick={() => {
+    // console.log('Profile icon clicked');
+    setShowProfileMenu((prev) => !prev);
+  }}
+/>
+            {showProfileMenu && (
+  <div className="dropdown-menu" style={{ display: 'block', background: 'white' }}>
+  <div onClick={() => { setShowProfileMenu(false); navigate('/dashboard'); }}>
+    Profile
+  </div>
+  <div onClick={() => { setShowProfileMenu(false); navigate('/'); }}>
+    Logout
+  </div>
+</div>
+)}
+
+          </div>
         </div>
       </div>
 
@@ -82,7 +112,6 @@ const NavScreen = () => {
             </button>
           );
         })}
-
       </div>
     </>
   );

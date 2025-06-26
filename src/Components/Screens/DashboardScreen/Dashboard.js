@@ -43,8 +43,8 @@ const Dashboard = () => {
             <p><strong>Customer Type:</strong> {userDetails.customer_type}</p>
             <p><strong>Status:</strong> {userDetails.status}</p>
             <p><strong>Remarks:</strong> {userDetails.remarks}</p>
-            <p><strong>Created By:</strong> {userDetails.created_by}</p>
-            <p><strong>Updated By:</strong> {userDetails.updated_by}</p>
+            {/* <p><strong>Created By:</strong> {userDetails.created_by}</p>
+            <p><strong>Updated By:</strong> {userDetails.updated_by}</p> */}
           </div>
         ) : (
           <p>Loading user details...</p>

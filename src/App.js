@@ -20,6 +20,7 @@ import './App.css';
 import ViewDelegates from './Components/Screens/Delegates/ViewDelegates';
 import AddDelegates from './Components/Screens/Delegates/AddDelegates';
 import { SnackbarProvider } from 'notistack'; 
+import Home from './DashboardReport/Home';
 function App() {
   return (
       <AuthProvider>
@@ -50,7 +51,7 @@ function App() {
   <Route path="/service-form" element={<ServiceRequestForm />} />
  <Route path="/view-delegates" element={<ViewDelegates />} />
 <Route path="/add-delegates" element={<AddDelegates />} />
-
+<Route path="/home" element={<Home />} />
         </Routes>
       </div>
     </Router>

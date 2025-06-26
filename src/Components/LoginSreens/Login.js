@@ -50,7 +50,7 @@ const handleLogin = async (e) => {
     login(user); // Optional if using context
 
     // Navigate to dashboard
-    navigate("/dashboard", { state: { userMobile: user.mobile } });
+    navigate("/home", { state: { userMobile: user.mobile } });
 
     console.log("User data from API:", user);
 

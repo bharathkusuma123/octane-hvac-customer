@@ -1,62 +1,3 @@
-/* Navbar.css
-
-.navbar-container {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background-color: white;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  border-top: 1px solid #ccc;
-  height: 60px;
-  z-index: 100;
-}
-
-.nav-item {
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: #555;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-
-.nav-item .icon {
-  font-size: 20px;
-}
-
-.nav-item.active {
-  color: #000;
-}
-
-.center-button {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #666;
-  color: white;
-  border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  z-index: 101;
-} */
-
-
-
-
-
-
-
-
 
 /* Top Navbar */
 .top-navbar {
@@ -73,7 +14,8 @@
   padding: 0 16px;
   border-bottom: 1px solid #e0e0e0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  z-index: 102;
+   /* z-index: 10000 !important; */
+    overflow: visible !important;
 }
 
 .logo-img {
@@ -86,6 +28,7 @@
   display: flex;
   gap: 16px;
    align-items: center;
+     position: relative; 
 }
 
 .top-icon {
@@ -98,6 +41,35 @@
 
 .top-icon:hover {
   color: #000;
+}
+
+
+.profile-dropdown {
+ position: relative;
+  display: inline-block; 
+  z-index: 9999;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+ top: 40px; 
+  background: white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  border-radius: 6px;
+  z-index: 999;
+  padding: 5px 0;
+  min-width: 120px;
+}
+
+.dropdown-menu div {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-menu div:hover {
+  background-color: #f0f0f0;
 }
 
 /* Bottom Navbar */

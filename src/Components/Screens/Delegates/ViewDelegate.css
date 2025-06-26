@@ -20,16 +20,13 @@
 }
 
 .delegate-table-add-btn {
-  background-color: #4CAF50;
+   background: #0180ff;
   color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  transition: background-color 0.3s;
+  padding: 12px 25px;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: 0.3s;
+  border: none !important;
 }
 
 .delegate-table-add-btn:hover {

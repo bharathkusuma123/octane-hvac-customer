@@ -14,30 +14,33 @@ const AddDelegates = () => {
   const navigate = useNavigate();
 
   // Fetch delegates
-  const fetchDelegates = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${baseURL}/delegates/?customer=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setDelegates(data.data || []);
-      } else {
-        console.error('Failed to fetch delegates');
-      }
-    } catch (error) {
-      console.error('Error fetching delegates:', error);
-    } finally {
-      setIsLoading(false);
+const fetchDelegates = async () => {
+  setIsLoading(true);
+  try {
+    const response = await fetch(`${baseURL}/delegates/?customer=${userId}`);
+    if (response.ok) {
+      const data = await response.json();
+      const filteredDelegates = (data.data || [])
+        .filter((delegate) => delegate.customer === userId)
+        .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at)); // Sort descending
+      setDelegates(filteredDelegates);
+    } else {
+      console.error('Failed to fetch delegates');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching delegates:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
     fetchDelegates();
   }, [userId]);
 
   const handleAddDelegate = () => {
-    // Implement your add delegate logic here
-    // This could navigate to a form or open a modal
     navigate('/add-delegates');
   };
 
@@ -46,7 +49,7 @@ const AddDelegates = () => {
       <div className="delegate-table-header">
         <h2 className="delegate-table-title">My Delegates</h2>
         <button onClick={handleAddDelegate} className="delegate-table-add-btn">
-          <FaUserPlus className="delegate-table-add-icon" /> Add Delegate
+          Add Delegate
         </button>
       </div>
 
@@ -57,6 +60,7 @@ const AddDelegates = () => {
           <table className="delegates-table">
             <thead>
               <tr>
+                <th>S.No</th>
                 <th>Delegate ID</th>
                 <th>Mobile Number</th>
                 <th>Service Item</th>
@@ -65,8 +69,9 @@ const AddDelegates = () => {
               </tr>
             </thead>
             <tbody>
-              {delegates.map((delegate) => (
+              {delegates.map((delegate, index) => (
                 <tr key={delegate.delegate_id}>
+                  <td>{index+1}</td>
                   <td>{delegate.delegate_id}</td>
                   <td>{delegate.delegate_mobile}</td>
                   <td>{delegate.service_item}</td>
