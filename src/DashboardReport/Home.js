@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { AuthContext } from "../Components/AuthContext/AuthContext";
 import NavScreen from "../Components/Screens/Navbar/Navbar";
+import baseURL from "../Components/ApiUrl/Apiurl";
 import "./Home.css";
 
 const Home = () => {
@@ -14,7 +15,7 @@ const Home = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await fetch("http://175.29.21.7:8006/service-pools/");
+        const response = await fetch(`${baseURL}/service-pools/`);
         if (response.ok) {
           const result = await response.json();
           const services = result.data || [];
@@ -28,7 +29,7 @@ const Home = () => {
 
     const fetchDelegates = async () => {
       try {
-        const response = await fetch("http://175.29.21.7:8006/delegates/");
+        const response = await fetch(`${baseURL}/delegates/`);
         if (response.ok) {
           const result = await response.json();
           const delegates = result.data || [];
@@ -42,7 +43,7 @@ const Home = () => {
 
     const fetchCustomerUsername = async () => {
       try {
-        const response = await fetch("http://175.29.21.7:8006/customers/");
+        const response = await fetch(`${baseURL}/customers/`);
         if (response.ok) {
           const result = await response.json();
           const customers = result.data || [];
@@ -65,7 +66,7 @@ const Home = () => {
 
   return (
     <div className="home">
-      {username && <h2 className="welcome-text">Hey,{username}</h2>}
+      {username && <h2 className="welcome-text">Hey, {username}</h2>}
       <div className="card-container">
         <div className="info-card">
           <h3>My Services</h3>
