@@ -590,17 +590,46 @@ const ServiceRequestForm = () => {
 const handleSubmit = async (e) => {
   e.preventDefault();
 
+  const selectedItem = serviceItems.find(
+    (item) => item.service_item_id === form.service_item
+  );
+
+  if (!selectedItem) {
+    enqueueSnackbar('Invalid service item selected.', { variant: 'error' });
+    return;
+  }
+
   const payload = {
-    request_id: Math.floor(Math.random() * 1000000),
-    ...form,
-    status: 'Unassigned',
-    source_type: 'Machine Alert',
-    customer: user?.customer_id,
-    created_by: 'Customer',
-    updated_by: 'Customer',
-    requested_by: user?.customer_id,
-    company: selectedCompany,
+    request_id: Math.floor(Math.random() * 1000000).toString(),
+    dynamics_service_order_no:  "string",
+    source_type: "Machine Alert",
+    request_details: form.request_details || "Service required",
+    alert_details: "string",
+    requested_by: user?.customer_id || "unknown",
+    preferred_date: form.preferred_date,
+    preferred_time: `${form.preferred_time}:00`,
+    status: "Open",
+    estimated_completion_time: `${form.preferred_time}:00`,
+    estimated_price: "0.00",
+    est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    act_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    act_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    act_material_cost: "0.00",
+    act_labour_hours: "0.00",
+    act_labour_cost: "0.00",
+    completion_notes: "Not yet completed",
+    created_by: "Customer",
+    updated_by: "Customer",
+    company: selectedCompany || "unknown",
+    service_item: form.service_item,
+    customer: user?.customer_id || "unknown",
+    pm_group: selectedItem?.pm_group || "default-pm",
+    assigned_engineer: "",
+    reopened_from: ""
   };
+
+  console.log("Submitting payload:", payload);
 
   try {
     const response = await fetch(`${baseURL}/service-pools/`, {
@@ -608,6 +637,8 @@ const handleSubmit = async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+
+    const contentType = response.headers.get('content-type');
 
     if (response.ok) {
       enqueueSnackbar('Service request submitted successfully!', { variant: 'success' });
@@ -622,12 +653,11 @@ const handleSubmit = async (e) => {
         customer: user?.customer_id,
       });
 
-      // Delay navigation slightly so the user sees the message
       setTimeout(() => {
         navigate('/request');
       }, 1500);
 
-      const userResponse = await fetch('http://175.29.21.7:8006/users/');
+      const userResponse = await fetch(`${baseURL}/users/`);
       const users = await userResponse.json();
 
       const serviceManager = users.find(
@@ -650,7 +680,19 @@ const handleSubmit = async (e) => {
         }
       }
     } else {
-      const errorData = await response.json();
+      let errorData = {};
+      try {
+        if (contentType?.includes('application/json')) {
+          errorData = await response.json();
+        } else {
+          const text = await response.text(); // fallback if not JSON
+          errorData.message = `Server responded with non-JSON: ${text.slice(0, 100)}...`;
+        }
+      } catch (err) {
+        errorData.message = 'Failed to parse error response.';
+      }
+
+      console.error('Backend error:', errorData);
       enqueueSnackbar(`Failed to submit request: ${errorData.message || 'Unknown error'}`, {
         variant: 'error',
       });
@@ -660,6 +702,7 @@ const handleSubmit = async (e) => {
     enqueueSnackbar('An error occurred. Please try again later.', { variant: 'error' });
   }
 };
+
 
   return (
     <div className="container service-request-form">

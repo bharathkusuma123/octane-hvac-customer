@@ -163,8 +163,8 @@ const RequestScreen = () => {
   const { user } = useContext(AuthContext);
   const userId = user?.user_id;
   const userName = user?.username;
-  console.log("from context data",userId,userName);
-  console.log("userdata",user);
+  // console.log("from context data",userId,userName);
+  // console.log("userdata",user);
 
   useEffect(() => {
     if (user?.customer_id) {
