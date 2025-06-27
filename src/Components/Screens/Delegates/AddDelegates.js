@@ -114,7 +114,7 @@ const AddDelegate = () => {
       <div className="card">
         <div className="card-header">
           <h5 className="mb-1">Add Delegate</h5>
-          <p>{userId}</p>
+          {/* <p>{userId}</p> */}
           <h6 className="text" style={{ color: 'white' }}>
             Please fill in the delegate details
           </h6>
