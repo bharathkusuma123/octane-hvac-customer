@@ -21,6 +21,7 @@ import ViewDelegates from './Components/Screens/Delegates/ViewDelegates';
 import AddDelegates from './Components/Screens/Delegates/AddDelegates';
 import { SnackbarProvider } from 'notistack'; 
 import Home from './DashboardReport/Home';
+import EditCustomer from "./Components/Screens/DashboardScreen/EditCustomer";
 function App() {
   return (
       <AuthProvider>
@@ -52,6 +53,7 @@ function App() {
  <Route path="/view-delegates" element={<ViewDelegates />} />
 <Route path="/add-delegates" element={<AddDelegates />} />
 <Route path="/home" element={<Home />} />
+<Route path="/edit-customer/:customer_id"  element={<EditCustomer />} />
         </Routes>
       </div>
     </Router>

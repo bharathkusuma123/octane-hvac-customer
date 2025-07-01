@@ -3,10 +3,12 @@ import "./Dashboard.css";
 import Navbar from "../../Screens/Navbar/Navbar";
 import axios from "axios";
 import baseURL from '../../ApiUrl/Apiurl';
+import { FaEdit } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
-
+  const navigate = useNavigate();
   useEffect(() => {
     const customerId = localStorage.getItem("userId"); // make sure you store this after login
 
@@ -23,12 +25,25 @@ const Dashboard = () => {
         });
     }
   }, []);
+   const handleEditClick = () => {
+    navigate(`/edit-customer/${userDetails.customer_id}`);
+  };
 
-  return (
+
+ return (
     <div className="dashboard-container">
       <Navbar />
       <div className="dashboard-content">
-        <h2>Customer Dashboard</h2>
+        <h2>
+          Customer Dashboard
+          {userDetails && (
+            <FaEdit
+              className="edit-icon"
+              onClick={handleEditClick}
+              style={{ marginLeft: "10px", cursor: "pointer", color: "blue" }}
+            />
+          )}
+        </h2>
         {userDetails ? (
           <div className="user-details">
             <p><strong>Customer ID:</strong> {userDetails.customer_id}</p>
@@ -43,8 +58,6 @@ const Dashboard = () => {
             <p><strong>Customer Type:</strong> {userDetails.customer_type}</p>
             <p><strong>Status:</strong> {userDetails.status}</p>
             <p><strong>Remarks:</strong> {userDetails.remarks}</p>
-            {/* <p><strong>Created By:</strong> {userDetails.created_by}</p>
-            <p><strong>Updated By:</strong> {userDetails.updated_by}</p> */}
           </div>
         ) : (
           <p>Loading user details...</p>
