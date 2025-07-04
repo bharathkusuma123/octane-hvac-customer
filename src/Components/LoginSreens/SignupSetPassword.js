@@ -1,8 +1,8 @@
-
 import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import Swal from 'sweetalert2';
 
 import logo from "../../Logos/hvac-logo-new.jpg";
 import "./SecurityQuestionsScreen.css";
@@ -34,8 +34,13 @@ const SecurityQuestionsScreen = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      Swal.fire({
+        icon: 'error',
+        title: 'Password Mismatch',
+        text: 'Passwords do not match!',
+      });
       return;
     }
 
@@ -58,16 +63,29 @@ const SecurityQuestionsScreen = () => {
       });
 
       if (response.ok) {
-        alert("Security questions and password updated successfully!");
-        navigate("/"); // Redirect to login
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Security questions and password updated successfully!',
+        }).then(() => {
+          navigate("/"); // Redirect to login
+        });
       } else {
         const errorData = await response.json();
         console.error("API error:", errorData);
-        alert("Failed to update user. Please try again.");
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Failed',
+          text: 'Failed to update user. Please try again.',
+        });
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("An error occurred. Please try again later.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An error occurred. Please try again later.',
+      });
     }
   };
 
@@ -191,4 +209,3 @@ const SecurityQuestionsScreen = () => {
 };
 
 export default SecurityQuestionsScreen;
-
