@@ -111,7 +111,7 @@ const AddDelegates = () => {
                 <th>S.No</th>
                 <th>Delegate ID</th>
                 <th>Mobile Number</th>
-                <th>Service Item</th>
+                {/* <th>Service Item</th> */}
                 <th>Status</th>
                 <th>Registered At</th>
               </tr>
@@ -122,7 +122,7 @@ const AddDelegates = () => {
                   <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                   <td>{delegate.delegate_id}</td>
                   <td>{delegate.delegate_mobile}</td>
-                  <td>{delegate.service_item}</td>
+                  {/* <td>{delegate.service_item}</td> */}
                   <td>
                     <span className={`status-badge ${delegate.status.toLowerCase()}`}>
                       {delegate.status}
