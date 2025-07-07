@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import Swal from "sweetalert2"; // ✅ SweetAlert2 import
 import baseURL from "../../ApiUrl/Apiurl";
-import "./EditCustomer.css"; // We'll define this next
+import "./EditCustomer.css";
 
 const EditCustomer = () => {
   const { customer_id } = useParams();
@@ -17,7 +18,7 @@ const EditCustomer = () => {
     address: "",
     customer_type: "",
     status: "",
-    remarks: ""
+    remarks: "",
   });
 
   useEffect(() => {
@@ -26,10 +27,26 @@ const EditCustomer = () => {
         const user = res.data.data.find((u) => u.customer_id === customer_id);
         if (user) {
           setFormData(user);
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Customer Not Found",
+            text: "The customer data could not be found.",
+            confirmButtonColor: "#d33",
+          });
+          navigate("/dashboard");
         }
       })
-      .catch((err) => console.error(err));
-  }, [customer_id]);
+      .catch((err) => {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to fetch customer data",
+          confirmButtonColor: "#d33",
+        });
+      });
+  }, [customer_id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,12 +57,24 @@ const EditCustomer = () => {
     e.preventDefault();
     axios.put(`${baseURL}/customers/${customer_id}/`, formData)
       .then(() => {
-        alert("Customer updated successfully!");
-        navigate("/dashboard");
+        Swal.fire({
+          icon: "success",
+          title: "Updated!",
+          text: "Customer updated successfully!",
+          confirmButtonColor: "#3085d6",
+        }).then(() => {
+          navigate("/dashboard");
+        });
       })
       .catch((err) => {
         console.error(err);
-        alert("Failed to update customer.");
+        const errorMessage = err.response?.data?.message || "Failed to update customer.";
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: errorMessage,
+          confirmButtonColor: "#d33",
+        });
       });
   };
 
@@ -57,14 +86,12 @@ const EditCustomer = () => {
           {[
             { name: "full_name", label: "Full Name" },
             { name: "email", label: "Email", type: "email" },
-            // { name: "mobile", label: "Mobile" },
-            // { name: "telephone", label: "Telephone" },
             { name: "city", label: "City" },
             { name: "country_code", label: "Country Code" },
             { name: "address", label: "Address" },
             { name: "customer_type", label: "Customer Type" },
             { name: "status", label: "Status" },
-            { name: "remarks", label: "Remarks" }
+            { name: "remarks", label: "Remarks" },
           ].map(({ name, label, type = "text" }) => (
             <div className="form-group" key={name}>
               <label>{label}</label>
@@ -78,17 +105,18 @@ const EditCustomer = () => {
             </div>
           ))}
 
-           <div className="button-group">
-             <button
-    type="button"
-    className="back-btn"
-    onClick={() => navigate("/dashboard")}
-  >
-    Back
-  </button>
-  <button type="submit" className="submit-btn">Update</button>
- 
-</div>
+          <div className="button-group">
+            <button
+              type="button"
+              className="back-btn"
+              onClick={() => navigate("/dashboard")}
+            >
+              Back
+            </button>
+            <button type="submit" className="submit-btn">
+              Update
+            </button>
+          </div>
         </form>
       </div>
     </div>

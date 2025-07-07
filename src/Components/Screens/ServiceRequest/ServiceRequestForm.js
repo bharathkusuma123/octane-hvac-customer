@@ -531,16 +531,15 @@ import './ServiceRequestForm.css';
 import { AuthContext } from '../../AuthContext/AuthContext';
 import baseURL from '../../ApiUrl/Apiurl';
 import Notification_Url from '../../ApiUrl/PushNotificanURL';
-import { useSnackbar } from 'notistack'; // ← NEW
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+
 const ServiceRequestForm = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const { enqueueSnackbar } = useSnackbar(); // ← Snackbar instance
-
   const userId = user?.user_id;
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
-
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -573,11 +572,21 @@ const ServiceRequestForm = () => {
             setServiceItems(filteredItems);
           }
         } else {
-          enqueueSnackbar('Failed to load service items', { variant: 'error' });
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load service items',
+            confirmButtonColor: '#d33',
+          });
         }
       } catch (error) {
         console.error('Error fetching service items:', error);
-        enqueueSnackbar('Error loading service items', { variant: 'error' });
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Something went wrong while loading service items.',
+          confirmButtonColor: '#d33',
+        });
       }
     };
 
@@ -587,122 +596,144 @@ const ServiceRequestForm = () => {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  const selectedItem = serviceItems.find(
-    (item) => item.service_item_id === form.service_item
-  );
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  if (!selectedItem) {
-    enqueueSnackbar('Invalid service item selected.', { variant: 'error' });
-    return;
-  }
+    const selectedItem = serviceItems.find(
+      (item) => item.service_item_id === form.service_item
+    );
 
-  const payload = {
-    request_id: Math.floor(Math.random() * 1000000).toString(),
-    dynamics_service_order_no:  "string",
-    source_type: "Machine Alert",
-    request_details: form.request_details || "Service required",
-    alert_details: "string",
-    requested_by: user?.customer_id || "unknown",
-    preferred_date: form.preferred_date,
-    preferred_time: `${form.preferred_time}:00`,
-    status: "Open",
-    estimated_completion_time: `${form.preferred_time}:00`,
-    estimated_price: "0.00",
-    est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-    est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-    act_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-    act_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-    act_material_cost: "0.00",
-    act_labour_hours: "0.00",
-    act_labour_cost: "0.00",
-    completion_notes: "Not yet completed",
-    created_by: "Customer",
-    updated_by: "Customer",
-    company: selectedCompany || "unknown",
-    service_item: form.service_item,
-    customer: user?.customer_id || "unknown",
-    pm_group: selectedItem?.pm_group || "default-pm",
-    assigned_engineer: "",
-    reopened_from: ""
-  };
+    if (!selectedItem) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Invalid Input',
+        text: 'Please select a valid service item.',
+        confirmButtonColor: '#f8bb86',
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
-  console.log("Submitting payload:", payload);
+    const payload = {
+      request_id: Math.floor(Math.random() * 1000000).toString(),
+      dynamics_service_order_no: "string",
+      source_type: "Machine Alert",
+      request_details: form.request_details || "Service required",
+      alert_details: "string",
+      requested_by: user?.customer_id || "unknown",
+      preferred_date: form.preferred_date,
+      preferred_time: `${form.preferred_time}:00`,
+      status: "Open",
+      estimated_completion_time: `${form.preferred_time}:00`,
+      estimated_price: "0.00",
+      est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+      est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+      act_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+      act_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+      act_material_cost: "0.00",
+      act_labour_hours: "0.00",
+      act_labour_cost: "0.00",
+      completion_notes: "Not yet completed",
+      created_by: "Customer",
+      updated_by: "Customer",
+      company: selectedCompany || "unknown",
+      service_item: form.service_item,
+      customer: user?.customer_id || "unknown",
+      pm_group: selectedItem?.pm_group || "default-pm",
+      assigned_engineer: "",
+      reopened_from: ""
+    };
 
-  try {
-    const response = await fetch(`${baseURL}/service-pools/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    const contentType = response.headers.get('content-type');
-
-    if (response.ok) {
-      enqueueSnackbar('Service request submitted successfully!', { variant: 'success' });
-
-      setForm({
-        request_details: '',
-        preferred_date: '',
-        preferred_time: '',
-        status: 'Unassigned',
-        source_type: 'Machine Alert',
-        service_item: '',
-        customer: user?.customer_id,
+    try {
+      const response = await fetch(`${baseURL}/service-pools/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      setTimeout(() => {
-        navigate('/request');
-      }, 1500);
+      const contentType = response.headers.get('content-type');
 
-      const userResponse = await fetch(`${baseURL}/users/`);
-      const users = await userResponse.json();
-
-      const serviceManager = users.find(
-        (u) => u.role === 'Service Manager' && u.fcm_token
-      );
-
-      if (serviceManager) {
-        const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token: serviceManager.fcm_token,
-            title: 'New Service Request',
-            body: `Service request raised by ${user?.customer_id}`,
-          }),
+      if (response.ok) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Service request submitted successfully!',
+          confirmButtonColor: '#3085d6',
+        }).then(() => {
+          navigate('/request');
         });
 
-        if (!notifyResponse.ok) {
-          enqueueSnackbar('Service manager notification failed', { variant: 'warning' });
-        }
-      }
-    } else {
-      let errorData = {};
-      try {
-        if (contentType?.includes('application/json')) {
-          errorData = await response.json();
-        } else {
-          const text = await response.text(); // fallback if not JSON
-          errorData.message = `Server responded with non-JSON: ${text.slice(0, 100)}...`;
-        }
-      } catch (err) {
-        errorData.message = 'Failed to parse error response.';
-      }
+        setForm({
+          request_details: '',
+          preferred_date: '',
+          preferred_time: '',
+          status: 'Unassigned',
+          source_type: 'Machine Alert',
+          service_item: '',
+          customer: user?.customer_id,
+        });
 
-      console.error('Backend error:', errorData);
-      enqueueSnackbar(`Failed to submit request: ${errorData.message || 'Unknown error'}`, {
-        variant: 'error',
+        const userResponse = await fetch(`${baseURL}/users/`);
+        const users = await userResponse.json();
+
+        const serviceManager = users.find(
+          (u) => u.role === 'Service Manager' && u.fcm_token
+        );
+
+        if (serviceManager) {
+          const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: serviceManager.fcm_token,
+              title: 'New Service Request',
+              body: `Service request raised by ${user?.customer_id}`,
+            }),
+          });
+
+          if (!notifyResponse.ok) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Notification Failed',
+              text: 'Service manager notification could not be delivered.',
+              confirmButtonColor: '#f8bb86',
+            });
+          }
+        }
+      } else {
+        let errorData = {};
+        try {
+          if (contentType?.includes('application/json')) {
+            errorData = await response.json();
+          } else {
+            const text = await response.text();
+            errorData.message = `Non-JSON error: ${text.slice(0, 100)}...`;
+          }
+        } catch (err) {
+          errorData.message = 'Failed to parse error response.';
+        }
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorData.message || 'Failed to submit request.',
+          confirmButtonColor: '#d33',
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An error occurred while submitting. Please try again later.',
+        confirmButtonColor: '#d33',
       });
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error('Error submitting form:', error);
-    enqueueSnackbar('An error occurred. Please try again later.', { variant: 'error' });
-  }
-};
-
+  };
 
   return (
     <div className="container service-request-form">
@@ -727,9 +758,7 @@ const handleSubmit = async (e) => {
                 >
                   <option value="">Select Service Item</option>
                   {serviceItems.length === 0 ? (
-                    <option value="" disabled>
-                      No service items found
-                    </option>
+                    <option value="" disabled>No service items found</option>
                   ) : (
                     serviceItems.map((item) => (
                       <option key={item.service_item_id} value={item.service_item_id}>
@@ -777,8 +806,8 @@ const handleSubmit = async (e) => {
               </div>
 
               <div className="d-flex justify-content-center mt-3 gap-3">
-                <button type="submit" className="submit-btn">
-                  Submit
+                <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </div>
@@ -791,3 +820,5 @@ const handleSubmit = async (e) => {
 };
 
 export default ServiceRequestForm;
+
+
