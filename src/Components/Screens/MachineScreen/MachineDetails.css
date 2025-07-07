@@ -1,0 +1,32 @@
+
+
+.table-container {
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  overflow-x: auto;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  color: #fafdfd;
+  background-color: #0096D6;
+  z-index: 1;
+}
+
+.table td, .table th {
+  vertical-align: middle;
+  white-space: nowrap;
+  padding: 12px 16px;
+}
+
+@media (max-width: 576px) {
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .search-bar input {
+    width: 100%;
+  }
+}

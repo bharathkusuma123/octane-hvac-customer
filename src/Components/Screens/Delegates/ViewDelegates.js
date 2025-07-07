@@ -110,6 +110,7 @@ const AddDelegates = () => {
               <tr>
                 <th>S.No</th>
                 <th>Delegate ID</th>
+                 <th>Delegate Name</th>
                 <th>Mobile Number</th>
                 {/* <th>Service Item</th> */}
                 <th>Status</th>
@@ -120,7 +121,16 @@ const AddDelegates = () => {
               {paginatedData.map((delegate, index) => (
                 <tr key={delegate.delegate_id}>
                   <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                  <td>{delegate.delegate_id}</td>
+                 <td>
+  <span
+    onClick={() => navigate(`/delegate-service-items/${delegate.delegate_id}`)}
+    style={{ color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
+  >
+    {delegate.delegate_id}
+  </span>
+</td>
+
+                  <td>{delegate.delegate_name}</td>
                   <td>{delegate.delegate_mobile}</td>
                   {/* <td>{delegate.service_item}</td> */}
                   <td>
