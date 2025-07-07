@@ -597,143 +597,278 @@ const ServiceRequestForm = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setIsSubmitting(true);
+
+  //   const selectedItem = serviceItems.find(
+  //     (item) => item.service_item_id === form.service_item
+  //   );
+
+  //   if (!selectedItem) {
+  //     Swal.fire({
+  //       icon: 'warning',
+  //       title: 'Invalid Input',
+  //       text: 'Please select a valid service item.',
+  //       confirmButtonColor: '#f8bb86',
+  //     });
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   const payload = {
+  //     request_id: Math.floor(Math.random() * 1000000).toString(),
+  //     dynamics_service_order_no: "string",
+  //     source_type: "Machine Alert",
+  //     request_details: form.request_details || "Service required",
+  //     alert_details: "string",
+  //     requested_by: user?.customer_id || "unknown",
+  //     preferred_date: form.preferred_date,
+  //     preferred_time: `${form.preferred_time}:00`,
+  //     status: "Open",
+  //     estimated_completion_time: `${form.preferred_time}:00`,
+  //     estimated_price: "0.00",
+  //     est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+  //     est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+  //     act_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+  //     act_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+  //     act_material_cost: "0.00",
+  //     act_labour_hours: "0.00",
+  //     act_labour_cost: "0.00",
+  //     completion_notes: "Not yet completed",
+  //     created_by: "Customer",
+  //     updated_by: "Customer",
+  //     company: selectedCompany || "unknown",
+  //     service_item: form.service_item,
+  //     customer: user?.customer_id || "unknown",
+  //     pm_group: selectedItem?.pm_group || "default-pm",
+  //     assigned_engineer: "",
+  //     reopened_from: ""
+  //   };
+
+  //   try {
+  //     const response = await fetch(`${baseURL}/service-pools/`, {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify(payload),
+  //     });
+
+  //     const contentType = response.headers.get('content-type');
+
+  //     if (response.ok) {
+  //       Swal.fire({
+  //         icon: 'success',
+  //         title: 'Success',
+  //         text: 'Service request submitted successfully!',
+  //         confirmButtonColor: '#3085d6',
+  //       }).then(() => {
+  //         navigate('/request');
+  //       });
+
+  //       setForm({
+  //         request_details: '',
+  //         preferred_date: '',
+  //         preferred_time: '',
+  //         status: 'Unassigned',
+  //         source_type: 'Machine Alert',
+  //         service_item: '',
+  //         customer: user?.customer_id,
+  //       });
+
+  //       const userResponse = await fetch(`${baseURL}/users/`);
+  //       const users = await userResponse.json();
+
+  //       const serviceManager = users.find(
+  //         (u) => u.role === 'Service Manager' && u.fcm_token
+  //       );
+
+  //       if (serviceManager) {
+  //         const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
+  //           method: 'POST',
+  //           headers: { 'Content-Type': 'application/json' },
+  //           body: JSON.stringify({
+  //             token: serviceManager.fcm_token,
+  //             title: 'New Service Request',
+  //             body: `Service request raised by ${user?.customer_id}`,
+  //           }),
+  //         });
+
+  //         if (!notifyResponse.ok) {
+  //           Swal.fire({
+  //             icon: 'warning',
+  //             title: 'Notification Failed',
+  //             text: 'Service manager notification could not be delivered.',
+  //             confirmButtonColor: '#f8bb86',
+  //           });
+  //         }
+  //       }
+  //     } else {
+  //       let errorData = {};
+  //       try {
+  //         if (contentType?.includes('application/json')) {
+  //           errorData = await response.json();
+  //         } else {
+  //           const text = await response.text();
+  //           errorData.message = `Non-JSON error: ${text.slice(0, 100)}...`;
+  //         }
+  //       } catch (err) {
+  //         errorData.message = 'Failed to parse error response.';
+  //       }
+
+  //       Swal.fire({
+  //         icon: 'error',
+  //         title: 'Error',
+  //         text: errorData.message || 'Failed to submit request.',
+  //         confirmButtonColor: '#d33',
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error submitting form:', error);
+  //     Swal.fire({
+  //       icon: 'error',
+  //       title: 'Error',
+  //       text: 'An error occurred while submitting. Please try again later.',
+  //       confirmButtonColor: '#d33',
+  //     });
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    const selectedItem = serviceItems.find(
-      (item) => item.service_item_id === form.service_item
-    );
+  const selectedItem = serviceItems.find(
+    (item) => item.service_item_id === form.service_item
+  );
 
-    if (!selectedItem) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Invalid Input',
-        text: 'Please select a valid service item.',
-        confirmButtonColor: '#f8bb86',
+  if (!selectedItem) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Invalid Input',
+      text: 'Please select a valid service item.',
+      confirmButtonColor: '#f8bb86',
+    });
+    setIsSubmitting(false);
+    return;
+  }
+
+  const payload = {
+    request_id: Math.floor(Math.random() * 1000000).toString(),
+    dynamics_service_order_no: "string",
+    source_type: "Machine Alert",
+    request_details: form.request_details || "Service required",
+    alert_details: "string",
+    requested_by: user?.customer_id || "unknown",
+    preferred_date: form.preferred_date,
+    preferred_time: `${form.preferred_time}:00`,
+    status: "Open",
+    estimated_completion_time: `${form.preferred_time}:00`,
+    estimated_price: "0.00",
+    est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    act_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    act_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
+    act_material_cost: "0.00",
+    act_labour_hours: "0.00",
+    act_labour_cost: "0.00",
+    completion_notes: "Not yet completed",
+    created_by: "Customer",
+    updated_by: "Customer",
+    company: selectedCompany || "unknown",
+    service_item: form.service_item,
+    customer: user?.customer_id || "unknown",
+    pm_group: selectedItem?.pm_group || "default-pm",
+    assigned_engineer: "",
+    reopened_from: ""
+  };
+
+  try {
+    const response = await fetch(`${baseURL}/service-pools/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      const data = await response.json(); // Parse the response data
+      
+      // Only show success if the response is truly successful
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Service request submitted successfully!',
+        confirmButtonColor: '#3085d6',
       });
-      setIsSubmitting(false);
-      return;
-    }
+      
+      navigate('/request');
 
-    const payload = {
-      request_id: Math.floor(Math.random() * 1000000).toString(),
-      dynamics_service_order_no: "string",
-      source_type: "Machine Alert",
-      request_details: form.request_details || "Service required",
-      alert_details: "string",
-      requested_by: user?.customer_id || "unknown",
-      preferred_date: form.preferred_date,
-      preferred_time: `${form.preferred_time}:00`,
-      status: "Open",
-      estimated_completion_time: `${form.preferred_time}:00`,
-      estimated_price: "0.00",
-      est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-      est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-      act_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-      act_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
-      act_material_cost: "0.00",
-      act_labour_hours: "0.00",
-      act_labour_cost: "0.00",
-      completion_notes: "Not yet completed",
-      created_by: "Customer",
-      updated_by: "Customer",
-      company: selectedCompany || "unknown",
-      service_item: form.service_item,
-      customer: user?.customer_id || "unknown",
-      pm_group: selectedItem?.pm_group || "default-pm",
-      assigned_engineer: "",
-      reopened_from: ""
-    };
-
-    try {
-      const response = await fetch(`${baseURL}/service-pools/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      setForm({
+        request_details: '',
+        preferred_date: '',
+        preferred_time: '',
+        status: 'Unassigned',
+        source_type: 'Machine Alert',
+        service_item: '',
+        customer: user?.customer_id,
       });
 
-      const contentType = response.headers.get('content-type');
-
-      if (response.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Success',
-          text: 'Service request submitted successfully!',
-          confirmButtonColor: '#3085d6',
-        }).then(() => {
-          navigate('/request');
-        });
-
-        setForm({
-          request_details: '',
-          preferred_date: '',
-          preferred_time: '',
-          status: 'Unassigned',
-          source_type: 'Machine Alert',
-          service_item: '',
-          customer: user?.customer_id,
-        });
-
+      try {
         const userResponse = await fetch(`${baseURL}/users/`);
-        const users = await userResponse.json();
+        if (userResponse.ok) {
+          const users = await userResponse.json();
+          const serviceManager = users.find(
+            (u) => u.role === 'Service Manager' && u.fcm_token
+          );
 
-        const serviceManager = users.find(
-          (u) => u.role === 'Service Manager' && u.fcm_token
-        );
-
-        if (serviceManager) {
-          const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token: serviceManager.fcm_token,
-              title: 'New Service Request',
-              body: `Service request raised by ${user?.customer_id}`,
-            }),
-          });
-
-          if (!notifyResponse.ok) {
-            Swal.fire({
-              icon: 'warning',
-              title: 'Notification Failed',
-              text: 'Service manager notification could not be delivered.',
-              confirmButtonColor: '#f8bb86',
+          if (serviceManager) {
+            const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                token: serviceManager.fcm_token,
+                title: 'New Service Request',
+                body: `Service request raised by ${user?.customer_id}`,
+              }),
             });
-          }
-        }
-      } else {
-        let errorData = {};
-        try {
-          if (contentType?.includes('application/json')) {
-            errorData = await response.json();
-          } else {
-            const text = await response.text();
-            errorData.message = `Non-JSON error: ${text.slice(0, 100)}...`;
-          }
-        } catch (err) {
-          errorData.message = 'Failed to parse error response.';
-        }
 
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: errorData.message || 'Failed to submit request.',
-          confirmButtonColor: '#d33',
-        });
+            if (!notifyResponse.ok) {
+              console.warn('Notification failed to send');
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Notification error:', notificationError);
       }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      Swal.fire({
+    } else {
+      let errorMessage = 'Failed to submit request.';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+
+      await Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'An error occurred while submitting. Please try again later.',
+        text: errorMessage,
         confirmButtonColor: '#d33',
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'An error occurred while submitting. Please try again later.',
+      confirmButtonColor: '#d33',
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="container service-request-form">
