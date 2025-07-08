@@ -21,10 +21,13 @@ const MachineDetails = () => {
   const [delegates, setDelegates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(null); 
-  const [submittedDelegates, setSubmittedDelegates] = useState(() => {
+const [submittedDelegates, setSubmittedDelegates] = useState(() => {
   const saved = localStorage.getItem('submittedDelegates');
   return saved ? JSON.parse(saved) : [];
 });
+const [assignedPermissions, setAssignedPermissions] = useState([]);
+
+
 
   useEffect(() => {
     const fetchDelegates = async () => {
@@ -68,45 +71,62 @@ const MachineDetails = () => {
   let count = parseInt(localStorage.getItem(key) || "0", 10);
   count += 1;
   localStorage.setItem(key, count.toString());
-  return `IID${count.toString().padStart(2, "0")}`; // e.g., IID01, IID02
+  return `IID${count.toString().padStart(2, "0")}`; 
 };
 
 const handleSubmit = async (delegate) => {
   setSubmittingId(delegate.delegate_id);
 
-  const payload = {
-    item_id: getNextItemId(),
-    delegate: delegate.delegate_id,
-    service_item: serviceItemId,
-    completed_at: new Date().toISOString(),
-  };
-
-  permissionFields.forEach((field) => {
-    payload[field.key] = delegate[field.key];
-  });
-
-  console.log("Submitting Payload:", payload); 
-
   try {
+    // Fetch existing assignments
+    const checkRes = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`);
+    if (!checkRes.ok) throw new Error("Failed to fetch existing assignments");
+
+    const existingData = await checkRes.json();
+
+    // Check if the serviceItemId is already assigned to ANY delegate
+    const existingAssignment = existingData.data.find(
+      (item) => item.service_item === serviceItemId
+    );
+
+    if (existingAssignment) {
+      if (existingAssignment.delegate !== delegate.delegate_id) {
+        alert(`Access already assigned to another delegate for this service item.`);
+        setSubmittingId(null);
+        return;
+      }
+      // If same delegate is re-assigning, allow it to proceed
+    }
+
+    // Proceed with submission
+    const payload = {
+      item_id: getNextItemId(),
+      delegate: delegate.delegate_id,
+      service_item: serviceItemId,
+      completed_at: new Date().toISOString(),
+    };
+
+    permissionFields.forEach((field) => {
+      payload[field.key] = delegate[field.key];
+    });
+
     const res = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    const responseText = await res.text(); // get response body even if failed
+    const responseText = await res.text();
     console.log("API Response:", res.status, responseText);
 
-    if (!res.ok) {
-      throw new Error(`Failed to submit for ${delegate.delegate_id}`);
-    }
+    if (!res.ok) throw new Error(`Failed to submit for ${delegate.delegate_id}`);
 
+    // Update submitted delegate list
     setSubmittedDelegates((prev) => {
-  const updated = [...prev, delegate.delegate_id];
-  localStorage.setItem('submittedDelegates', JSON.stringify(updated));
-  return updated;
-});
-
+      const updated = [...prev, { delegateId: delegate.delegate_id, serviceItemId }];
+localStorage.setItem('submittedDelegates', JSON.stringify(updated));
+return updated;
+    });
 
     alert(`Permissions submitted for ${delegate.delegate_name}`);
   } catch (err) {
@@ -116,6 +136,55 @@ const handleSubmit = async (delegate) => {
     setSubmittingId(null);
   }
 };
+
+useEffect(() => {
+  const fetchDelegates = async () => {
+    try {
+      const [delegateRes, taskRes] = await Promise.all([
+        fetch(`http://175.29.21.7:8006/delegates/`),
+        fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`),
+      ]);
+
+      if (!delegateRes.ok || !taskRes.ok) throw new Error('API fetch error');
+
+      const delegateData = await delegateRes.json();
+      const taskData = await taskRes.json();
+
+      // Get all previous assignments
+      setAssignedPermissions(taskData.data);
+
+      const filteredDelegates = delegateData.data
+        .filter((d) => d.customer === userId)
+        .map((d) => {
+          const existing = taskData.data.find(
+            (item) =>
+              item.service_item === serviceItemId &&
+              item.delegate === d.delegate_id
+          );
+
+          return {
+            ...d,
+            ...permissionFields.reduce((acc, field) => {
+              acc[field.key] = existing ? Boolean(existing[field.key]) : false;
+              return acc;
+            }, {}),
+          };
+        });
+
+      setDelegates(filteredDelegates);
+    } catch (err) {
+      console.error('Failed to load delegates or assignments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (userId) fetchDelegates();
+}, [userId, serviceItemId]);
+
+
+
+
 
 
   return (
@@ -143,37 +212,59 @@ const handleSubmit = async (delegate) => {
               </tr>
             </thead>
             <tbody>
-              {delegates.map((d, index) => (
-                <tr key={d.delegate_id}>
-                  <td>{index + 1}</td>
-                  <td>{d.delegate_id}</td>
-                  <td>{d.delegate_name}</td>
-                  {permissionFields.map((p) => (
-                    <td key={p.key}>
-                      <input
-                        type="checkbox"
-                        checked={d[p.key]}
-                        onChange={(e) =>
-                          handleCheckboxChange(d.delegate_id, p.key, e.target.checked)
-                        }
-                      />
-                    </td>
-                  ))}
-                  <td>
-                   <button
-  className="btn btn-sm btn-primary"
-  disabled={submittingId === d.delegate_id || submittedDelegates.includes(d.delegate_id)}
-  onClick={() => handleSubmit(d)}
->
-  {submittingId === d.delegate_id
-    ? "Submitting..."
-    : submittedDelegates.includes(d.delegate_id)
-    ? "Submitted"
-    : "Submit"}
-</button>
-                  </td>
-                </tr>
-              ))}
+              {delegates.map((d, index) => {
+  const isSubmitted = submittedDelegates.some(
+    (entry) =>
+      entry.delegateId === d.delegate_id &&
+      entry.serviceItemId === serviceItemId
+  );
+
+  return (
+    <tr key={d.delegate_id}>
+      <td>{index + 1}</td>
+      <td>{d.delegate_id}</td>
+      <td>{d.delegate_name}</td>
+      {permissionFields.map((p) => (
+        <td key={p.key}>
+          <input
+            type="checkbox"
+            checked={d[p.key]}
+            disabled={assignedPermissions.some(
+              (item) =>
+                item.service_item === serviceItemId &&
+                item.delegate !== d.delegate_id
+            )}
+            onChange={(e) =>
+              handleCheckboxChange(d.delegate_id, p.key, e.target.checked)
+            }
+          />
+        </td>
+      ))}
+      <td>
+        <button
+          className="btn btn-sm btn-primary"
+          disabled={
+            submittingId === d.delegate_id ||
+            isSubmitted ||
+            assignedPermissions.some(
+              (item) =>
+                item.service_item === serviceItemId &&
+                item.delegate !== d.delegate_id
+            )
+          }
+          onClick={() => handleSubmit(d)}
+        >
+          {submittingId === d.delegate_id
+            ? "Submitting..."
+            : isSubmitted
+            ? "Submitted"
+            : "Submit"}
+        </button>
+      </td>
+    </tr>
+  );
+})}
+
             </tbody>
           </table>
         ) : (
