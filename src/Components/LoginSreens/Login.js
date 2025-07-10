@@ -29,10 +29,8 @@ const handleLogin = async (e) => {
   setError('');
 
   try {
-    // Generate FCM token
     const fcmToken = await generateToken();
 
-    // Send login request with FCM token
     const response = await axios.post(`${baseURL}/customer-login/`, {
       mobile: mobile,
       password,
@@ -42,19 +40,22 @@ const handleLogin = async (e) => {
     const user = response.data.data;
 
     // Store user data in localStorage
-    localStorage.setItem("userId", user.customer_id);
+    localStorage.setItem("userId", user.customer_id || user.delegate_id); // fallback for delegate
     localStorage.setItem("userMobile", user.mobile);
-    localStorage.setItem("userName", user.full_name);
-    localStorage.setItem("customerType", user.customer_type);
+    localStorage.setItem("userName", user.full_name || user.delegate_name);
+    localStorage.setItem("customerType", user.customer_type || "delegate");
 
-    login(user); // Optional if using context
+    login(user);
 
-    // Navigate to dashboard
-    navigate("/home", { state: { userMobile: user.mobile } });
+    // ✅ Conditional Navigation
+    if (user.delegate_id) {
+      navigate("/delegate-home", { state: { userMobile: user.mobile } });
+    } else {
+      navigate("/home", { state: { userMobile: user.mobile } });
+    }
 
     console.log("User data from API:", user);
 
-    // Send push notification after successful login
     if (fcmToken) {
       try {
         const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
@@ -64,7 +65,7 @@ const handleLogin = async (e) => {
           },
           body: JSON.stringify({
             token: fcmToken,
-            title: 'Welcome to LandNest!',
+            title: 'Welcome to Octane!',
             body: 'You have successfully logged in.',
           }),
         });
@@ -79,8 +80,6 @@ const handleLogin = async (e) => {
       } catch (notifyError) {
         console.error('Error sending notification:', notifyError);
       }
-    } else {
-      console.warn('No FCM token available for notification.');
     }
 
   } catch (err) {
@@ -88,6 +87,7 @@ const handleLogin = async (e) => {
     setError("Invalid mobile number or password");
   }
 };
+
 
 
 

@@ -24,9 +24,19 @@ import Home from './DashboardReport/Home';
 import EditCustomer from "./Components/Screens/DashboardScreen/EditCustomer";
 import MachineDetails from "./Components/Screens/MachineScreen/MachineDetails";
 import DelegateSetviceItems from './Components/Screens/Delegates/DelegateSetviceItems';
+import DelegateHome from "./DelegateProfile/DelegateHome/DelegateHome";
+import DelegateRequestForm from './DelegateProfile/DelegateRequest/DelegateRequestForm';
+import DelegateSurveyForm from './DelegateProfile/DelegateSurvey/DelegateSurveyForm';
+import DelegateServiceItems from './DelegateProfile/DelegateServiceItems/DelegateServiceItems';
+import { DelegateServiceItemProvider } from "./Components/AuthContext/DelegateServiceItemContext";
+
+
+
+
 function App() {
   return (
       <AuthProvider>
+         <DelegateServiceItemProvider>
          <SnackbarProvider 
         maxSnack={3} 
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
@@ -58,10 +68,15 @@ function App() {
 <Route path="/edit-customer/:customer_id"  element={<EditCustomer />} />
   <Route path="/machines/:serviceItemId" element={<MachineDetails />} />
   <Route path="/delegate-service-items/:delegateId" element={<DelegateSetviceItems />} />
+   <Route path="/delegate-home" element={<DelegateHome />} />
+   <Route path="/delegate-request" element={<DelegateRequestForm />} />
+   <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
+   <Route path="/delegate-machines" element={<DelegateServiceItems />} />
         </Routes>
       </div>
     </Router>
     </SnackbarProvider>
+    </DelegateServiceItemProvider>
     </AuthProvider>
   );
 }
