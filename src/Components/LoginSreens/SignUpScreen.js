@@ -29,31 +29,40 @@ const handleSubmit = async (e) => {
 
   setLoading(true);
   try {
-    const response = await fetch(`${baseURL}/customers/`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch users");
-    }
+    const response = await fetch("http://175.29.21.7:8006/customer-signup/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ mobile, email }),
+    });
 
     const result = await response.json();
-    const users = result.data || [];
+    console.log("API Response:", result);
 
-    const matchedUser = users.find(
-      (user) =>
-        user.mobile === mobile &&
-        user.email.toLowerCase() === email.toLowerCase()
-    );
+    if (response.ok && result.customer_id && result.company_id) {
+      const user = {
+        customer_id: result.customer_id,
+        company_id: result.company_id,
+        mobile,
+        email,
+      };
 
-    if (matchedUser) {
-      navigate("/customer-data", { state: { user: matchedUser } });
+      navigate("/customer-data", { state: { user } });
     } else {
-      alert("No matching customer found with provided mobile and email.");
+      alert(result.message || "No matching customer found.");
     }
   } catch (error) {
-    alert("Error checking user details. Please try again later.");
-    console.error("Error fetching users:", error);
+    alert("Error checking user details.");
+    console.error("Error during user verification:", error);
+  } finally {
+    setLoading(false);
   }
-  setLoading(false);
 };
+
+
+
+
 
   return (
     <div className="signup-container">

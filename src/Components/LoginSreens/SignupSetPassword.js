@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, use } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaLock } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
@@ -31,6 +31,10 @@ const SecurityQuestionsScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user_id = location.state?.user_id || "N/A";
+  const company_id = location.state?.company_id || "N/A";
+
+  console.log("user_id:", user_id);
+  console.log("company_id:", company_id);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,7 +55,11 @@ const SecurityQuestionsScreen = () => {
       security_answer2: a2,
       password: password,
       is_registered_by_customer: true,
+      company_id: company_id,
+      user_id: user_id,
     };
+    console.log("Data to be sent:", JSON.stringify(data, null, 2));
+
 
     try {
       const response = await fetch(`${baseURL}/customers/${user_id}/`, {

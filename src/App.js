@@ -29,6 +29,7 @@ import DelegateRequestForm from './DelegateProfile/DelegateRequest/DelegateReque
 import DelegateSurveyForm from './DelegateProfile/DelegateSurvey/DelegateSurveyForm';
 import DelegateServiceItems from './DelegateProfile/DelegateServiceItems/DelegateServiceItems';
 import { DelegateServiceItemProvider } from "./Components/AuthContext/DelegateServiceItemContext";
+import Connect from './Components/Screens/Connect/Connect';
 
 
 
@@ -58,6 +59,7 @@ function App() {
 <Route path="/navbar" element={<Navbar />} />
 
    <Route path="/dashboard" element={<DashboardScreen />} />
+     <Route path="/connect" element={<Connect />} />
         <Route path="/machine" element={<MachineScreen />} />
         <Route path="/request" element={<RequestScreen />} />
         <Route path="/feedback" element={<FeedbackScreen />} />

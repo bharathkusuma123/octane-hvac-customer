@@ -69,6 +69,9 @@ const NavScreen = () => {
   <div onClick={() => { setShowProfileMenu(false); navigate('/dashboard'); }}>
     Profile
   </div>
+   <div onClick={() => { setShowProfileMenu(false); navigate('/connect'); }}>
+    Connect
+  </div>
   <div onClick={() => { setShowProfileMenu(false); navigate('/'); }}>
     Logout
   </div>

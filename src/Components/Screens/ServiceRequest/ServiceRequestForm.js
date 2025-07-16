@@ -537,7 +537,10 @@ import Swal from 'sweetalert2';
 const ServiceRequestForm = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const userId = user?.user_id;
+  const userId = user?.customer_id;
+  const company_id = user?.company_id;
+  console.log("User ID from context:", userId);
+  console.log("Company ID from context:", company_id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [form, setForm] = useState({
@@ -555,7 +558,7 @@ const ServiceRequestForm = () => {
   useEffect(() => {
     const fetchServiceItems = async () => {
       try {
-        const response = await fetch(`${baseURL}/service-items/`);
+        const response = await fetch(`${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`);
         if (response.ok) {
           const result = await response.json();
           const serviceItemsArray = result.data;
@@ -764,7 +767,7 @@ const ServiceRequestForm = () => {
     preferred_date: form.preferred_date,
     preferred_time: `${form.preferred_time}:00`,
     status: "Open",
-    estimated_completion_time: `${form.preferred_time}:00`,
+    estimated_completion_time: null,
     estimated_price: "0.00",
     est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
     est_end_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
@@ -781,8 +784,11 @@ const ServiceRequestForm = () => {
     customer: user?.customer_id || "unknown",
     pm_group: selectedItem?.pm_group || "default-pm",
     assigned_engineer: "",
-    reopened_from: ""
+    reopened_from: "",
+    company_id: selectedCompany || "unknown", // Ensure company_id is included
+    user_id: userId, // Include user_id for tracking
   };
+  console.log("Payload being sent:", JSON.stringify(payload, null, 2));
 
   try {
     const response = await fetch(`${baseURL}/service-pools/`, {
@@ -845,10 +851,17 @@ const ServiceRequestForm = () => {
       let errorMessage = 'Failed to submit request.';
       try {
         const errorData = await response.json();
+         console.error("Backend returned 400:", errorData); // 👈 Log full error response
         errorMessage = errorData.message || errorMessage;
-      } catch (parseError) {
-        console.error('Error parsing error response:', parseError);
-      }
+      // If backend returns specific validation errors
+    if (errorData.errors) {
+      console.table(errorData.errors); // Optional: show tabular error messages if array/object
+    }
+
+    errorMessage = errorData.message || JSON.stringify(errorData) || errorMessage;
+  } catch (parseError) {
+    console.error('Error parsing backend error response:', parseError);
+  }
 
       await Swal.fire({
         icon: 'error',

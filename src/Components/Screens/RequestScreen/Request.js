@@ -161,7 +161,8 @@ const RequestScreen = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { user } = useContext(AuthContext);
-  const userId = user?.user_id;
+  const userId = user?.customer_id;
+  const company_id = user?.company_id;
   const userName = user?.username;
   // console.log("from context data",userId,userName);
   // console.log("userdata",user);
@@ -169,7 +170,7 @@ const RequestScreen = () => {
   useEffect(() => {
     if (user?.customer_id) {
       axios
-        .get(`${baseURL}/service-pools/`)
+        .get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${company_id}`) 
         .then((response) => {
           if (response.data?.status === 'success') {
             const customerRequests = response.data.data

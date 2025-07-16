@@ -56,6 +56,7 @@ import { FaArrowLeft } from "react-icons/fa";
 const CustomerData = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
+  console.log("CustomerData state:", state);
 
   if (!state || !state.user) {
     return (
@@ -68,7 +69,13 @@ const CustomerData = () => {
   const user = state.user;
 
   const handleConfirm = () => {
-    navigate("/set-sign-password", { state: { user_id: user.customer_id } });
+    // navigate("/set-sign-password", { state: { user_id: user.customer_id } }); 
+    navigate("/set-sign-password", {
+  state: {
+    user_id: user.customer_id,
+    company_id: user.company_id, 
+  },
+});
   };
 
   return (
@@ -98,6 +105,10 @@ const CustomerData = () => {
           <div className="otp-row">
             <span className="label">Mobile:</span>
             <span className="value">{user.mobile}</span>
+          </div>
+            <div className="otp-row">
+            <span className="label">Company:</span>
+            <span className="value">{user.company_id}</span>
           </div>
           <div className="otp-row">
             <span className="label">City:</span>
