@@ -4,17 +4,19 @@ import './Connect.css';
 
 const Connect = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
 
   const handleConnectClick = () => {
     setIsModalOpen(true);
+    setShowFallback(false); // reset fallback when modal is reopened
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
   };
 
-  // Using a demo website that allows iframe embedding
-  const deviceUrl = "https://google.com"; // Replace with actual device connection URL
+  // Use a URL that allows embedding in iframes
+  const deviceUrl = "https://iiiqbetshrms.web.app/"; // Replace with your actual device connection URL
 
   return (
     <div className="connect-container">
@@ -45,23 +47,28 @@ const Connect = () => {
                 </button>
               </div>
               <div className="connect-iframe-container">
-                <iframe 
-                  src={deviceUrl}
-                  title="Device Connection Interface"
-                  className="connect-iframe"
-                  allow="camera; microphone" // Add necessary permissions
-                />
-                <div className="connect-iframe-fallback">
-                  <p>Connection interface couldn't be loaded.</p>
-                  <a 
-                    href={deviceUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="connect-external-link"
-                  >
-                    Open in browser
-                  </a>
-                </div>
+                {!showFallback ? (
+                  <iframe 
+                    src={deviceUrl}
+                    title="Device Connection Interface"
+                    className="connect-iframe"
+                    allow="camera; microphone"
+                    sandbox="allow-scripts allow-same-origin allow-forms"
+                    onError={() => setShowFallback(true)}
+                  />
+                ) : (
+                  <div className="connect-iframe-fallback">
+                    <p>Connection interface couldn't be loaded.</p>
+                    <a 
+                      href={deviceUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="connect-external-link"
+                    >
+                      Open in browser
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>

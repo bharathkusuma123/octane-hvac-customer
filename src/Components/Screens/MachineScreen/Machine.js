@@ -1,96 +1,86 @@
 import React, { useContext, useEffect, useState } from 'react';
 import NavScreen from '../../Screens/Navbar/Navbar';
 import { AuthContext } from "../../AuthContext/AuthContext";
-import baseURL from '../../ApiUrl/Apiurl';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import "./Machine.css";
 
 const MachineScreen = () => {
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
+  const companyId = user?.company_id;
 
   const [serviceItems, setServiceItems] = useState([]);
-  const [selectedCompany, setSelectedCompany] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); 
+ const navigate = useNavigate(); 
 
-useEffect(() => {
-  const fetchServiceItems = async () => {
-    try {
-      const response = await fetch(`${baseURL}/service-items/`);
-      if (response.ok) {
-        const result = await response.json();
-        const serviceItemsArray = result.data;
-
-        const userServiceItem = serviceItemsArray.find(
-          (item) => item.customer === user?.customer_id
-        );
-
-        if (userServiceItem) {
-          setSelectedCompany(userServiceItem.company);
-
-          const filteredItems = serviceItemsArray
-            .filter((item) => item.customer === user?.customer_id)
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // 🔽 Sort by created_at DESC
-
-          setServiceItems(filteredItems);
+  useEffect(() => {
+    if (userId && companyId) {
+      axios.get(`http://175.29.21.7:8006/service-items/`, {
+        params: {
+          user_id: userId,
+          company_id: companyId
         }
-      } else {
-        console.error('Failed to load service items');
-      }
-    } catch (error) {
-      console.error('Error fetching service items:', error);
-    } finally {
-      setLoading(false);
+      })
+      .then(response => {
+        if (response.data.status === "success") {
+          setServiceItems(response.data.data);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching service items:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
     }
-  };
+  }, [userId, companyId]);
 
-  if (userId) {
-    fetchServiceItems();
-  }
-}, [userId]);
+return (
+  <div className="request-screen-wrapper">
+    <div className="d-flex justify-content-between align-items-center mb-3">
+      <h2 className="machine-table-title">Machine Screen</h2>
+      {/* <div>
+        <p className="mb-1">User ID: {userId}</p>
+        <p className="mb-1">Company ID: {companyId}</p>
+      </div> */}
+    </div>
 
+    <NavScreen />
 
-  return (
-    <div className="machine-table-container">
-      <div className="machine-table-header">
-        <h2 className="machine-table-title">Machine Screen</h2>
-      </div>
-
-      {/* <p>Customer ID: {userId}</p>
-      <p>Company: {selectedCompany}</p> */}
-
-      <div className="table-responsive">
-        {loading ? (
-          <div className="loading-message">Loading service items...</div>
-        ) : serviceItems.length > 0 ? (
-          <table className="machines-table">
-            <thead>
-              <tr>
-                <th>S.No</th>
-                <th>Service Item ID</th>
-                <th>Serial Number</th>
+    {loading ? (
+      <p>Loading data...</p>
+    ) : (
+      <div className="table-container">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Service Item</th>
+                 <th>Serial Number</th>
                 <th>Location</th>
                 <th>Product Description</th>
                 <th>Installation Date</th>
                 <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serviceItems.map((item,index) => (
-                <tr key={item.service_item_id}>
-                  <td>{index+1}</td>
-                  <td
+
+            </tr>
+          </thead>
+          <tbody>
+            {serviceItems.map((item, index) => (
+              <tr key={index}>
+                <td>{index + 1}</td>
+                <td
                     style={{ cursor: 'pointer', color: 'blue', textDecoration: 'underline' }}
                     onClick={() => navigate(`/machines/${item.service_item_id}`)} // ✅ navigate
                   >
                     {item.service_item_id}
                   </td>
-                  <td>{item.serial_number}</td>
+
+                 <td>{item.serial_number}</td>
                   <td>{item.location}</td>
                   <td>{item.product_description}</td>
                   <td>{item.installation_date}</td>
-                  <td>
+                   <td>
                     <span
                       className={`status-badge ${
                         item.status.toLowerCase() === 'active'
@@ -103,18 +93,16 @@ useEffect(() => {
                       {item.status}
                     </span>
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="no-machines-message">No service items found for your account.</div>
-        )}
-      </div>
 
-      <NavScreen />
-    </div>
-  );
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+);
+
 };
 
 export default MachineScreen;
