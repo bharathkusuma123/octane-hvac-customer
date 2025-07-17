@@ -16,7 +16,7 @@ const Connect = () => {
   };
 
   // Use a URL that allows embedding in iframes
-  const deviceUrl = "https://iiiqbetshrms.web.app/"; // Replace with your actual device connection URL
+  const deviceUrl = "http://192.168.178.86/"; // Replace with your actual device connection URL
 
   return (
     <div className="connect-container">

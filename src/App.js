@@ -30,7 +30,7 @@ import DelegateSurveyForm from './DelegateProfile/DelegateSurvey/DelegateSurveyF
 import DelegateServiceItems from './DelegateProfile/DelegateServiceItems/DelegateServiceItems';
 import { DelegateServiceItemProvider } from "./Components/AuthContext/DelegateServiceItemContext";
 import Connect from './Components/Screens/Connect/Connect';
-
+import { db, auth, storage } from "./Firebase/Firebase";
 
 
 

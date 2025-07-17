@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { useNavigate } from 'react-router-dom'; // If using React Router
+import { useNavigate } from 'react-router-dom';
 
 
 
