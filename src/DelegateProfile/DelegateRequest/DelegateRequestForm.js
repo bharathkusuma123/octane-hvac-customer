@@ -92,6 +92,7 @@ const handleSubmit = async (e) => {
     assigned_engineer: "",
     reopened_from: ""
   };
+  console.log("payload", payload);
 
   try {
     const response = await fetch("http://175.29.21.7:8006/service-pools/", {

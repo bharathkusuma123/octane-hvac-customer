@@ -3,6 +3,7 @@ import NavScreen from '../../Screens/Navbar/Navbar';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../AuthContext/AuthContext';
+import { useParams } from 'react-router-dom';
 
 // Star Rating Component
 const StarRating = ({ value, onChange }) => {
@@ -38,6 +39,9 @@ const FeedbackScreen = () => {
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
+  const { requestId } = useParams();
+
+  
   
   const [formData, setFormData] = useState({
     service_request: '',
@@ -92,8 +96,8 @@ const FeedbackScreen = () => {
             question: question.question_text,
             rating_response: '',
             reason: '',
-            created_by: 'Customer',
-            updated_by: 'Customer'
+            created_by: userId,
+            updated_by: userId
           }))
         }));
 
@@ -176,8 +180,8 @@ const handleSubmit = async (e) => {
       customer: userId,
       service_engineer: selectedRequest.assigned_engineer,
       suggestions: '',
-      created_by: 'Customer',
-      updated_by: 'Customer',
+      created_by: userId,
+      updated_by: userId,
       responses: formData.responses
         .filter(r => r.rating_response)
         .map((response, index) => {
@@ -191,8 +195,8 @@ const handleSubmit = async (e) => {
             question: question.question_id, // Use question_id instead of question_text
             rating_response: response.rating_response.toString(),
             reason: response.reason || '',
-            created_by: 'Customer',
-            updated_by: 'Customer'
+            created_by: userId,
+            updated_by: userId
         };
       })
     };
@@ -234,6 +238,19 @@ const handleSubmit = async (e) => {
     alert(errorMessage);
   }
 };
+
+useEffect(() => {
+  if (requestId && serviceRequests.length > 0) {
+    const matched = serviceRequests.find(req => req.request_id === requestId);
+    if (matched) {
+      setFormData(prev => ({
+        ...prev,
+        service_request: matched.request_id
+      }));
+    }
+  }
+}, [requestId, serviceRequests]);
+
 
   if (loading) {
     return (
@@ -309,47 +326,22 @@ const handleSubmit = async (e) => {
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          {/* Service Request Selection */}
-          <div style={{ marginBottom: '25px' }}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
-                fontWeight: '600',
-                color: '#444'
-              }}>
-                Select Service Request *
-              </label>
-              <select
-                name="service_request"
-                value={formData.service_request}
-                onChange={handleChange}
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  borderRadius: '6px', 
-                  border: '1px solid #ddd',
-                  fontSize: '16px',
-                  backgroundColor: serviceRequests.length === 0 ? '#f5f5f5' : 'white',
-                  cursor: serviceRequests.length === 0 ? 'not-allowed' : 'pointer'
-                }}
-                required
-                disabled={serviceRequests.length === 0}
-              >
-                <option value="">{serviceRequests.length === 0 ? 'No closed service requests available' : 'Select a closed service request'}</option>
-                {serviceRequests.map(request => (
-                  <option key={request.request_id} value={request.request_id}>
-                    {request.service_item} - {request.dynamics_service_order_no || 'N/A'} ({request.source_type || 'No type'})
-                  </option>
-                ))}
-              </select>
-              {serviceRequests.length === 0 && (
-                <p style={{ color: '#666', fontSize: '14px', marginTop: '5px' }}>
-                  You don't have any closed service requests to provide feedback for.
-                </p>
-              )}
-            </div>
-          </div>
+         <div style={{ marginBottom: '25px' }}>
+  <label style={{ fontWeight: '600', color: '#444' }}>
+    Service Request ID:
+  </label>
+  <div style={{ 
+    padding: '12px', 
+    backgroundColor: '#f5f5f5', 
+    borderRadius: '6px', 
+    border: '1px solid #ddd',
+    marginTop: '8px',
+    fontSize: '16px'
+  }}>
+    {formData.service_request}
+  </div>
+</div>
+
           
           {/* Survey Questions */}
           <div style={{ marginBottom: '25px' }}>

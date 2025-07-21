@@ -152,6 +152,8 @@ import axios from 'axios';
 import './Request.css';
 import { AuthContext } from "../../AuthContext/AuthContext";
 import baseURL from '../../ApiUrl/Apiurl';
+import { useNavigate } from 'react-router-dom';
+
 
 const RequestScreen = () => {
   const [requests, setRequests] = useState([]);
@@ -159,14 +161,19 @@ const RequestScreen = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
+   const [submittedFeedbackRequests, setSubmittedFeedbackRequests] = useState([]);
 
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
   const userName = user?.username;
+  const navigate = useNavigate();
   // console.log("from context data",userId,userName);
   // console.log("userdata",user);
 
+ const [closedRequestIds, setClosedRequestIds] = useState([]);
+
+  // Fetch service requests
   useEffect(() => {
     if (user?.customer_id) {
       axios
@@ -176,9 +183,15 @@ const RequestScreen = () => {
             const customerRequests = response.data.data
               .filter((req) => req.customer === user.customer_id)
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
+
             setRequests(customerRequests);
             setFilteredRequests(customerRequests);
+
+            const closedIds = customerRequests
+              .filter(req => (req.status || req.request_status || req.state || req.ServiceStatus)?.toLowerCase() === 'closed')
+              .map(req => req.request_id);
+
+            setClosedRequestIds(closedIds);
           }
         })
         .catch((error) => {
@@ -186,6 +199,34 @@ const RequestScreen = () => {
         });
     }
   }, [user?.customer_id]);
+
+  // Fetch survey data to check for submitted feedback
+ useEffect(() => {
+  if (user?.customer_id) {
+    axios
+      .get(`${baseURL}/customer-surveys/?user_id=${userId}&company_id=${company_id}`)
+      .then((response) => {
+        // Check if response.data exists and is an array
+        if (Array.isArray(response.data)) {
+          const feedbackSubmittedRequests = response.data.map(
+            survey => survey.service_request
+          );
+          setSubmittedFeedbackRequests(feedbackSubmittedRequests);
+        }
+        // If the data is nested differently (like in your example)
+        else if (response.data && Array.isArray(response.data.data)) {
+          const feedbackSubmittedRequests = response.data.data.map(
+            survey => survey.service_request
+          );
+          setSubmittedFeedbackRequests(feedbackSubmittedRequests);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching survey data:', error);
+      });
+  }
+}, [user?.customer_id]);
+
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -286,6 +327,20 @@ const RequestScreen = () => {
                   <td>{req.preferred_date}</td>
                   <td>{req.preferred_time}</td>
                   <td>{req.request_details}</td>
+                    <td>
+                {closedRequestIds.includes(req.request_id) && (
+                  <button
+                    className="btn btn-sm btn-success mt-2"
+                    onClick={() => navigate(`/feedback/${req.request_id}`)}
+                    disabled={submittedFeedbackRequests.includes(req.request_id)}
+                  >
+                    {submittedFeedbackRequests.includes(req.request_id) 
+                      ? 'Feedback Submitted' 
+                      : 'Give Feedback'}
+                  </button>
+                )}
+              </td>
+
                 </tr>
               ))
             )}

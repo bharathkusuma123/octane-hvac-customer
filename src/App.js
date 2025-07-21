@@ -31,6 +31,7 @@ import DelegateServiceItems from './DelegateProfile/DelegateServiceItems/Delegat
 import { DelegateServiceItemProvider } from "./Components/AuthContext/DelegateServiceItemContext";
 import Connect from './Components/Screens/Connect/Connect';
 import { db, auth, storage } from "./Firebase/Firebase";
+import DisplayFeedback from './Components/Screens/FeedbackScreen/DisplayFeedback';
 
 
 
@@ -62,7 +63,9 @@ function App() {
      <Route path="/connect" element={<Connect />} />
         <Route path="/machine" element={<MachineScreen />} />
         <Route path="/request" element={<RequestScreen />} />
-        <Route path="/feedback" element={<FeedbackScreen />} />
+        <Route path="/feedback/:requestId" element={<FeedbackScreen />} />
+
+        <Route path="/display-feedback" element={<DisplayFeedback />} />
   <Route path="/service-form" element={<ServiceRequestForm />} />
  <Route path="/view-delegates" element={<ViewDelegates />} />
 <Route path="/add-delegates" element={<AddDelegates />} />

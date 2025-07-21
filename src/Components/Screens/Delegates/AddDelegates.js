@@ -265,6 +265,7 @@ const AddDelegate = () => {
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
   const navigate = useNavigate();
+  const company_id = user?.company_id;
 
   const [form, setForm] = useState({
     service_item: '',
@@ -275,43 +276,6 @@ const AddDelegate = () => {
     delegate_id: '',
   });
 
-  const [serviceItems, setServiceItems] = useState([]);
-  const [company, setCompany] = useState('');
-
-  useEffect(() => {
-    const fetchCustomerCompany = async () => {
-      try {
-        const response = await fetch(`${baseURL}/customers/`);
-        if (response.ok) {
-          const result = await response.json();
-          const customers = result.data || [];
-          const matchedCustomer = customers.find(c => c.customer_id === userId);
-          if (matchedCustomer) {
-            setCompany(matchedCustomer.company);
-          }
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to fetch customer data',
-            confirmButtonColor: '#d33',
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching customer company:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Could not load company details.',
-          confirmButtonColor: '#d33',
-        });
-      }
-    };
-
-    if (userId) {
-      fetchCustomerCompany();
-    }
-  }, [userId]);
 
   useEffect(() => {
     const fetchDelegates = async () => {
@@ -350,35 +314,6 @@ const AddDelegate = () => {
     }
   }, [userId]);
 
-  useEffect(() => {
-    const fetchServiceItems = async () => {
-      try {
-        const response = await fetch(`${baseURL}/service-items/`);
-        if (response.ok) {
-          const result = await response.json();
-          const filteredItems = result.data.filter(item => item.customer === userId);
-          setServiceItems(filteredItems);
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to fetch service items',
-            confirmButtonColor: '#d33',
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching service items:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Could not load service items.',
-          confirmButtonColor: '#d33',
-        });
-      }
-    };
-
-    fetchServiceItems();
-  }, [userId]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -400,7 +335,7 @@ const AddDelegate = () => {
       answer2: "default",
       recalled_at: new Date().toISOString(),
       fcm_token: "string",
-      company: company,
+      company: company_id,
       customer: userId
     };
 
