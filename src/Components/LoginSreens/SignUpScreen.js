@@ -110,4 +110,5 @@ const handleSubmit = async (e) => {
   );
 };
 
+
 export default SignUpScreen;
