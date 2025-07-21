@@ -267,6 +267,7 @@ const RequestScreen = () => {
               <th>Preferred Date</th>
               <th>Preferred Time</th>
               <th>Request Details</th>
+              <th>Feedback</th>
             </tr>
           </thead>
           <tbody>
