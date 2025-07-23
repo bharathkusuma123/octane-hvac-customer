@@ -3,6 +3,7 @@
   margin: 0 auto;
   padding: 16px;
   font-family: Arial, sans-serif;
+  margin-top: 70px;
 }
 
 h3 {
@@ -45,11 +46,26 @@ button[type="submit"] {
 button[type="submit"]:hover {
   background-color: #0056b3;
 }
+button[type="requestbackbutton"] {
+  padding: 12px;
+  background-color: #808285;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+button[type="requestbackbutton"]:hover {
+  background-color: #717172;
+}
 
 /* Mobile responsiveness */
 @media (max-width: 600px) {
   .form-container {
     padding: 12px;
+    margin-top: 70px;
   }
 
   h3 {

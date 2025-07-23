@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 import './DelegateRequestForm.css';
+import { useNavigate } from 'react-router-dom';
 
 const DelegateRequestForm = () => {
   const { user } = useContext(AuthContext);
@@ -9,6 +10,8 @@ const DelegateRequestForm = () => {
   const [company, setCompany] = useState('');
   const [customer, setCustomer] = useState('');
   const [serviceItems, setServiceItems] = useState([]); // 👈 New state for service items
+  const navigate = useNavigate();
+
 
   const [formData, setFormData] = useState({
     serviceItem: '',
@@ -73,7 +76,8 @@ const handleSubmit = async (e) => {
     preferred_date: formData.preferredDate,
     preferred_time: preferredTimeFormatted,
     status: "Open",
-    estimated_completion_time: preferredTimeFormatted, // <- FIXED format
+    estimated_completion_time: null, // <- FIXED format
+    // estimated_completion_time: preferredTimeFormatted, // <- FIXED format
     estimated_price: "0",
     est_start_datetime: now,
     est_end_datetime: now,
@@ -90,7 +94,9 @@ const handleSubmit = async (e) => {
     customer: customer,
     pm_group: "",
     assigned_engineer: "",
-    reopened_from: ""
+    reopened_from: "",
+    user_id: customer,
+    company_id: company
   };
   console.log("payload", payload);
 
@@ -118,6 +124,7 @@ const handleSubmit = async (e) => {
       console.error("Failed response:", result);
       alert("Submission failed: " + (result.message || "Please check the input."));
     }
+    navigate('/delegate-display-request'); // Navigate to your desired path
 
   } catch (error) {
     console.error("Submission error:", error);
@@ -132,9 +139,9 @@ const handleSubmit = async (e) => {
       <DelegateNavbar />
       <h3>Delegate Request Form</h3>
 
-      <p><strong>Delegate ID:</strong> {delegateId}</p>
+      {/* <p><strong>Delegate ID:</strong> {delegateId}</p>
       <p><strong>Company:</strong> {company}</p>
-      <p><strong>Customer:</strong> {customer}</p>
+      <p><strong>Customer:</strong> {customer}</p> */}
 
       <form onSubmit={handleSubmit}>
         <label htmlFor="serviceItem">Service Item</label>
@@ -184,6 +191,12 @@ const handleSubmit = async (e) => {
         />
 
         <button type="submit">Submit Request</button>
+         <button 
+        type="requestbackbutton" // Important to prevent form submission
+        onClick={() => navigate(-1)} // This will go back in history
+      >
+        Back
+      </button>
       </form>
     </div>
   );

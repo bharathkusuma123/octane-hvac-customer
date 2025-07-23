@@ -15,7 +15,7 @@ import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateSe
 const screens = [
   { label: 'Dashboard', name: '/delegate-home', icon: <FaHome />, key: 'dashboard' },
   { label: 'Machines', name: '/delegate-machines', icon: <FaCogs />, key: 'machines' },
-  { label: 'Requests', name: '/delegate-request', icon: <FaEnvelope />, key: 'requests' },
+  { label: 'Requests', name: '/delegate-display-request', icon: <FaEnvelope />, key: 'requests' },
   { label: 'Feedback', name: '/delegate-survey', icon: <FaCommentDots />, key: 'feedback' },
 ];
 

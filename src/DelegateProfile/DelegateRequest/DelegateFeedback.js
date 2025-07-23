@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import NavScreen from '../../Screens/Navbar/Navbar';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 import axios from 'axios';
-import { AuthContext } from '../../AuthContext/AuthContext';
+import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import { useParams } from 'react-router-dom';
+import baseURL from '../../Components/ApiUrl/Apiurl';
 
 // Star Rating Component
+// Star Rating Component (unchanged)
 const StarRating = ({ value, onChange }) => {
   const [hover, setHover] = useState(null);
   
@@ -34,14 +36,19 @@ const StarRating = ({ value, onChange }) => {
   );
 };
 
-const FeedbackScreen = () => {
-  const navigate = useNavigate();
+const DelegateFeedback = () => {
+   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const userId = user?.customer_id;
-  const company_id = user?.company_id;
   const { requestId } = useParams();
-
+  const location = useLocation();
+  const [customerId, setCustomerId] = useState('');
   
+  // Get passed parameters
+  const { delegateId } = location.state || {};
+  
+  // Use these in your component logic
+  const userId = delegateId;
+  const company_id = user?.company_id;
   
   const [formData, setFormData] = useState({
     service_request: '',
@@ -64,8 +71,8 @@ const FeedbackScreen = () => {
 
         // Fetch both endpoints in parallel
         const [requestsResponse, questionsResponse] = await Promise.all([
-          axios.get(`http://175.29.21.7:8006/service-pools/?user_id=${userId}&company_id=${company_id}`),
-          axios.get('http://175.29.21.7:8006/survey-questions/')
+          axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${company_id}`),
+          axios.get(`${baseURL}/survey-questions/`)
         ]);
 
         if (!isMounted) return;
@@ -130,7 +137,7 @@ const FeedbackScreen = () => {
     }));
   };
 
-    const handleResponseChange = (index, e) => {
+  const handleResponseChange = (index, e) => {
     const { name, value } = e.target;
     const updatedResponses = [...formData.responses];
     updatedResponses[index] = {
@@ -143,7 +150,7 @@ const FeedbackScreen = () => {
     }));
   };
 
-    // Special handler for star ratings
+  // Special handler for star ratings
   const handleStarRating = (index, rating) => {
     const updatedResponses = [...formData.responses];
     updatedResponses[index] = {
@@ -156,101 +163,124 @@ const FeedbackScreen = () => {
     }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    // Validate at least one response is filled
-    const hasResponses = formData.responses.some(r => r.rating_response);
-    if (!hasResponses) {
-      throw new Error('Please answer at least one survey question');
-    }
-
-    // Get the selected service request
-    const selectedRequest = serviceRequests.find(req => req.request_id === formData.service_request);
-    if (!selectedRequest) {
-      throw new Error('Please select a valid service request');
-    }
-
-    // Prepare the payload according to Django model expectations
-    const payload = {
-      user_id: userId,
-      company_id: company_id,
-      company: company_id,
-      service_request: selectedRequest.request_id,
-      customer: userId,
-      service_engineer: selectedRequest.assigned_engineer,
-      suggestions: '',
-      created_by: userId,
-      updated_by: userId,
-      responses: formData.responses
-        .filter(r => r.rating_response)
-        .map((response, index) => {
-          // Get the corresponding question from the questions array
-          const question = questions[index];
-          if (!question) {
-            throw new Error(`Missing question for response index ${index}`);
-          }
-          
-          return {
-            question: question.question_id, // Use question_id instead of question_text
-            rating_response: response.rating_response.toString(),
-            reason: response.reason || '',
-            created_by: userId,
-            updated_by: userId
-        };
-      })
-    };
-
-    console.log('Final payload before submission:', JSON.stringify(payload, null, 2));
-
-    const response = await axios.post('http://175.29.21.7:8006/customer-surveys/', payload, {
-      headers: {
-        'Content-Type': 'application/json',
+  useEffect(() => {
+  const fetchDelegateData = async () => {
+    try {
+      const response = await axios.get(`${baseURL}/delegates/`);
+      const delegateData = response.data?.data || response.data;
+      
+      if (Array.isArray(delegateData)) {
+        const currentDelegate = delegateData.find(d => d.delegate_id === delegateId);
+        if (currentDelegate) {
+          setCustomerId(currentDelegate.customer);
+          console.log("customer", currentDelegate.customer);
+        }
       }
-    });
-
-    console.log('Submission successful:', response.data);
-    alert('Feedback submitted successfully!');
-    navigate('/request');
-
-  } catch (error) {
-    console.error('Detailed error:', {
-      message: error.message,
-      response: error.response?.data,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        data: error.config?.data
-      }
-    });
-
-    let errorMessage = 'Error submitting feedback';
-    if (error.response?.data) {
-      // Handle Django validation errors
-      if (typeof error.response.data === 'object') {
-        errorMessage = Object.entries(error.response.data)
-          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
-          .join('\n');
-      } else {
-        errorMessage = error.response.data;
-      }
+    } catch (error) {
+      console.error('Error fetching delegate data:', error);
     }
-    alert(errorMessage);
+  };
+
+  if (delegateId) {
+    fetchDelegateData();
   }
-};
+}, [delegateId]);
 
-useEffect(() => {
-  if (requestId && serviceRequests.length > 0) {
-    const matched = serviceRequests.find(req => req.request_id === requestId);
-    if (matched) {
-      setFormData(prev => ({
-        ...prev,
-        service_request: matched.request_id
-      }));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Validate at least one response is filled
+      const hasResponses = formData.responses.some(r => r.rating_response);
+      if (!hasResponses) {
+        throw new Error('Please answer at least one survey question');
+      }
+
+      // Get the selected service request
+      const selectedRequest = serviceRequests.find(req => req.request_id === formData.service_request);
+      if (!selectedRequest) {
+        throw new Error('Please select a valid service request');
+      }
+
+      // Prepare the payload according to Django model expectations
+      const payload = {
+        user_id: userId,
+        company_id: company_id,
+        company: company_id,
+        service_request: selectedRequest.request_id,
+         customer: customerId, // Now using dynamic customerId
+        service_engineer: selectedRequest.assigned_engineer,
+        delegate_id: delegateId, // Include delegate_id in the payload
+        suggestions: '',
+        created_by: userId,
+        updated_by: userId,
+        responses: formData.responses
+          .filter(r => r.rating_response)
+          .map((response, index) => {
+            // Get the corresponding question from the questions array
+            const question = questions[index];
+            if (!question) {
+              throw new Error(`Missing question for response index ${index}`);
+            }
+            
+            return {
+              question: question.question_id, // Use question_id instead of question_text
+              rating_response: response.rating_response.toString(),
+              reason: response.reason || '',
+              created_by: userId,
+              updated_by: userId
+            };
+          })
+      };
+
+      console.log('Final payload before submission:', JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(`${baseURL}/customer-surveys/`, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('Submission successful:', response.data);
+      alert('Feedback submitted successfully!');
+      navigate('/delegate-display-request');
+
+    } catch (error) {
+      console.error('Detailed error:', {
+        message: error.message,
+        response: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data
+        }
+      });
+
+      let errorMessage = 'Error submitting feedback';
+      if (error.response?.data) {
+        // Handle Django validation errors
+        if (typeof error.response.data === 'object') {
+          errorMessage = Object.entries(error.response.data)
+            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+            .join('\n');
+        } else {
+          errorMessage = error.response.data;
+        }
+      }
+      alert(errorMessage);
     }
-  }
-}, [requestId, serviceRequests]);
+  };
 
+  useEffect(() => {
+    if (requestId && serviceRequests.length > 0) {
+      const matched = serviceRequests.find(req => req.request_id === requestId);
+      if (matched) {
+        setFormData(prev => ({
+          ...prev,
+          service_request: matched.request_id
+        }));
+      }
+    }
+  }, [requestId, serviceRequests]);
 
   if (loading) {
     return (
@@ -263,7 +293,7 @@ useEffect(() => {
         justifyContent: 'center',
         height: 'calc(100vh - 60px)'
       }}>
-        <NavScreen />
+        <DelegateNavbar />
         <p>Loading survey form...</p>
       </div>
     );
@@ -280,7 +310,7 @@ useEffect(() => {
         justifyContent: 'center',
         height: 'calc(100vh - 60px)'
       }}>
-        <NavScreen />
+        <DelegateNavbar />
         <p style={{ color: 'red', marginBottom: '20px' }}>{error}</p>
         <button 
           onClick={() => window.location.reload()}
@@ -302,7 +332,7 @@ useEffect(() => {
   if (questions.length === 0) {
     return (
       <div style={{ paddingTop: '60px', textAlign: 'center' }}>
-        <NavScreen />
+        <DelegateNavbar />
         <p>No survey questions available</p>
       </div>
     );
@@ -316,7 +346,7 @@ useEffect(() => {
       margin: '0 auto',
       minHeight: 'calc(100vh - 120px)'
     }}>
-      <NavScreen />
+      <DelegateNavbar />
       <div style={{ padding: '20px' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Customer Satisfaction Survey</h2>
         
@@ -530,4 +560,4 @@ useEffect(() => {
   );
 };
 
-export default FeedbackScreen;
+export default DelegateFeedback;
