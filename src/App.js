@@ -34,6 +34,8 @@ import { db, auth, storage } from "./Firebase/Firebase";
 import DisplayFeedback from './Components/Screens/FeedbackScreen/DisplayFeedback';
 import RequestScreenDelegate from './DelegateProfile/DelegateRequest/RequestScreenDelegate';
 import DelegateFeedback from './DelegateProfile/DelegateRequest/DelegateFeedback';
+import DelegateData from './Components/LoginSreens/DelegateData';
+import DelegateSignup from './Components/LoginSreens/DelegateSignup';
 
 
 
@@ -56,7 +58,9 @@ function App() {
           <Route path="/security" element={<SecurityQuestionsScreen />} />
           <Route path="/signup" element={<SignUpScreen />} />
           <Route path="/set-sign-password" element={<SignupSetPassword />} />
+           <Route path="/set-delegate-sign-password" element={<DelegateSignup />} />
           <Route path="/customer-data" element={<CustomerData />} />
+           <Route path="/delegate-data" element={<DelegateData />} />
           <Route path="/customer-dashboard" element={<Dashboard />} />
 
 <Route path="/navbar" element={<Navbar />} />

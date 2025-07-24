@@ -29,7 +29,7 @@ const handleSubmit = async (e) => {
 
   setLoading(true);
   try {
-    const response = await fetch("http://175.29.21.7:8006/customer-signup/", {
+    const response = await fetch(`${baseURL}/customer-signup/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -40,17 +40,34 @@ const handleSubmit = async (e) => {
     const result = await response.json();
     console.log("API Response:", result);
 
-    if (response.ok && result.customer_id && result.company_id) {
-      const user = {
-        customer_id: result.customer_id,
-        company_id: result.company_id,
-        mobile,
-        email,
-      };
+    if (response.ok) {
+      if (result.redirect === "otp-verification" && result.delegate_id && result.company_id) {
+        // Delegate found - redirect with delegate data
+        const user = {
+          delegate_id: result.delegate_id,
+          company_id: result.company_id,
+          mobile,
+          email,
+          isDelegate: true,
+        };
+        navigate("/delegate-data", { state: { user } });
 
-      navigate("/customer-data", { state: { user } });
+      } else if (result.customer_id && result.company_id) {
+        // Customer found - redirect with customer data
+        const user = {
+          customer_id: result.customer_id,
+          company_id: result.company_id,
+          mobile,
+          email,
+          isDelegate: false,
+        };
+        navigate("/customer-data", { state: { user } });
+
+      } else {
+        alert(result.message || "No matching customer or delegate found.");
+      }
     } else {
-      alert(result.message || "No matching customer found.");
+      alert(result.message || "Something went wrong.");
     }
   } catch (error) {
     alert("Error checking user details.");
@@ -59,6 +76,7 @@ const handleSubmit = async (e) => {
     setLoading(false);
   }
 };
+
 
 
 
@@ -97,7 +115,7 @@ const handleSubmit = async (e) => {
               value={email}
               className="sign-input"
               onChange={(e) => setEmail(e.target.value)}
-              required
+              // required
             />
           </div>
 
