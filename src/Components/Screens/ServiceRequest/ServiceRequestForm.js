@@ -910,7 +910,7 @@ const ServiceRequestForm = () => {
                   ) : (
                     serviceItems.map((item) => (
                       <option key={item.service_item_id} value={item.service_item_id}>
-                        {item.service_item_id} - {item.serial_number}
+                        {item.service_item_name} - {item.service_item_id}
                       </option>
                     ))
                   )}

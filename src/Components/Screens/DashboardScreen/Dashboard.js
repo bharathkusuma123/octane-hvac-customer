@@ -1,36 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import "./Dashboard.css";
 import Navbar from "../../Screens/Navbar/Navbar";
 import axios from "axios";
 import baseURL from '../../ApiUrl/Apiurl';
 import { FaEdit } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../AuthContext/AuthContext';
 
 const Dashboard = () => {
   const [userDetails, setUserDetails] = useState(null);
   const navigate = useNavigate();
-  useEffect(() => {
-    const customerId = localStorage.getItem("userId"); // make sure you store this after login
 
-    if (customerId) {
-      axios.get(`${baseURL}/customers/`)
-        .then((res) => {
-          const matchedUser = res.data.data.find(user => user.customer_id === customerId);
-          if (matchedUser) {
-            setUserDetails(matchedUser);
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching user data:", error);
-        });
-    }
-  }, []);
-   const handleEditClick = () => {
+  const { user } = useContext(AuthContext); // ← Access both user and company
+  const userId = user?.customer_id   
+  const company_id = user?.company_id   // ← Support both customer & delegate
+
+useEffect(() => {
+  if (userId && company_id) {
+    axios
+      .get(`${baseURL}/customers/${userId}/?user_id=${userId}&company_id=${company_id}`)
+      .then((res) => {
+        if (res.data && res.data.data) {
+          setUserDetails(res.data.data);
+        } else {
+          console.warn("No matching user found.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching user data:", error);
+      });
+  }
+}, [userId, company_id]);
+
+
+  const handleEditClick = () => {
     navigate(`/edit-customer/${userDetails.customer_id}`);
   };
 
-
- return (
+  return (
     <div className="dashboard-container">
       <Navbar />
       <div className="dashboard-content">
