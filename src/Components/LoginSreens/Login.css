@@ -155,9 +155,9 @@
 }
 
 .footerLogo {
-  width: 100px;
+  /* width: 100px; */
   height: 50px;
-  margin-top: 30px;
+  /* margin-top: 30px; */
   object-fit: contain;
 }
 

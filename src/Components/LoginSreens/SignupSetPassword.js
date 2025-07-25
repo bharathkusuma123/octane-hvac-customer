@@ -50,9 +50,9 @@ const SecurityQuestionsScreen = () => {
 
     const data = {
       security_question1: q1,
-      security_answer1: a1,
+      answer1: a1,
       security_question2: q2,
-      security_answer2: a2,
+      answer2: a2,
       password: password,
       is_registered_by_customer: true,
       company_id: company_id,
