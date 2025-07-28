@@ -52,6 +52,8 @@ const handleLogin = async (e) => {
       navigate("/delegate-home", { state: { userMobile: user.mobile } });
     } else {
       navigate("/home", { state: { userMobile: user.mobile } });
+            // navigate("/machinescreen1", { state: { userMobile: user.mobile } });
+
     }
 
     console.log("User data from API:", user);

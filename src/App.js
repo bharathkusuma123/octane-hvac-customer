@@ -19,7 +19,7 @@ import ServiceRequestForm from './Components/Screens/ServiceRequest/ServiceReque
 import './App.css';
 import ViewDelegates from './Components/Screens/Delegates/ViewDelegates';
 import AddDelegates from './Components/Screens/Delegates/AddDelegates';
-import { SnackbarProvider } from 'notistack'; 
+import { SnackbarProvider } from 'notistack';
 import Home from './DashboardReport/Home';
 import EditCustomer from "./Components/Screens/DashboardScreen/EditCustomer";
 import MachineDetails from "./Components/Screens/MachineScreen/MachineDetails";
@@ -37,59 +37,65 @@ import DelegateFeedback from './DelegateProfile/DelegateRequest/DelegateFeedback
 import DelegateData from './Components/LoginSreens/DelegateData';
 import DelegateSignup from './Components/LoginSreens/DelegateSignup';
 
+import Screen1 from './Components/Screens/MachineScreensNew/Screen1';
+import Screen2 from './Components/Screens/MachineScreensNew/Screen2';
 
 
 function App() {
   return (
-      <AuthProvider>
-         <DelegateServiceItemProvider>
-         <SnackbarProvider 
-        maxSnack={3} 
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        autoHideDuration={4000}
-      >
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/setpassword" element={<SetPasswordScreen />} />
-          <Route path="/forgotpassword" element={<ForgotPasswordScreen />} />
-          <Route path="/otp" element={<OTPVerificationScreen />} />
-          <Route path="/security" element={<SecurityQuestionsScreen />} />
-          <Route path="/signup" element={<SignUpScreen />} />
-          <Route path="/set-sign-password" element={<SignupSetPassword />} />
-           <Route path="/set-delegate-sign-password" element={<DelegateSignup />} />
-          <Route path="/customer-data" element={<CustomerData />} />
-           <Route path="/delegate-data" element={<DelegateData />} />
-          <Route path="/customer-dashboard" element={<Dashboard />} />
+    <AuthProvider>
+      <DelegateServiceItemProvider>
+        <SnackbarProvider
+          maxSnack={3}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          autoHideDuration={4000}
+        >
+          <Router>
+            <div className="App">
+              <Routes>
+                <Route path="/" element={<Login />} />
+                <Route path="/machinescreen1" element={<Screen1 />} />
+                <Route path="/machinescreen2" element={<Screen2 />} />
 
-<Route path="/navbar" element={<Navbar />} />
 
-   <Route path="/dashboard" element={<DashboardScreen />} />
-     <Route path="/connect" element={<Connect />} />
-        <Route path="/machine" element={<MachineScreen />} />
-        <Route path="/request" element={<RequestScreen />} />
-        <Route path="/feedback/:requestId" element={<FeedbackScreen />} />
-         <Route path="/delegate-feedback/:requestId" element={<DelegateFeedback />} />
+                <Route path="/setpassword" element={<SetPasswordScreen />} />
+                <Route path="/forgotpassword" element={<ForgotPasswordScreen />} />
+                <Route path="/otp" element={<OTPVerificationScreen />} />
+                <Route path="/security" element={<SecurityQuestionsScreen />} />
+                <Route path="/signup" element={<SignUpScreen />} />
+                <Route path="/set-sign-password" element={<SignupSetPassword />} />
+                <Route path="/set-delegate-sign-password" element={<DelegateSignup />} />
+                <Route path="/customer-data" element={<CustomerData />} />
+                <Route path="/delegate-data" element={<DelegateData />} />
+                <Route path="/customer-dashboard" element={<Dashboard />} />
 
-        <Route path="/display-feedback" element={<DisplayFeedback />} />
-  <Route path="/service-form" element={<ServiceRequestForm />} />
- <Route path="/view-delegates" element={<ViewDelegates />} />
-<Route path="/add-delegates" element={<AddDelegates />} />
-<Route path="/home" element={<Home />} />
-<Route path="/edit-customer/:customer_id"  element={<EditCustomer />} />
-  <Route path="/machines/:serviceItemId" element={<MachineDetails />} />
-  <Route path="/delegate-service-items/:delegateId" element={<DelegateSetviceItems />} />
-   <Route path="/delegate-home" element={<DelegateHome />} />
-   <Route path="/delegate-request" element={<DelegateRequestForm />} />
-    <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />
-   <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
-   <Route path="/delegate-machines" element={<DelegateServiceItems />} />
-        </Routes>
-      </div>
-    </Router>
-    </SnackbarProvider>
-    </DelegateServiceItemProvider>
+                <Route path="/navbar" element={<Navbar />} />
+
+                <Route path="/dashboard" element={<DashboardScreen />} />
+                <Route path="/connect" element={<Connect />} />
+                <Route path="/machine" element={<MachineScreen />} />
+                <Route path="/request" element={<RequestScreen />} />
+                <Route path="/feedback/:requestId" element={<FeedbackScreen />} />
+                <Route path="/delegate-feedback/:requestId" element={<DelegateFeedback />} />
+
+                <Route path="/display-feedback" element={<DisplayFeedback />} />
+                <Route path="/service-form" element={<ServiceRequestForm />} />
+                <Route path="/view-delegates" element={<ViewDelegates />} />
+                <Route path="/add-delegates" element={<AddDelegates />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/edit-customer/:customer_id" element={<EditCustomer />} />
+                <Route path="/machines/:serviceItemId" element={<MachineDetails />} />
+                <Route path="/delegate-service-items/:delegateId" element={<DelegateSetviceItems />} />
+                <Route path="/delegate-home" element={<DelegateHome />} />
+                <Route path="/delegate-request" element={<DelegateRequestForm />} />
+                <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />
+                <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
+                <Route path="/delegate-machines" element={<DelegateServiceItems />} />
+              </Routes>
+            </div>
+          </Router>
+        </SnackbarProvider>
+      </DelegateServiceItemProvider>
     </AuthProvider>
   );
 }

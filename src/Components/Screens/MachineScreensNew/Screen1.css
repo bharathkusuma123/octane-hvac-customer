@@ -1,0 +1,376 @@
+/* Base Styles */
+
+.mainmain-container{
+display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  /* max-width: 400px; */
+  margin: 0 auto;
+  padding: 20px;
+  background: linear-gradient(to bottom, #3E99ED, #2B7ED6);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+
+.header1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 20px; /* Add some padding for better spacing */
+}
+
+.power-button {
+  background: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.logo-image {
+  height: 30px; /* Adjust as needed */
+  width: auto; /* Maintain aspect ratio */
+}
+
+/* Temperature Control */
+.temp-control {
+  background: white;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.current-temp {
+  font-size: 42px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.fan-status {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.fan-icon {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+.fan-blade {
+  position: absolute;
+  background-color: #3E99ED;
+  height: 2px;
+  width: 100%;
+  top: 50%;
+  transform-origin: center;
+}
+
+.fan-blade:nth-child(1) { transform: rotate(0deg); }
+.fan-blade:nth-child(2) { transform: rotate(120deg); }
+.fan-blade:nth-child(3) { transform: rotate(240deg); }
+
+.fan-label {
+  font-size: 14px;
+  color: #888;
+}
+
+/* Environment Info */
+.env-info {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 30px;
+  margin-top: -43%;
+}
+
+.env-item {
+  flex: 1;
+  text-align: center;
+      margin-top: 150px;
+}
+
+.env-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 5px;
+}
+
+.env-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.temp-container {
+  display: flex;
+  justify-content: center;
+}
+
+.temp-circle-control {
+  width: 285px;
+  height: 285px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.25);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.temp-inner-circle {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.temp-temperature {
+  font-size: 38px;
+  font-weight: bold;
+}
+
+.temp-fan-container {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.temp-fan-icon-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 16px;
+  height: 12px;
+}
+
+.temp-fan-line1,
+.temp-fan-line2,
+.temp-fan-line3 {
+  height: 2px;
+  background-color: #3e99ed;
+}
+
+.temp-fan-line1 {
+  width: 4px;
+}
+
+.temp-fan-line2 {
+  width: 8px;
+}
+
+.temp-fan-line3 {
+  width: 12px;
+}
+
+.temp-fan-speed {
+  margin-left: 4px;
+  color: #3e99ed;
+  font-weight: bold;
+}
+
+.temp-fan-label {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.temp-control-handle {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border-radius: 50%;
+  border: 2px solid #2b7ed6;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.temp-tick {
+  position: absolute;
+  width: 5px;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.5);
+  left: 50%;
+  top: 49%;
+  margin-left: -1px;
+  transform-origin: center center;
+}
+
+.footer-container{
+    background: white;
+  border-top-left-radius: 50px;
+border-top-right-radius: 50px;
+}
+/* Control Buttons */
+.control-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  /* width: 90%; */
+  /* background: white;
+  border-top-left-radius: 50px;
+border-top-right-radius: 50px; */
+
+  padding: 20px;
+  margin-top: auto;
+  /* margin-bottom: 20px; */
+}
+
+.control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff; /* light card background */
+  border: none;
+  border-radius: 15px; /* rounded corners for card look */
+  padding: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* subtle shadow */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.control-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* slightly stronger on hover */
+}
+
+
+.control-btn svg {
+  color: #3E99ED;
+  margin-bottom: 5px;
+}
+
+.control-btn span {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Footer Logo */
+.footer-logo {
+  color: rgb(177, 27, 27);
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: -20px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Responsive Styles */
+@media (max-width: 480px) {
+
+
+        .logo-image {
+  width: 170px;
+  height: 35px;
+  object-fit: contain;
+}
+
+        /* Mobile Footer */
+.footer-container {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 450px; /* iPhone width */
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top-left-radius: 50px;
+  border-top-right-radius: 50px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  padding: 15px 0 10px;
+  height: 280px;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-items {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 20px;
+}
+
+.menu-item {
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  padding: 8px 5px;
+}
+
+.footer-brand {
+  color: rgb(177, 27, 27);
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 10px;
+  padding-bottom: 5px;
+}
+
+
+  .temp-control {
+    width: 160px;
+    height: 160px;
+  }
+  
+  .current-temp {
+    font-size: 38px;
+  }
+  
+  .env-value {
+    font-size: 20px;
+  }
+  
+  .control-buttons {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .footer-logo img {
+        margin-top: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .temp-control {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .current-temp {
+    font-size: 34px;
+  }
+  
+  .env-value {
+    font-size: 18px;
+  }
+  
+  .env-label {
+    font-size: 12px;
+  }
+}
