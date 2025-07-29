@@ -354,6 +354,25 @@ border-top-right-radius: 50px; */
   .footer-logo img {
         margin-top: 20px;
   }
+
+  .power-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.power-on {
+  background-color: rgba(76, 175, 80, 0.2); /* Green with opacity */
+}
+
+.power-off {
+  background-color: rgba(244, 67, 54, 0.2); /* Red with opacity */
+}
 }
 
 @media (max-width: 360px) {

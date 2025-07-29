@@ -51,8 +51,8 @@ const handleLogin = async (e) => {
     if (user.delegate_id) {
       navigate("/delegate-home", { state: { userMobile: user.mobile } });
     } else {
-      navigate("/home", { state: { userMobile: user.mobile } });
-            // navigate("/machinescreen1", { state: { userMobile: user.mobile } });
+      // navigate("/home", { state: { userMobile: user.mobile } });
+            navigate("/machinescreen1", { state: { userMobile: user.mobile } });
 
     }
 
