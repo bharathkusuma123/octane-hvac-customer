@@ -17,6 +17,7 @@ const MachineDetails = () => {
   const { serviceItemId } = useParams();
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
+  const company_id = user?.company_id;
 
   const [delegates, setDelegates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,35 @@ const [submittedDelegates, setSubmittedDelegates] = useState(() => {
   return saved ? JSON.parse(saved) : [];
 });
 const [assignedPermissions, setAssignedPermissions] = useState([]);
+const [contracts, setContracts] = useState([]); // ✅ Correct
 
+
+useEffect(() => {
+  const fetchServiceContracts = async () => {
+    try {
+      const response = await fetch(
+        `http://175.29.21.7:8006/service-contracts/?user_id=${userId}&company_id=${company_id}`
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch contracts");
+
+      const result = await response.json();
+
+      // Filter all contracts that match this serviceItemId
+      const matchedContracts = result.data.filter(
+        (item) => item.service_item === serviceItemId
+      );
+
+      setContracts(matchedContracts);
+    } catch (err) {
+      console.error("Error fetching service contracts:", err);
+    }
+  };
+
+  if (userId && serviceItemId) {
+    fetchServiceContracts();
+  }
+}, [userId, serviceItemId]);
 
 
   useEffect(() => {
@@ -182,9 +211,13 @@ useEffect(() => {
   if (userId) fetchDelegates();
 }, [userId, serviceItemId]);
 
-
-
-
+const formatDate = (dateStr) => {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  return `${date.getDate().toString().padStart(2, '0')}/${
+    (date.getMonth() + 1).toString().padStart(2, '0')
+  }/${date.getFullYear()}`;
+};
 
 
   return (
@@ -271,6 +304,54 @@ useEffect(() => {
           <p className="p-3">No delegates found for this customer.</p>
         )}
       </div>
+
+        <div className="contract-details mt-3">
+  <h4>Service Contract Details</h4>
+
+ {contracts.length > 0 ? (
+  <div className="table-responsive">
+    <table className="table table-bordered table-striped table-sm">
+      <thead>
+        <tr>
+          <th>S.No</th>
+          <th>Contract ID</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Value</th>
+          <th>Payment Term</th>
+          <th>Alert Days</th>
+          <th>Alert Date</th>
+          <th>Overdue Alert Days</th>
+          <th>Overdue Alert Date</th>
+          <th>Is Alert Sent</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {contracts.map((contract, index) => (
+          <tr key={contract.contract_id}>
+            <td>{index + 1}</td>
+            <td>{contract.contract_id}</td>
+            <td>{formatDate(contract.start_date)}</td>
+            <td>{formatDate(contract.end_date)}</td>
+            <td>{contract.contract_value}</td>
+            <td>{contract.payment_term}</td>
+            <td>{contract.alert_days || "-"}</td>
+            <td>{formatDate(contract.alert_date)}</td>
+            <td>{contract.overdue_alert_days || "-"}</td>
+            <td>{formatDate(contract.overdue_alert_date)}</td>
+            <td>{contract.is_alert_sent ? "Yes" : "No"}</td>
+            <td>{contract.remarks || "N/A"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+) : (
+  <p className="text-muted">No service contracts available for this item.</p>
+)}
+
+</div>
 
       <NavScreen />
     </div>

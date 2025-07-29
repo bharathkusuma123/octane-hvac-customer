@@ -429,7 +429,7 @@ const Screen2 = () => {
   const navigate = useNavigate();
   
   // State for ControlButtons2 functionality
-  const [selectedMode, setSelectedMode] = useState('High');
+  const [selectedMode, setSelectedMode] = useState('IDEC');
   const [fanPosition, setFanPosition] = useState(50);
 
   useEffect(() => {
@@ -513,7 +513,7 @@ const Screen2 = () => {
     setFanPosition(percentage);
   };
 
-  const modes = ['High', 'Medium', 'Low'];
+  const modes = ['IDEC', 'Auto', 'Fan', 'Indirect', 'Direct'];
 
   if (loading) {
     return <div className="loading">Loading...</div>;

@@ -359,6 +359,8 @@ const Screen1 = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [showAlarmModal, setShowAlarmModal] = useState(false);
+const [errorCount, setErrorCount] = useState(3); // You can set this dynamically based on actual errors
 
   useEffect(() => {
     const fetchData = async () => {
@@ -507,8 +509,29 @@ const Screen1 = () => {
             <FiWind size={20} />
             <span>Modes</span>
           </button>
-          <button className="control-btn" onClick={() => handleNavigation('/modes')}>
-            <FiClock size={20} />
+          <button className="control-btn" onClick={() => setShowAlarmModal(true)}>
+            <div style={{ position: 'relative' }}>
+              <FiClock size={20} />
+              {errorCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-23px',
+                  backgroundColor: 'red',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  {errorCount}
+                </span>
+              )}
+            </div>
             <span>Alarms</span>
           </button>
           <button className="control-btn" onClick={() => handleNavigation('/modes')}>
@@ -536,6 +559,78 @@ const Screen1 = () => {
           />
         </div>
       </div>
+       {/* Alarm Modal */}
+      {showAlarmModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowAlarmModal(false)}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '10px',
+            width: '80%',
+            maxWidth: '400px'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, color: '#333' }}>Alarm Notifications ({errorCount})</h3>
+            <div style={{ margin: '15px 0' }}>
+              <div style={{ 
+                padding: '10px', 
+                backgroundColor: '#ffeeee', 
+                borderRadius: '5px', 
+                marginBottom: '10px',
+                borderLeft: '4px solid red'
+              }}>
+                <strong>High Temperature Alert</strong>
+                <p style={{ margin: '5px 0 0 0' }}>Room temperature exceeded safe limits</p>
+              </div>
+              <div style={{ 
+                padding: '10px', 
+                backgroundColor: '#ffeeee', 
+                borderRadius: '5px',
+                borderLeft: '4px solid red'
+              }}>
+                <strong>Fan Malfunction</strong>
+                <p style={{ margin: '5px 0 0 0' }}>Fan speed inconsistent with settings</p>
+              </div>
+              {errorCount > 2 && (
+                <div style={{ 
+                  padding: '10px', 
+                  backgroundColor: '#ffeeee', 
+                  borderRadius: '5px',
+                  borderLeft: '4px solid red',
+                  marginTop: '10px'
+                }}>
+                  <strong>Filter Replacement Needed</strong>
+                  <p style={{ margin: '5px 0 0 0' }}>Air filter has reached maximum usage</p>
+                </div>
+              )}
+            </div>
+            <button 
+              onClick={() => setShowAlarmModal(false)}
+              style={{
+                backgroundColor: '#2B7ED6',
+                color: 'white',
+                border: 'none',
+                padding: '8px 15px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                float: 'right'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
