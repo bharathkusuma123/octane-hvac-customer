@@ -158,6 +158,23 @@
     border-radius: 20px;
     background-color: white;
   }
+
+  .fan-speed-labels {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  top: 20px;
+}
+
+.fan-speed-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 12px;
+}
+
+
 }
 
 

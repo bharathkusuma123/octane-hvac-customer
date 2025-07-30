@@ -340,7 +340,7 @@ import React, { useState, useEffect } from 'react';
 import {
   FiArrowLeft, FiPower, FiWind, FiClock, FiWatch, FiSettings, FiZap, FiLogOut, FiSun,
   FiDroplet,
-  FiThermometer
+  FiThermometer,   FiNavigation,  FiLayers,    FiRefreshCw,   FiCornerUpRight       
 } from 'react-icons/fi';
 import './Screen1.css';
 import AIROlogo from './Images/AIRO.png';
@@ -361,6 +361,7 @@ const Screen1 = () => {
   const navigate = useNavigate();
   const [showAlarmModal, setShowAlarmModal] = useState(false);
 const [errorCount, setErrorCount] = useState(3); // You can set this dynamically based on actual errors
+const [selectedMode, setSelectedMode] = useState(localStorage.getItem('selectedMode') || 'IDEC');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -441,6 +442,14 @@ const [errorCount, setErrorCount] = useState(3); // You can set this dynamically
   const handleNavigation = (path) => {
     navigate(path);
   };
+
+  const modeIcons = {
+  "Direct": FiNavigation,
+  "IDEC": FiLayers,
+  "Auto": FiRefreshCw,
+  "Fan": FiWind,
+  "Indirect": FiCornerUpRight
+};
 
   return (
     <div className='mainmain-container' style={{ backgroundImage: 'linear-gradient(to bottom, #3E99ED, #2B7ED6)' }}>
