@@ -207,7 +207,7 @@ display: flex;
   background-color: white;
   border-radius: 50%;
   border: 2px solid #2b7ed6;
-  right: 15px;
+  right: 20px;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -522,4 +522,12 @@ border-top-right-radius: 50px; */
   .main-container {
     margin-top: 5px;
   }
+  .temp-curve-arc {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 }

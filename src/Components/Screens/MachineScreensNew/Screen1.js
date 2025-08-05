@@ -271,6 +271,15 @@ const Screen1 = () => {
         <div className="temp-container">
           <div className="temp-circle-control">
             <div className="temp-inner-circle">
+                <svg className="temp-curve-arc" width="285" height="285" viewBox="0 0 285 285">
+  <path
+    d="M 142.5 32 A 110 110 0 0 1 252 142.5"
+    fill="none"
+    stroke="#ffffff"
+    strokeOpacity="0.7"
+    strokeWidth="6"
+  />
+</svg>
               <div className="temp-temperature">{formatTemp(sensorData.temperature)}°C</div>
               <div className="temp-fan-container">
 <div className="temp-fan-icon-container">
