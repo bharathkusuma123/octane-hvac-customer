@@ -1,4 +1,3 @@
-
 .add-delegate-form {
   background-color: #f4f6f9;
   font-family: 'Poppins', sans-serif;
@@ -17,25 +16,25 @@
   background-color: #0096D6;
   padding: 20px;
   border-radius: 12px 12px 0 0;
-text-align: left;
+  text-align: left;
 }
 
 .add-delegate-form .form-label {
   font-weight: 600;
   color: #333;
- margin-bottom: 4px ;
-    font-size: 20px;
+  margin-bottom: 4px;
+  font-size: 20px;
 }
 
-.add-delegate-form
-.formlabel{
-    text-align: left !important;
-     font-weight: 600;
+.add-delegate-form .formlabel {
+  text-align: left !important;
+  font-weight: 600;
   color: #333;
- margin-bottom: 4px ;
-    font-size: 20px;
+  margin-bottom: 4px;
+  font-size: 20px;
 
 }
+
 .add-delegate-form .form-control,
 .add-delegate-form .form-select {
   border-radius: 10px;
@@ -54,15 +53,26 @@ text-align: left;
   box-shadow: none;
 }
 
-.add-delegate-form .submit-btn {
+.add-delegate-form {
   background: #0180ff;
   color: white;
-  padding: 12px 25px;
+  padding: 12px 12px;
   border-radius: 10px;
   font-size: 1rem;
   transition: 0.3s;
   border: none !important;
 }
+
+.cancel-btn{
+  background: #0180ff;
+  color: white;
+  padding: 12px 12px;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: 0.3s;
+  border: none !important;
+}
+
 
 .add-delegate-form .submit-btn:hover {
   background: #5c91c5;
@@ -77,4 +87,73 @@ text-align: left;
 .add-delegate-form ::placeholder {
   color: #c9c9c9 !important;
   font-size: 0.9rem !important;
+}
+
+
+/* Replace your existing button styles with this */
+.button-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.button-container button {
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn {
+  background-color: #0096D6;
+  color: white;
+}
+
+.submit-btn:hover {
+  background-color: #007bb5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-btn:active {
+  transform: translateY(0);
+}
+
+/* For smaller screens */
+@media (max-width: 576px) {
+  .button-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .button-container button {
+    width: 100%;
+    max-width: 100%;
+  }
 }

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import "./Machine.css";
 import EditServiceItemModal from './EditServiceItemModal';
-import { FaEdit } from 'react-icons/fa';
+import { FaEdit, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
 const MachineScreen = () => {
   const { user } = useContext(AuthContext);
@@ -16,6 +16,7 @@ const MachineScreen = () => {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [expandedCards, setExpandedCards] = useState({});
   const navigate = useNavigate(); 
 
   useEffect(() => {
@@ -29,6 +30,12 @@ const MachineScreen = () => {
       .then(response => {
         if (response.data.status === "success") {
           setServiceItems(response.data.data);
+          // Initialize all cards as collapsed
+          const initialExpandedState = {};
+          response.data.data.forEach((item, index) => {
+            initialExpandedState[index] = false;
+          });
+          setExpandedCards(initialExpandedState);
         }
       })
       .catch(error => {
@@ -53,6 +60,13 @@ const MachineScreen = () => {
     );
   };
 
+  const toggleCardExpand = (index) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
   return (
     <div className="machine-screen-wrapper">
       <div className="machine-screen-header">
@@ -67,59 +81,67 @@ const MachineScreen = () => {
         <div className="machine-cards-container">
           {serviceItems.map((item, index) => (
             <div key={index} className="machine-card">
-              <div className="machine-card-header">
+              <div className="machine-card-header" onClick={() => toggleCardExpand(index)}>
                 <span className="machine-card-sno">{index + 1}</span>
                 <h3 
                   className="machine-card-id"
-                  onClick={() => navigate(`/machines/${item.service_item_id}`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/machines/${item.service_item_id}`);
+                  }}
                 >
                   {item.service_item_id}
                 </h3>
+                <div className="machine-card-toggle">
+                  {expandedCards[index] ? <FaChevronUp /> : <FaChevronDown />}
+                </div>
               </div>
               
-              <div className="machine-card-body">
-                <div className="machine-card-row">
-                  <span className="machine-card-label">Name:</span>
-                  <span className="machine-card-value">
-                    {item.service_item_name}
-                    <FaEdit 
-                      className="machine-card-edit-icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(item);
-                      }}
-                      title="Edit"
-                    />
-                  </span>
+              {expandedCards[index] && (
+                <div className="machine-card-body">
+                  <div className="machine-card-row">
+                    <span className="machine-card-label">Name:</span>
+                    <span className="machine-card-value">
+                      {item.service_item_name}
+                      <FaEdit 
+                        className="machine-card-edit-icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClick(item);
+                        }}
+                        title="Edit"
+                      />
+                    </span>
+                  </div>
+                  
+                  <div className="machine-card-row">
+                    <span className="machine-card-label">Serial Number:</span>
+                    <span className="machine-card-value">{item.serial_number}</span>
+                  </div>
+                  
+                  <div className="machine-card-row">
+                    <span className="machine-card-label">Location:</span>
+                    <span className="machine-card-value">{item.location}</span>
+                  </div>
+                  
+                  <div className="machine-card-row">
+                    <span className="machine-card-label">Description:</span>
+                    <span className="machine-card-value">{item.product_description}</span>
+                  </div>
+                  
+                  <div className="machine-card-row">
+                    <span className="machine-card-label">Installation Date:</span>
+                    <span className="machine-card-value">{item.installation_date}</span>
+                  </div>
+                  
+                  <div className="machine-card-row">
+                    <span className="machine-card-label">Status:</span>
+                    <span className={`machine-card-status machine-status-${item.status.toLowerCase()}`}>
+                      {item.status}
+                    </span>
+                  </div>
                 </div>
-                
-                <div className="machine-card-row">
-                  <span className="machine-card-label">Serial Number:</span>
-                  <span className="machine-card-value">{item.serial_number}</span>
-                </div>
-                
-                <div className="machine-card-row">
-                  <span className="machine-card-label">Location:</span>
-                  <span className="machine-card-value">{item.location}</span>
-                </div>
-                
-                <div className="machine-card-row">
-                  <span className="machine-card-label">Description:</span>
-                  <span className="machine-card-value">{item.product_description}</span>
-                </div>
-                
-                <div className="machine-card-row">
-                  <span className="machine-card-label">Installation Date:</span>
-                  <span className="machine-card-value">{item.installation_date}</span>
-                </div>
-                
-                <div className="machine-card-row">
-                  <span className="machine-card-label">Status:</span>
-                  <span className={`machine-card-status machine-status-${item.status.toLowerCase()}`}>
-                    {item.status}
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>

@@ -1,159 +1,11 @@
-// import React, { useEffect, useState, useContext} from 'react';
-// import NavScreen from '../../Screens/Navbar/Navbar';
-// import axios from 'axios';
-// import './Request.css';
-// import { AuthContext } from "../../AuthContext/AuthContext";
-// import baseURL from '../../ApiUrl/Apiurl';
-
-// const RequestScreen = () => {
-//   const [requests, setRequests] = useState([]);
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const [rowsPerPage, setRowsPerPage] = useState(5);
-
-//     const { user } = useContext(AuthContext);
-//     // const userId = localStorage.getItem('userId'); // e.g., 'custid00066'
-//    const userId = user?.user_id; // Use optional chaining to avoid crash if user is null
-//   const userName = user?.username;
-//   console.log("from context data",userId,userName);
-//   console.log("userdata",user);
-
-// useEffect(() => {
-//   if (user?.customer_id) {
-//     axios
-//       .get(`${baseURL}/service-pools/`)
-//       .then((response) => {
-//         if (response.data?.status === 'success') {
-//          const filteredRequests = response.data.data
-//             .filter((req) => req.customer === user.customer_id)
-//             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort descending by created_at
-
-//           setRequests(filteredRequests);
-//         }
-//       })
-//       .catch((error) => {
-//         console.error('Error fetching service requests:', error);
-//       });
-//   }
-// }, [user?.customer_id]);
-
-
-
-//   const totalPages = Math.ceil(requests.length / rowsPerPage);
-//   const paginatedData = requests.slice(
-//     (currentPage - 1) * rowsPerPage,
-//     currentPage * rowsPerPage
-//   );
-
-//   const handleRowsPerPageChange = (e) => {
-//     setRowsPerPage(Number(e.target.value));
-//     setCurrentPage(1);
-//   };
-
-//   const handlePageChange = (newPage) => {
-//     if (newPage >= 1 && newPage <= totalPages) {
-//       setCurrentPage(newPage);
-//     }
-//   };
-
-//   return (
-//     <div className="request-screen-wrapper">
-//       <h2 className="text-center mt-1 mb-4">Request Screen</h2>
-//  {/* <strong>Customer ID:</strong> {user?.customer_id || 'Loading...'} */}
-//       <div className="d-flex justify-content-between align-items-center mb-3">
-//         <label>
-//           Show:{' '}
-//           <select
-//             value={rowsPerPage}
-//             onChange={handleRowsPerPageChange}
-//             className="form-select d-inline-block w-auto"
-//           >
-//             <option value={5}>5</option>
-//             <option value={10}>10</option>
-//             <option value={25}>25</option>
-//           </select>{' '}
-//           entries
-//         </label>
-//       </div>
-
-//       <div className="table-container table-responsive p-0">
-//         <table className="table table-bordered table-hover table-striped mb-0">
-//           <thead className="table-dark">
-//             <tr>
-//               <th>S.No</th>
-//               <th>Request ID</th>
-//               <th>Service Item ID</th>
-//               <th>Preferred Date</th>
-//               <th>Preferred Time</th>
-//               <th>Request Details</th>
-//             </tr>
-//           </thead>
-//           <tbody>
-//             {paginatedData.length === 0 ? (
-//               <tr>
-//                 <td colSpan="5" className="text-center">
-//                   No requests found.
-//                 </td>
-//               </tr>
-//             ) : (
-//               paginatedData.map((req, index) => (
-//                 <tr key={index}>
-//                   <td>{index+1}</td>
-//                   <td>{req.request_id}</td>
-//                   <td>{req.service_item}</td>
-//                   <td>{req.preferred_date}</td>
-//                   <td>{req.preferred_time}</td>
-//                   <td>{req.request_details}</td>
-//                 </tr>
-//               ))
-//             )}
-//           </tbody>
-//         </table>
-//       </div>
-
-//        <div className="d-flex justify-content-center align-items-center mt-3 gap-3 flex-wrap">
-//           <button
-//             className="btn btn-primary"
-//             disabled={currentPage === 1}
-//             onClick={() => handlePageChange(currentPage - 1)}
-//           >
-//             Previous
-//           </button>
-//           <span className="fw-semibold">
-//             Page {currentPage} of {totalPages}
-//           </span>
-//           <button
-//             className="btn btn-primary"
-//             disabled={currentPage === totalPages}
-//             onClick={() => handlePageChange(currentPage + 1)}
-//           >
-//             Next
-//           </button>
-//         </div>
-
-
-//       <NavScreen />
-//     </div>
-//   );
-// };
-
-// export default RequestScreen;
-
-
-
-
-
-
-
-
-
-import React, { useEffect, useState, useContext} from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import NavScreen from '../../Screens/Navbar/Navbar';
 import axios from 'axios';
 import './Request.css';
 import { AuthContext } from "../../AuthContext/AuthContext";
 import baseURL from '../../ApiUrl/Apiurl';
 import { useNavigate } from 'react-router-dom';
-
+import { Card, Button, Form, Row, Col } from 'react-bootstrap';
 
 const RequestScreen = () => {
   const [requests, setRequests] = useState([]);
@@ -161,23 +13,18 @@ const RequestScreen = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
-   const [submittedFeedbackRequests, setSubmittedFeedbackRequests] = useState([]);
+  const [submittedFeedbackRequests, setSubmittedFeedbackRequests] = useState([]);
+  const [closedRequestIds, setClosedRequestIds] = useState([]);
 
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
-  const userName = user?.username;
   const navigate = useNavigate();
-  // console.log("from context data",userId,userName);
-  // console.log("userdata",user);
 
- const [closedRequestIds, setClosedRequestIds] = useState([]);
-
-  // Fetch service requests
   useEffect(() => {
     if (user?.customer_id) {
       axios
-        .get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${company_id}`) 
+        .get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${company_id}`)
         .then((response) => {
           if (response.data?.status === 'success') {
             const customerRequests = response.data.data
@@ -200,39 +47,28 @@ const RequestScreen = () => {
     }
   }, [user?.customer_id]);
 
-  // Fetch survey data to check for submitted feedback
- useEffect(() => {
-  if (user?.customer_id) {
-    axios
-      .get(`${baseURL}/customer-surveys/?user_id=${userId}&company_id=${company_id}`)
-      .then((response) => {
-        // Check if response.data exists and is an array
-        if (Array.isArray(response.data)) {
-          const feedbackSubmittedRequests = response.data.map(
-            survey => survey.service_request
-          );
-          setSubmittedFeedbackRequests(feedbackSubmittedRequests);
-        }
-        // If the data is nested differently (like in your example)
-        else if (response.data && Array.isArray(response.data.data)) {
-          const feedbackSubmittedRequests = response.data.data.map(
-            survey => survey.service_request
-          );
-          setSubmittedFeedbackRequests(feedbackSubmittedRequests);
-        }
-      })
-      .catch((error) => {
-        console.error('Error fetching survey data:', error);
-      });
-  }
-}, [user?.customer_id]);
-
+  useEffect(() => {
+    if (user?.customer_id) {
+      axios
+        .get(`${baseURL}/customer-surveys/?user_id=${userId}&company_id=${company_id}`)
+        .then((response) => {
+          const data = response.data?.data || response.data;
+          if (Array.isArray(data)) {
+            const feedbackSubmittedRequests = data.map(survey => survey.service_request);
+            setSubmittedFeedbackRequests(feedbackSubmittedRequests);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching survey data:', error);
+        });
+    }
+  }, [user?.customer_id]);
 
   useEffect(() => {
     if (searchTerm === '') {
       setFilteredRequests(requests);
     } else {
-      const filtered = requests.filter(request => 
+      const filtered = requests.filter(request =>
         request.request_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         request.service_item.toLowerCase().includes(searchTerm.toLowerCase()) ||
         request.preferred_date.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -241,7 +77,7 @@ const RequestScreen = () => {
       );
       setFilteredRequests(filtered);
     }
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   }, [searchTerm, requests]);
 
   const totalPages = Math.ceil(filteredRequests.length / rowsPerPage);
@@ -250,122 +86,94 @@ const RequestScreen = () => {
     currentPage * rowsPerPage
   );
 
-  const handleRowsPerPageChange = (e) => {
-    setRowsPerPage(Number(e.target.value));
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
   return (
     <div className="request-screen-wrapper">
-      <h2 className="text-center mt-1 mb-4">Request Screen</h2>
+      <h2 className="text-center mb-4">Request Screen</h2>
 
-    <div className="d-flex justify-content-between align-items-center mb-3 flex-nowrap overflow-hidden">
-  <div className="d-flex align-items-center me-2" style={{ minWidth: '150px' }}>
-    <label className="mb-0 text-nowrap">
-      Show:{' '}
-      <select
-        value={rowsPerPage}
-        onChange={handleRowsPerPageChange}
-        className="form-select d-inline-block w-auto"
-      >
-        <option value={5}>5</option>
-        <option value={10}>10</option>
-        <option value={25}>25</option>
-      </select>{' '}
-      entries
-    </label>
-  </div>
-  
-  <div className="search-bar flex-grow-1">
-    <input
-      type="text"
-      placeholder="Search..."
-      value={searchTerm}
-      onChange={handleSearchChange}
-      className="form-control"
-      style={{ minWidth: '120px' }}
-    />
-  </div>
-</div>
+      <Card className="toolbar-card shadow-sm p-3 mb-4">
+        <Row className="align-items-center g-3">
+          <Col xs="auto">
+            <Form.Label className="mb-0 fw-semibold">Show:</Form.Label>
+          </Col>
+          <Col xs="auto">
+            <Form.Select
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="rows-select"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </Form.Select>
+          </Col>
+          <Col className="ms-auto">
+            <Form.Control
+              type="text"
+              placeholder="Search by ID, Service, Date..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </Col>
+        </Row>
+      </Card>
 
-      <div className="table-container table-responsive p-0">
-        <table className="table table-bordered table-hover mb-0">
-          <thead className="table-dark">
-            <tr>
-              <th>S.No</th>
-              <th>Request ID</th>
-              <th>Service Item ID</th>
-              <th>Preferred Date</th>
-              <th>Preferred Time</th>
-              <th>Request Details</th>
-              <th>Feedback</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="text-center">
-                  {searchTerm ? 'No matching requests found.' : 'No requests found.'}
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((req, index) => (
-                <tr key={index}>
-                  <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                  <td>{req.request_id}</td>
-                  <td>{req.service_item}</td>
-                  <td>{req.preferred_date}</td>
-                  <td>{req.preferred_time}</td>
-                  <td>{req.request_details}</td>
-                    <td>
-                {closedRequestIds.includes(req.request_id) && (
-                  <button
-                    className="btn btn-sm btn-success mt-2"
-                    onClick={() => navigate(`/feedback/${req.request_id}`)}
-                    disabled={submittedFeedbackRequests.includes(req.request_id)}
-                  >
-                    {submittedFeedbackRequests.includes(req.request_id) 
-                      ? 'Feedback Submitted' 
-                      : 'Give Feedback'}
-                  </button>
-                )}
-              </td>
+      <Row className="g-4">
+        {paginatedData.length === 0 ? (
+          <p className="text-center">No {searchTerm ? 'matching' : ''} requests found.</p>
+        ) : (
+          paginatedData.map((req, index) => (
+            <Col xs={12} sm={6} md={4} key={index}>
+              <Card className="request-card h-100 shadow-sm">
+                <Card.Body>
+                  <Card.Title className="mb-3 text-primary fw-bold">
+                    Request ID: {req.request_id}
+                  </Card.Title>
+                  <Card.Text>
+                    <strong>Service Item:</strong> {req.service_item}<br />
+                    <strong>Preferred Date:</strong> {req.preferred_date}<br />
+                    <strong>Preferred Time:</strong> {req.preferred_time}<br />
+                    <strong>Details:</strong> {req.request_details || 'N/A'}
+                  </Card.Text>
+                </Card.Body>
+                <Card.Footer className="bg-white border-top-0">
+                  {closedRequestIds.includes(req.request_id) && (
+                    <Button
+                      variant={submittedFeedbackRequests.includes(req.request_id) ? "success" : "primary"}
+                      size="sm"
+                      className="w-100"
+                      onClick={() => navigate(`/feedback/${req.request_id}`)}
+                      disabled={submittedFeedbackRequests.includes(req.request_id)}
+                    >
+                      {submittedFeedbackRequests.includes(req.request_id)
+                        ? 'Feedback Submitted'
+                        : 'Give Feedback'}
+                    </Button>
+                  )}
+                </Card.Footer>
+              </Card>
+            </Col>
+          ))
+        )}
+      </Row>
 
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="d-flex justify-content-center align-items-center mt-3 gap-3 flex-wrap">
-        <button
-          className="btn btn-primary"
+      <div className="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
+        <Button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
-          onClick={() => handlePageChange(currentPage - 1)}
         >
           Previous
-        </button>
-        <span className="fw-semibold">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          className="btn btn-primary"
+        </Button>
+        <span className="fw-semibold">Page {currentPage} of {totalPages}</span>
+        <Button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
-          onClick={() => handlePageChange(currentPage + 1)}
         >
           Next
-        </button>
+        </Button>
       </div>
 
       <NavScreen />

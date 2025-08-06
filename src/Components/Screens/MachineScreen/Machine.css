@@ -50,6 +50,7 @@
   padding: 12px 16px;
   background-color: #0096D6;
   color: white;
+  cursor: pointer;
 }
 
 .machine-card-sno {
@@ -71,33 +72,33 @@
   font-size: 16px;
   cursor: pointer;
   text-decoration: underline;
+  flex-grow: 1;
 }
 
 .machine-card-id:hover {
   opacity: 0.9;
 }
 
+.machine-card-toggle {
+  margin-left: 8px;
+  font-size: 14px;
+}
+
 .machine-card-body {
-  padding: 16px;
+  padding: 8px 16px;
 }
 
 .machine-card-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
-}
-
-.machine-card-row:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
 }
 
 .machine-card-label {
   font-weight: 600;
   color: #555;
+  font-size: 14px;
 }
 
 .machine-card-value {
@@ -105,6 +106,7 @@
   text-align: right;
   max-width: 60%;
   word-break: break-word;
+  font-size: 14px;
 }
 
 .machine-card-edit-icon {

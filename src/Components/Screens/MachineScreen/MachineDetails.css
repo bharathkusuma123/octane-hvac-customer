@@ -298,3 +298,32 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* Add this to your existing CSS */
+/* .delegate-card {
+  max-width: 250px; /* Reduced from the implicit 300px */
+/* }  */
+
+.delegate-permissions-grid {
+  grid-template-columns: 1fr; /* Single column layout */
+  gap: 6px; /* Reduced gap between items */
+  padding: 8px 12px; /* Adjusted padding */
+}
+
+.delegate-permission-label {
+  padding: 4px 6px; /* Reduced padding */
+  font-size: 13px; /* Slightly smaller font */
+}
+
+.delegate-card-header {
+  padding: 10px 12px; /* Reduced padding */
+}
+
+.delegate-card-body {
+  padding: 12px 0; /* Adjusted padding */
+}
+
+.delegate-card-footer {
+  padding: 10px 12px; /* Reduced padding */
+}

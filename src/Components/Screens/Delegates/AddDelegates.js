@@ -428,18 +428,20 @@ const AddDelegate = () => {
                 />
               </div>
 
-              <div className="d-flex justify-content-center mt-3 gap-3">
-                <button
-                  type="button"
-                  className="submit-btn"
-                  onClick={() => navigate('/view-delegates')}
-                  style={{ background: '#ccc', color: '#000' }}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="submit-btn">
-                  Add Delegate
-                </button>
+              <div className="button-container">
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => navigate('/view-delegates')}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="submit-btn"
+                  >
+                    Add Delegate
+                  </button>
               </div>
             </div>
           </form>
