@@ -64,113 +64,75 @@ const AddDelegates = () => {
   );
 
   return (
-    <div className="delegate-table-container">
-      <div className="delegate-table-header">
-        <h2 className="delegate-table-title">My Delegates</h2>
-        <button onClick={handleAddDelegate} className="delegate-table-add-btn">
-           Add Delegate
+    <div className="delegate-card-container">
+      <div className="delegate-card-header">
+        <h2 className="delegate-card-title">My Delegates</h2>
+        <button onClick={handleAddDelegate} className="delegate-card-add-btn">
+          <FaUserPlus className="delegate-card-add-icon" /> Add Delegate
         </button>
       </div>
 
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-nowrap overflow-hidden">
-        <div className="d-flex align-items-center me-2" style={{ minWidth: '150px' }}>
-          {/* <label className="mb-0 text-nowrap">
-            Show:{' '}
-            <select
-              value={rowsPerPage}
-              onChange={handleRowsPerPageChange}
-              className="form-select d-inline-block w-auto"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-            </select>{' '}
-            entries
-          </label> */}
-        </div>
-
-        <div className="search-bar flex-grow-1">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="form-control"
-            style={{ minWidth: '120px' }}
-          />
-        </div>
+      <div className="delegate-card-search-container">
+        <input
+          type="text"
+          placeholder="Search delegates..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="delegate-card-search-input"
+        />
       </div>
 
-      <div className="table-container table-responsive p-0">
+      <div className="delegate-card-grid">
         {isLoading ? (
-          <div className="loading-message">Loading delegates...</div>
+          <div className="delegate-card-loading-message">Loading delegates...</div>
         ) : paginatedData.length > 0 ? (
-          <table className="table table-bordered table-hover mb-0">
-            <thead className="table-dark">
-              <tr>
-                <th>S.No</th>
-                <th>Delegate ID</th>
-                 <th>Delegate Name</th>
-                <th>Mobile Number</th>
-                {/* <th>Service Item</th> */}
-                <th>Status</th>
-                <th>Registered At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((delegate, index) => (
-                <tr key={delegate.delegate_id}>
-                  <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                 <td>
-  <span
-    onClick={() => navigate(`/delegate-service-items/${delegate.delegate_id}`)}
-    style={{ color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
-  >
-    {delegate.delegate_id}
-  </span>
-</td>
-
-                  <td>{delegate.delegate_name}</td>
-                  <td>{delegate.delegate_mobile}</td>
-                  {/* <td>{delegate.service_item}</td> */}
-                  <td>
-                    <span className={`status-badge ${delegate.status.toLowerCase()}`}>
-                      {delegate.status}
-                    </span>
-                  </td>
-                  <td>{new Date(delegate.registered_at).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          paginatedData.map((delegate, index) => (
+            <div key={delegate.delegate_id} className="delegate-card-item">
+              <div className="delegate-card-header-section">
+                <span className="delegate-card-serial">
+                  {(currentPage - 1) * rowsPerPage + index + 1}
+                </span>
+                <span 
+                  className="delegate-card-id"
+                  onClick={() => navigate(`/delegate-service-items/${delegate.delegate_id}`)}
+                >
+                  ID: {delegate.delegate_id}
+                </span>
+              </div>
+              
+              <div className="delegate-card-body-section">
+                <div className="delegate-card-field">
+                  <span className="delegate-card-label">Name:</span>
+                  <span className="delegate-card-value">{delegate.delegate_name}</span>
+                </div>
+                
+                <div className="delegate-card-field">
+                  <span className="delegate-card-label">Mobile:</span>
+                  <span className="delegate-card-value">{delegate.delegate_mobile}</span>
+                </div>
+                
+                <div className="delegate-card-field">
+                  <span className="delegate-card-label">Status:</span>
+                  <span className={`delegate-card-status delegate-card-status-${delegate.status.toLowerCase()}`}>
+                    {delegate.status}
+                  </span>
+                </div>
+                
+                <div className="delegate-card-field">
+                  <span className="delegate-card-label">Registered:</span>
+                  <span className="delegate-card-value">
+                    {new Date(delegate.registered_at).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
         ) : (
-          <div className="no-delegates-message">
+          <div className="delegate-card-empty-message">
             {searchTerm ? 'No matching delegates found.' : 'No delegates found for your account.'}
           </div>
         )}
       </div>
-
-      {filteredDelegates.length > 0 && (
-        <div className="d-flex justify-content-center align-items-center mt-3 gap-3 flex-wrap">
-          <button
-            className="btn btn-primary"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <span className="fw-semibold">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="btn btn-primary"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
 
       <NavScreen />
     </div>

@@ -4,7 +4,7 @@ import { AuthContext } from "../../AuthContext/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import "./Machine.css";
-import EditServiceItemModal from './EditServiceItemModal'; // Import the modal component
+import EditServiceItemModal from './EditServiceItemModal';
 import { FaEdit } from 'react-icons/fa';
 
 const MachineScreen = () => {
@@ -54,81 +54,77 @@ const MachineScreen = () => {
   };
 
   return (
-    <div className="request-screen-wrapper">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="machine-table-title">Machine Screen</h2>
+    <div className="machine-screen-wrapper">
+      <div className="machine-screen-header">
+        <h2 className="machine-screen-title">Machine Screen</h2>
       </div>
 
       <NavScreen />
 
       {loading ? (
-        <p>Loading data...</p>
+        <p className="machine-loading-text">Loading data...</p>
       ) : (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>S.No</th>
-                <th>Service Item</th>
-                <th>Service Item Name</th>
-                <th>Serial Number</th>
-                <th>Location</th>
-                <th>Product Description</th>
-                <th>Installation Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serviceItems.map((item, index) => (
-                <tr key={index}>
-                  <td>{index + 1}</td>
-                  <td
-                    style={{ cursor: 'pointer', color: 'blue', textDecoration: 'underline' }}
-                    onClick={() => navigate(`/machines/${item.service_item_id}`)}
-                  >
-                    {item.service_item_id}
-                  </td>
-               <td>
-  {item.service_item_name}
-  <FaEdit 
-    style={{ 
-      cursor: 'pointer',
-      color: '#1890ff',
-      marginLeft: '8px',
-      fontSize: '16px'
-    }}
-    onClick={(e) => {
-      e.stopPropagation();
-      handleEditClick(item);
-    }}
-    title="Edit"
-  />
-</td>
-                  <td>{item.serial_number}</td>
-                  <td>{item.location}</td>
-                  <td>{item.product_description}</td>
-                  <td>{item.installation_date}</td>
-                  <td>
-                    <span
-                      className={`status-badge ${
-                        item.status.toLowerCase() === 'active'
-                          ? 'active'
-                          : item.status.toLowerCase() === 'inactive'
-                          ? 'inactive'
-                          : 'pending'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="machine-cards-container">
+          {serviceItems.map((item, index) => (
+            <div key={index} className="machine-card">
+              <div className="machine-card-header">
+                <span className="machine-card-sno">{index + 1}</span>
+                <h3 
+                  className="machine-card-id"
+                  onClick={() => navigate(`/machines/${item.service_item_id}`)}
+                >
+                  {item.service_item_id}
+                </h3>
+              </div>
+              
+              <div className="machine-card-body">
+                <div className="machine-card-row">
+                  <span className="machine-card-label">Name:</span>
+                  <span className="machine-card-value">
+                    {item.service_item_name}
+                    <FaEdit 
+                      className="machine-card-edit-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(item);
+                      }}
+                      title="Edit"
+                    />
+                  </span>
+                </div>
+                
+                <div className="machine-card-row">
+                  <span className="machine-card-label">Serial Number:</span>
+                  <span className="machine-card-value">{item.serial_number}</span>
+                </div>
+                
+                <div className="machine-card-row">
+                  <span className="machine-card-label">Location:</span>
+                  <span className="machine-card-value">{item.location}</span>
+                </div>
+                
+                <div className="machine-card-row">
+                  <span className="machine-card-label">Description:</span>
+                  <span className="machine-card-value">{item.product_description}</span>
+                </div>
+                
+                <div className="machine-card-row">
+                  <span className="machine-card-label">Installation Date:</span>
+                  <span className="machine-card-value">{item.installation_date}</span>
+                </div>
+                
+                <div className="machine-card-row">
+                  <span className="machine-card-label">Status:</span>
+                  <span className={`machine-card-status machine-status-${item.status.toLowerCase()}`}>
+                    {item.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Edit Modal */}
       {selectedItem && (
         <EditServiceItemModal
           show={showEditModal}

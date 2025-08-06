@@ -1,32 +1,300 @@
+/* Machine Details Wrapper */
+.machine-details-wrapper {
+  padding: 60px 16px 90px;
+  min-height: 100vh;
+  background-color: #f9f9f9;
+  box-sizing: border-box;
+}
 
+.machine-details-header {
+  margin-bottom: 24px;
+}
 
-.table-container {
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.machine-details-title {
+  font-size: 22px;
+  color: #333;
+}
+
+.machine-details-title span {
+  color: #0096D6;
+  font-weight: 600;
+}
+
+.machine-details-section {
+  margin-bottom: 32px;
   background: white;
-  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
 
-.table thead th {
-  position: sticky;
-  top: 0;
-  color: #fafdfd;
-  background-color: #0096D6;
-  z-index: 1;
+.machine-details-subtitle {
+  color: #444;
+  font-size: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
 }
 
-.table td, .table th {
-  vertical-align: middle;
-  white-space: nowrap;
+.machine-details-loading,
+.machine-details-empty {
+  color: #666;
+  text-align: center;
+  padding: 16px;
+}
+
+/* Delegate Cards */
+.delegate-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.delegate-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.delegate-card-disabled {
+  opacity: 0.7;
+  background-color: #f5f5f5;
+}
+
+.delegate-card-header {
+  display: flex;
+  align-items: center;
   padding: 12px 16px;
+  background-color: #f0f7fc;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-@media (max-width: 576px) {
-  .table-container {
-    overflow-x: auto;
-  }
+.delegate-card-sno {
+  background: #0096D6;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-weight: bold;
+  font-size: 14px;
+}
 
-  .search-bar input {
-    width: 100%;
+.delegate-card-name {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.delegate-card-id {
+  font-size: 14px;
+  color: #666;
+  background: #eee;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.delegate-card-body {
+  padding: 16px;
+}
+
+.delegate-permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.delegate-permission-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.delegate-permission-label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #444;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.delegate-permission-label:hover {
+  background-color: #f5f5f5;
+}
+
+.delegate-permission-checkbox {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #0096D6;
+  border-radius: 4px;
+  margin-right: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delegate-permission-checkbox:checked {
+  background-color: #0096D6;
+  border-color: #0096D6;
+}
+
+.delegate-permission-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.delegate-permission-checkbox:disabled {
+  border-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.delegate-permission-checkbox:disabled:checked {
+  background-color: #cccccc;
+}
+
+
+/* Adjust the grid layout */
+.delegate-permissions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.delegate-card-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  text-align: right;
+}
+
+.delegate-submit-btn {
+  background-color: #0096D6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.delegate-submit-btn:hover {
+  background-color: #007bb5;
+}
+
+.delegate-submit-btn:disabled,
+.delegate-submit-btn-delegate-submit-btn-disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Contract Cards */
+.contract-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.contract-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.contract-card-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.contract-card-sno {
+  background: #666;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.contract-card-id {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.contract-card-body {
+  padding: 16px;
+}
+
+.contract-card-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.contract-card-row:last-child {
+  margin-bottom: 0;
+}
+
+.contract-card-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+}
+
+.contract-card-value {
+  color: #333;
+  text-align: right;
+  max-width: 60%;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .delegate-cards-container,
+  .contract-cards-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .delegate-permissions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* For wider screens, show 2 columns */
+@media (min-width: 768px) {
+  .delegate-permissions-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

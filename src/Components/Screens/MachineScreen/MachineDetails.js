@@ -220,138 +220,159 @@ const formatDate = (dateStr) => {
 };
 
 
-  return (
-    <div className="request-screen-wrapper">
-      {/* <h2>Machine Details</h2> */}
-      {/* <p>Customer ID: {userId}</p> */}
-      <p>Service Item ID: <strong>{serviceItemId}</strong></p>
+return (
+    <div className="machine-details-wrapper">
+      <div className="machine-details-header">
+        <h2 className="machine-details-title">Service Item ID: <span>{serviceItemId}</span></h2>
+      </div>
 
-      <h3>Delegate Permissions</h3>
+      <div className="machine-details-section">
+        <h3 className="machine-details-subtitle">Delegate Permissions</h3>
 
-      <div className="table-container">
         {loading ? (
-          <p className="p-3">Loading delegates...</p>
+          <p className="machine-details-loading">Loading delegates...</p>
         ) : delegates.length > 0 ? (
-          <table className="table table-bordered mb-0">
-            <thead>
-              <tr>
-                <th>S.No</th>
-                <th>ID</th>
-                <th>Delegate Name</th>
-                {permissionFields.map((p) => (
-                  <th key={p.key}>{p.label}</th>
-                ))}
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {delegates.map((d, index) => {
-  const isSubmitted = submittedDelegates.some(
-    (entry) =>
-      entry.delegateId === d.delegate_id &&
-      entry.serviceItemId === serviceItemId
-  );
+          <div className="delegate-cards-container">
+            {delegates.map((d, index) => {
+              const isSubmitted = submittedDelegates.some(
+                (entry) =>
+                  entry.delegateId === d.delegate_id &&
+                  entry.serviceItemId === serviceItemId
+              );
 
-  return (
-    <tr key={d.delegate_id}>
-      <td>{index + 1}</td>
-      <td>{d.delegate_id}</td>
-      <td>{d.delegate_name}</td>
-      {permissionFields.map((p) => (
-        <td key={p.key}>
-          <input
-            type="checkbox"
-            checked={d[p.key]}
-            disabled={assignedPermissions.some(
-              (item) =>
-                item.service_item === serviceItemId &&
-                item.delegate !== d.delegate_id
-            )}
-            onChange={(e) =>
-              handleCheckboxChange(d.delegate_id, p.key, e.target.checked)
-            }
-          />
-        </td>
-      ))}
-      <td>
-        <button
-          className="btn btn-sm btn-primary"
-          disabled={
-            submittingId === d.delegate_id ||
-            isSubmitted ||
-            assignedPermissions.some(
-              (item) =>
-                item.service_item === serviceItemId &&
-                item.delegate !== d.delegate_id
-            )
-          }
-          onClick={() => handleSubmit(d)}
-        >
-          {submittingId === d.delegate_id
-            ? "Submitting..."
-            : isSubmitted
-            ? "Submitted"
-            : "Submit"}
-        </button>
-      </td>
-    </tr>
-  );
-})}
+              const isDisabled = assignedPermissions.some(
+                (item) =>
+                  item.service_item === serviceItemId &&
+                  item.delegate !== d.delegate_id
+              );
 
-            </tbody>
-          </table>
+              return (
+                <div key={d.delegate_id} className={`delegate-card ${isDisabled ? 'delegate-card-disabled' : ''}`}>
+                  <div className="delegate-card-header">
+                    <span className="delegate-card-sno">{index + 1}</span>
+                    <h4 className="delegate-card-name">{d.delegate_name}</h4>
+                    <span className="delegate-card-id">{d.delegate_id}</span>
+                  </div>
+                  
+                  <div className="delegate-card-body">
+                    <div className="delegate-permissions-grid">
+                        {permissionFields.map((p) => (
+                          <div key={p.key} className="delegate-permission-item">
+                            <label className="delegate-permission-label">
+                              <input
+                                type="checkbox"
+                                checked={d[p.key]}
+                                disabled={isDisabled}
+                                onChange={(e) =>
+                                  handleCheckboxChange(d.delegate_id, p.key, e.target.checked)
+                                }
+                                className="delegate-permission-checkbox"
+                              />
+                              <span className="delegate-permission-text">{p.label}</span>
+                            </label>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                  
+                  <div className="delegate-card-footer">
+                    <button
+                      className={`delegate-submit-btn ${
+                        isSubmitted ? 'delegate-submit-btn-disabled' : ''
+                      }`}
+                      disabled={
+                        submittingId === d.delegate_id ||
+                        isSubmitted ||
+                        isDisabled
+                      }
+                      onClick={() => handleSubmit(d)}
+                    >
+                      {submittingId === d.delegate_id
+                        ? "Submitting..."
+                        : isSubmitted
+                        ? "Submitted"
+                        : "Submit"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <p className="p-3">No delegates found for this customer.</p>
+          <p className="machine-details-empty">No delegates found for this customer.</p>
         )}
       </div>
 
-        <div className="contract-details mt-3">
-  <h4>Service Contract Details</h4>
+      <div className="machine-details-section">
+        <h3 className="machine-details-subtitle">Service Contract Details</h3>
 
- {contracts.length > 0 ? (
-  <div className="table-responsive">
-    <table className="table table-bordered table-striped table-sm">
-      <thead>
-        <tr>
-          <th>S.No</th>
-          <th>Contract ID</th>
-          <th>Start Date</th>
-          <th>End Date</th>
-          <th>Value</th>
-          <th>Payment Term</th>
-          <th>Alert Days</th>
-          <th>Alert Date</th>
-          <th>Overdue Alert Days</th>
-          <th>Overdue Alert Date</th>
-          <th>Is Alert Sent</th>
-          <th>Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        {contracts.map((contract, index) => (
-          <tr key={contract.contract_id}>
-            <td>{index + 1}</td>
-            <td>{contract.contract_id}</td>
-            <td>{formatDate(contract.start_date)}</td>
-            <td>{formatDate(contract.end_date)}</td>
-            <td>{contract.contract_value}</td>
-            <td>{contract.payment_term}</td>
-            <td>{contract.alert_days || "-"}</td>
-            <td>{formatDate(contract.alert_date)}</td>
-            <td>{contract.overdue_alert_days || "-"}</td>
-            <td>{formatDate(contract.overdue_alert_date)}</td>
-            <td>{contract.is_alert_sent ? "Yes" : "No"}</td>
-            <td>{contract.remarks || "N/A"}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-) : (
-  <p className="text-muted">No service contracts available for this item.</p>
-)}
-
-</div>
+        {contracts.length > 0 ? (
+          <div className="contract-cards-container">
+            {contracts.map((contract, index) => (
+              <div key={contract.contract_id} className="contract-card">
+                <div className="contract-card-header">
+                  <span className="contract-card-sno">{index + 1}</span>
+                  <h4 className="contract-card-id">{contract.contract_id}</h4>
+                </div>
+                
+                <div className="contract-card-body">
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Start Date:</span>
+                    <span className="contract-card-value">{formatDate(contract.start_date)}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">End Date:</span>
+                    <span className="contract-card-value">{formatDate(contract.end_date)}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Value:</span>
+                    <span className="contract-card-value">{contract.contract_value}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Payment Term:</span>
+                    <span className="contract-card-value">{contract.payment_term}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Alert Days:</span>
+                    <span className="contract-card-value">{contract.alert_days || "-"}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Alert Date:</span>
+                    <span className="contract-card-value">{formatDate(contract.alert_date)}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Overdue Alert Days:</span>
+                    <span className="contract-card-value">{contract.overdue_alert_days || "-"}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Overdue Alert Date:</span>
+                    <span className="contract-card-value">{formatDate(contract.overdue_alert_date)}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Alert Sent:</span>
+                    <span className="contract-card-value">{contract.is_alert_sent ? "Yes" : "No"}</span>
+                  </div>
+                  
+                  <div className="contract-card-row">
+                    <span className="contract-card-label">Remarks:</span>
+                    <span className="contract-card-value">{contract.remarks || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="machine-details-empty">No service contracts available for this item.</p>
+        )}
+      </div>
 
       <NavScreen />
     </div>

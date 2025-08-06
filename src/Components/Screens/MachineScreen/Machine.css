@@ -1,61 +1,145 @@
-/* Wrapper padding and background */
-.request-screen-wrapper {
-  padding: 60px 16px 90px; 
+/* Machine Screen Wrapper */
+.machine-screen-wrapper {
+  padding: 60px 16px 90px;
   min-height: 100vh;
   background-color: #f9f9f9;
   box-sizing: border-box;
 }
 
-/* Table container with white background and shadow */
-.table-container {
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.machine-screen-header {
+  margin-bottom: 20px;
+}
+
+.machine-screen-title {
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.machine-loading-text {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+/* Machine Cards Container */
+.machine-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 10px;
+}
+
+/* Machine Card Styles */
+.machine-card {
   background: white;
-  padding: 16px;
-  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s ease;
 }
 
-/* Table styling */
-.table {
-  width: 100%;
-  border-collapse: collapse;
+.machine-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.table thead th {
-  position: sticky;
-  top: 0;
-  color: #fafdfd;
+.machine-card-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
   background-color: #0096D6;
-  z-index: 1;
-  padding: 12px;
-  text-align: left;
+  color: white;
 }
 
-.table td, .table th {
-  vertical-align: middle;
-  white-space: nowrap;
-  padding: 12px;
-  border-bottom: 1px solid #ddd;
+.machine-card-sno {
+  background: white;
+  color: #0096D6;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-weight: bold;
+  font-size: 14px;
 }
 
-/* Search bar and responsiveness */
-.search-bar {
-  min-width: 120px;
+.machine-card-id {
+  margin: 0;
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: underline;
 }
 
-@media (max-width: 576px) {
-  .table-container {
-    overflow-x: auto;
-  }
+.machine-card-id:hover {
+  opacity: 0.9;
+}
 
-  .d-flex.justify-content-between.align-items-center.mb-3 {
-    overflow-x: auto;
-    white-space: nowrap;
-    gap: 8px;
-    padding-bottom: 8px;
-  }
+.machine-card-body {
+  padding: 16px;
+}
 
-  .search-bar input {
-    width: 100%;
+.machine-card-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.machine-card-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.machine-card-label {
+  font-weight: 600;
+  color: #555;
+}
+
+.machine-card-value {
+  color: #333;
+  text-align: right;
+  max-width: 60%;
+  word-break: break-word;
+}
+
+.machine-card-edit-icon {
+  cursor: pointer;
+  color: #1890ff;
+  margin-left: 8px;
+  font-size: 16px;
+}
+
+/* Status Badges */
+.machine-card-status {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.machine-status-active {
+  background-color: #e6f7e6;
+  color: #2e7d32;
+}
+
+.machine-status-inactive {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.machine-status-pending {
+  background-color: #fff8e1;
+  color: #f57f17;
+}
+
+@media (max-width: 768px) {
+  .machine-cards-container {
+    grid-template-columns: 1fr;
   }
 }
