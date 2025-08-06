@@ -109,6 +109,14 @@ const RequestScreen = () => {
               <option value={25}>25</option>
             </Form.Select>
           </Col>
+
+          {/* 🔘 Add Request Button */}
+          <Col xs="auto">
+            <Button variant="primary" onClick={() => navigate('/service-form')}>
+              Add Request
+            </Button>
+          </Col>
+
           <Col className="ms-auto">
             <Form.Control
               type="text"
