@@ -8,6 +8,7 @@ import AIROlogo from './Images/AIRO.png';
 import greenAire from './Images/greenAire.png';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from "../../AuthContext/AuthContext";
+import TemperatureDial from './TemperatureDial';
 
 const Screen2 = () => {
   const { user } = useContext(AuthContext);
@@ -18,7 +19,7 @@ const Screen2 = () => {
     fanSpeed: '3', // Default to shutdown/off
     temperature: 25,
     powerStatus: 'off',
-    mode: '1', // Default to IDEC
+    mode: '3', // Default to IDEC
     errorFlag: '0',
     hvacBusy: '0',
     deviceId: '',
@@ -31,6 +32,8 @@ const Screen2 = () => {
   const [processingMessage, setProcessingMessage] = useState('');
   const navigate = useNavigate();
   const [errorCount, setErrorCount] = useState(0);
+  const [fanSpeed, setFanSpeed] = useState(0); // 0=High, 1=Medium, 2=Low, 3=Off
+  
 
   // Mode mapping
   const modeMap = {
@@ -111,7 +114,7 @@ const Screen2 = () => {
   };
 
   const getModeDescription = (code) => {
-    return modeMap[code] || 'IDEC';
+    return modeMap[code] || 'Fan';
   };
 
   const formatTemp = (temp) => {
@@ -122,67 +125,170 @@ const Screen2 = () => {
     return temp;
   };
 
-  const handlePowerToggle = () => {
-    if (processing) return;
-    
-    if (sensorData.hvacBusy === '1') {
-      setProcessing(true);
-      setProcessingMessage('System is busy, please wait...');
-      return;
-    }
-    
+ const handlePowerToggle = async () => {
+  if (processing) return;
+
+  if (sensorData.hvacBusy === '1') {
     setProcessing(true);
-    setProcessingMessage('Sending command, please wait...');
-    
+    setProcessingMessage('System is busy, please wait...');
+    return;
+  }
+
+  setProcessing(true);
+  setProcessingMessage('Sending command, please wait...');
+
+  const newHvacValue = sensorData.powerStatus === 'on' ? 0 : 1;
+
+  const payload = {
+    Header: "0xAA",
+    DI: "2411GM-0102", // Use actual device ID from state or fallback
+    MD: 1,
+    FS: 0,
+    SRT: 30,
+    HVAC: newHvacValue,
+    Footer: "0xZX"
+  };
+  console.log('Sending payload:', payload);
+
+  try {
+    const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    console.log('Response:', response);
+
+    if (!response.ok) {
+      throw new Error('Failed to send command');
+    }
+
+    // Simulate successful command and update local state
     setTimeout(() => {
-      const newStatus = sensorData.powerStatus === 'on' ? 'off' : 'on';
+      const newStatus = newHvacValue === 1 ? 'on' : 'off';
       setSensorData(prev => ({ ...prev, powerStatus: newStatus }));
       setProcessing(false);
       setProcessingMessage('');
     }, 2000);
+  } catch (error) {
+    console.error('Error sending command:', error);
+    setProcessing(false);
+    setProcessingMessage('Failed to send command');
+  }
+};
+
+ const handleModeChange = async (newMode) => {
+  if (processing) return;
+  
+  if (sensorData.hvacBusy === '1') {
+    setProcessing(true);
+    setProcessingMessage('System is busy, please wait...');
+    return;
+  }
+  
+  setProcessing(true);
+  setProcessingMessage('Changing mode, please wait...');
+  
+  // Map mode name to code
+  const modeCodeMap = {
+    'IDEC': 1,
+    'Auto': 2,
+    'Fan': 3,
+    'Indirect': 4,
+    'Direct': 5
+  };
+  
+  const newModeCode = modeCodeMap[newMode] || 1;
+  
+  const payload = {
+    Header: "0xAA",
+    DI: sensorData.deviceId || "2411GM-0102",
+    MD: newModeCode,
+    FS: parseInt(sensorData.fanSpeed) || 0,
+    SRT: parseInt(sensorData.temperature) || 25,
+    HVAC: sensorData.powerStatus === 'on' ? 1 : 0,
+    Footer: "0xZX"
   };
 
-  const handleModeChange = (newMode) => {
-    if (processing) return;
-    
-    if (sensorData.hvacBusy === '1') {
-      setProcessing(true);
-      setProcessingMessage('System is busy, please wait...');
-      return;
+  try {
+    const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send command');
     }
+
+    // Update local state only after successful API call
+    setSensorData(prev => ({ 
+      ...prev, 
+      mode: newModeCode.toString() 
+    }));
     
+  } catch (error) {
+    console.error('Error sending command:', error);
+  } finally {
+    setProcessing(false);
+    setProcessingMessage('');
+  }
+};
+
+const handleFanSpeedChange = async (newPosition) => {
+  if (processing) return;
+  
+  if (sensorData.hvacBusy === '1') {
     setProcessing(true);
-    setProcessingMessage('Changing mode, please wait...');
-    
-    setTimeout(() => {
-      // Find the mode code from the modeMap
-      const modeCode = Object.keys(modeMap).find(key => modeMap[key] === newMode) || '1';
-      setSensorData(prev => ({ ...prev, mode: modeCode }));
-      setProcessing(false);
-      setProcessingMessage('');
-    }, 2000);
+    setProcessingMessage('System is busy, please wait...');
+    return;
+  }
+  
+  setProcessing(true);
+  setProcessingMessage('Changing fan speed, please wait...');
+  
+  const fanSpeedMap = ['0', '1', '2', '3']; // High, Medium, Low, Off
+  const newSpeed = fanSpeedMap[newPosition] || '3';
+  
+  const payload = {
+    Header: "0xAA",
+    DI: sensorData.deviceId || "2411GM-0102",
+    MD: parseInt(sensorData.mode) || 1,
+    FS: parseInt(newSpeed),
+    SRT: parseInt(sensorData.temperature) || 25,
+    HVAC: sensorData.powerStatus === 'on' ? 1 : 0,
+    Footer: "0xZX"
   };
 
-  const handleFanSpeedChange = (newPosition) => {
-    if (processing) return;
-    
-    if (sensorData.hvacBusy === '1') {
-      setProcessing(true);
-      setProcessingMessage('System is busy, please wait...');
-      return;
+  try {
+    const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send command');
     }
+
+    // Update local state only after successful API call
+    setSensorData(prev => ({ 
+      ...prev, 
+      fanSpeed: newSpeed 
+    }));
     
-    setProcessing(true);
-    setProcessingMessage('Changing fan speed, please wait...');
-    
-    setTimeout(() => {
-      const fanSpeedMap = ['0', '1', '2', '3']; // High, Medium, Low, Off
-      const newSpeed = fanSpeedMap[newPosition] || '3';
-      setSensorData(prev => ({ ...prev, fanSpeed: newSpeed }));
-      setProcessing(false);
-      setProcessingMessage('');
-    }, 2000);
-  };
+  } catch (error) {
+    console.error('Error sending command:', error);
+  } finally {
+    setProcessing(false);
+    setProcessingMessage('');
+  }
+};
 
   const handleBackClick = () => {
     if (!processing) {
@@ -203,6 +309,11 @@ const Screen2 = () => {
   // Convert position (0-3) to percentage for CSS (0%, 33.33%, 66.66%, 100%)
   const positionToPercentage = (pos) => {
     return pos * (100 / 3);
+  };
+
+    const handleTempChange = (newTemp) => {
+    console.log("Temperature changed:", newTemp);
+    // Update your backend or state as needed
   };
 
   return (
@@ -274,43 +385,11 @@ const Screen2 = () => {
           </div>
         )}
 
-        {/* Temperature Control */}
-        <div className="temp-container">
-          <div className="temp-circle-control">
-            <div className="temp-inner-circle">
-         <svg className="temp-curve-arc" width="285" height="285" viewBox="0 0 285 285">
-  <path
-    d="M 142.5 32 A 110 110 0 0 1 252 142.5"
-    fill="none"
-    stroke="#ffffff"
-    strokeOpacity="0.7"
-    strokeWidth="6"
-  />
-</svg>
-              <div className="temp-temperature">{formatTemp(sensorData.temperature)}°C</div>
-              <div className="temp-fan-container">
-                <div className="temp-fan-icon-container">
-                  <div className="temp-fan-bar1"></div>
-                  <div className="temp-fan-bar2"></div>
-                  <div className="temp-fan-bar3"></div>
-                </div>
-                <span className="temp-fan-speed">{getFanSpeedDescription(sensorData.fanSpeed)}</span>
-              </div>
-              <div className="temp-fan-label">Fan Speed</div>
-            </div>
-            <div className="temp-control-handle"></div>
-
-            {[...Array(48)].map((_, i) => (
-              <div
-                key={i}
-                className="temp-tick"
-                style={{
-                  transform: `rotate(${i * 7.5}deg) translateY(-135px)`,
-                }}
-              />
-            ))}
-          </div>
-        </div>
+         <TemperatureDial
+         sensorData={sensorData}
+          onTempChange={handleTempChange} 
+          fanSpeed={fanPosition} // Add this prop
+          />
 
         {/* Environment Info */}
         <div className="env-info">
@@ -354,35 +433,40 @@ const Screen2 = () => {
           </div>
 
           <div className="section">
-            <h3 className="heading">Fan Speed</h3>
-            <div
-              className="line-with-dot-container"
-              onClick={(e) => {
-                if (processing) return;
-                const containerWidth = e.currentTarget.offsetWidth;
-                const clickPosition = e.nativeEvent.offsetX;
-                const segmentWidth = containerWidth / 4;
-                const newPosition = Math.min(3, Math.floor(clickPosition / segmentWidth));
-                handleFanSpeedChange(newPosition);
-              }}
-              style={{ cursor: processing ? 'not-allowed' : 'pointer' }}
-            >
-              <div className="line" />
-              <div
-                className="dot"
-                style={{ 
-                  left: `${positionToPercentage(fanPosition)}%`,
-                  cursor: processing ? 'not-allowed' : 'pointer'
-                }}
-              />
-              <div className="fan-speed-labels">
-                <span style={{ left: '0%' }}>High</span>
-                <span style={{ left: '33.33%' }}>Medium</span>
-                <span style={{ left: '66.66%' }}>Low</span>
-                <span style={{ left: '90%' }}>Off</span>
-              </div>
-            </div>
-          </div>
+  <h3 className="heading">Fan Speed</h3>
+  <div
+    className="line-with-dot-container"
+    onClick={(e) => {
+      if (processing) return;
+      const containerWidth = e.currentTarget.offsetWidth;
+      const clickPosition = e.nativeEvent.offsetX;
+      const segmentWidth = containerWidth / 4;
+      const newPosition = Math.min(3, Math.floor(clickPosition / segmentWidth));
+      handleFanSpeedChange(newPosition);
+    }}
+    style={{ cursor: processing ? 'not-allowed' : 'pointer' }}
+  >
+    <div className="line" />
+    {/* Add vertical markers */}
+    <div className="vertical-marker" style={{ left: '33.33%' }} />
+    <div className="vertical-marker" style={{ left: '66.66%' }} />
+    <div className="vertical-marker" style={{ left: '100%' }} />
+    
+    <div
+      className="dot"
+      style={{ 
+        left: `${positionToPercentage(fanPosition)}%`,
+        cursor: processing ? 'not-allowed' : 'pointer'
+      }}
+    />
+    <div className="fan-speed-labels">
+      <span style={{ left: '0%' }}>High</span>
+      <span style={{ left: '33.33%' }}>Med</span>
+      <span style={{ left: '66.66%' }}>Low</span>
+      <span style={{ left: '100%' }}>Off</span>
+    </div>
+  </div>
+</div>
 
           <div className="logo-container">
             <img

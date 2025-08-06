@@ -24,7 +24,7 @@ const Screen1 = () => {
     fanSpeed: '3', // Default to shutdown/off
     temperature: 25,
     powerStatus: 'off',
-    mode: '1', // Default to IDEC
+    mode: '3', // Default to IDEC
     errorFlag: '0',
     hvacBusy: '0',
     deviceId: '',
@@ -135,7 +135,7 @@ const Screen1 = () => {
   };
 
   const getModeDescription = (code) => {
-    return modeMap[code] || 'IDEC';
+    return modeMap[code] || 'Fan';
   };
 
   const formatTemp = (temp) => {
@@ -146,26 +146,57 @@ const Screen1 = () => {
     return temp;
   };
 
- const handlePowerToggle = () => {
+const handlePowerToggle = async () => {
   if (processing) return;
-  
-  // Check if HVAC is busy
+
   if (sensorData.hvacBusy === '1') {
     setProcessing(true);
     setProcessingMessage('System is busy, please wait...');
     return;
   }
-  
-  // For demo purposes - simulate the command
+
   setProcessing(true);
   setProcessingMessage('Sending command, please wait...');
-  
-  setTimeout(() => {
-    const newStatus = sensorData.powerStatus === 'on' ? 'off' : 'on';
-    setSensorData(prev => ({ ...prev, powerStatus: newStatus }));
+
+  const newHvacValue = sensorData.powerStatus === 'on' ? 0 : 1;
+
+  const payload = {
+    Header: "0xAA",
+    DI: "2411GM-0102", // Use actual device ID from state or fallback
+    MD: 3,
+    FS: 0,
+    SRT: 30,
+    HVAC: newHvacValue,
+    Footer: "0xZX"
+  };
+  console.log('Sending payload:', payload);
+
+  try {
+    const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    console.log('Response:', response);
+
+    if (!response.ok) {
+      throw new Error('Failed to send command');
+    }
+
+    // Simulate successful command and update local state
+    setTimeout(() => {
+      const newStatus = newHvacValue === 1 ? 'on' : 'off';
+      setSensorData(prev => ({ ...prev, powerStatus: newStatus }));
+      setProcessing(false);
+      setProcessingMessage('');
+    }, 2000);
+  } catch (error) {
+    console.error('Error sending command:', error);
     setProcessing(false);
-    setProcessingMessage('');
-  }, 2000);
+    setProcessingMessage('Failed to send command');
+  }
 };
 
   if (loading) {
