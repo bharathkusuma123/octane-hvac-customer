@@ -93,6 +93,7 @@
     position: absolute;
     top: 6px;
     z-index: 1;
+    margin-left: -3%;
   }
 
   .logo-container {
@@ -214,4 +215,34 @@
         object-fit: contain;
         margin-top: -20px;
     }
+}
+
+/* Add to your mobile footer styles */
+.vertical-marker {
+  position: absolute;
+  height: 20px;
+  width: 2px;
+  background-color: #3E99ED;
+  top: -4px;
+}
+
+.fan-speed-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  color: #666; /* Changed from white to dark gray for better visibility */
+  font-size: 12px;
+  top: 15px;
+  font-weight: 500;
+}
+
+.line-with-dot-container {
+  margin-top: 25px; /* Increased to accommodate labels */
+}
+
+.line {
+  height: 2px;
+  background-color: #3E99ED;
+  width: 100%;
+  position: relative;
+  margin-top: -8%; /* Adjusted for better spacing */
 }
