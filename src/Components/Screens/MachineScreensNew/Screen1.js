@@ -9,6 +9,7 @@ import AIROlogo from './Images/AIRO.png';
 import greenAire from './Images/greenAire.png';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from "../../AuthContext/AuthContext";
+import TemperatureDial from './TemperatureDial';
 
 const Screen1 = () => {
    const { user } = useContext(AuthContext);
@@ -213,6 +214,13 @@ const handlePowerToggle = async () => {
     }
   };
 
+  const fanPosition = ['0', '1', '2', '3'].indexOf(sensorData.fanSpeed);
+
+   const handleTempChange = (newTemp) => {
+    console.log("Temperature changed:", newTemp);
+    // Update your backend or state as needed
+  };
+
    return (
     <div className='mainmain-container' style={{ backgroundImage: 'linear-gradient(to bottom, #3E99ED, #2B7ED6)' }}>
       <div className="main-container">
@@ -299,43 +307,11 @@ const handlePowerToggle = async () => {
   </div>
 )}
 
-        <div className="temp-container">
-          <div className="temp-circle-control">
-            <div className="temp-inner-circle">
-                <svg className="temp-curve-arc" width="285" height="285" viewBox="0 0 285 285">
-  <path
-    d="M 142.5 32 A 110 110 0 0 1 252 142.5"
-    fill="none"
-    stroke="#ffffff"
-    strokeOpacity="0.7"
-    strokeWidth="6"
-  />
-</svg>
-              <div className="temp-temperature">{formatTemp(sensorData.temperature)}°C</div>
-              <div className="temp-fan-container">
-<div className="temp-fan-icon-container">
-  <div className="temp-fan-bar1"></div>
-  <div className="temp-fan-bar2"></div>
-  <div className="temp-fan-bar3"></div>
-</div>
-
-                <span className="temp-fan-speed">{getFanSpeedDescription(sensorData.fanSpeed)}</span>
-              </div>
-              <div className="temp-fan-label">Fan Speed</div>
-            </div>
-            <div className="temp-control-handle"></div>
-
-            {[...Array(48)].map((_, i) => (
-              <div
-                key={i}
-                className="temp-tick"
-                style={{
-                  transform: `rotate(${i * 7.5}deg) translateY(-135px)`,
-                }}
-              />
-            ))}
-          </div>
-        </div>
+     <TemperatureDial
+         sensorData={sensorData}
+          onTempChange={handleTempChange} 
+          fanSpeed={fanPosition} // Add this prop
+          />
 
         <div className="env-info">
           <div className="env-item">
@@ -344,14 +320,14 @@ const handlePowerToggle = async () => {
             <div className="env-label">Outside Temp</div>
           </div>
           <div className="env-item">
-            <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{sensorData.humidity}%</div>
-            <div className="env-label">Humidity</div>
-          </div>
-          <div className="env-item">
             <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
             <div className="env-value">{formatTemp(sensorData.roomTemp)}°C</div>
             <div className="env-label">Room Temp</div>
+          </div>
+          <div className="env-item">
+            <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
+            <div className="env-value">{sensorData.humidity}%</div>
+            <div className="env-label">Humidity</div>
           </div>
         </div>
       </div>

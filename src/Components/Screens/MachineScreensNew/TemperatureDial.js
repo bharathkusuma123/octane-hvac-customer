@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from "react";
-// import "./TemperatureDial.css";
 
 const MIN_TEMP = 18;
 const MAX_TEMP = 30;
