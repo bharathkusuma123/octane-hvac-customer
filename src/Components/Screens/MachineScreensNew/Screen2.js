@@ -16,7 +16,7 @@ const Screen2 = () => {
     outsideTemp: 0,
     humidity: 0,
     roomTemp: 0,
-    fanSpeed: '3', // Default to shutdown/off
+    fanSpeed: '2', // Default to shutdown/off
     temperature: 25,
     powerStatus: 'off',
     mode: '3', // Default to IDEC
@@ -105,11 +105,10 @@ const Screen2 = () => {
 
   const getFanSpeedDescription = (code) => {
     switch (code) {
-      case '0': return 'High';
+      case '0': return ' Low';
       case '1': return 'Medium';
-      case '2': return 'Low';
-      case '3': return 'Shutdown/off';
-      default: return 'Shutdown/off';
+      case '2': return 'High';
+      default: return 'High';
     }
   };
 
@@ -238,6 +237,59 @@ const Screen2 = () => {
   }
 };
 
+// const handleFanSpeedChange = async (newPosition) => {
+//   if (processing) return;
+  
+//   if (sensorData.hvacBusy === '1') {
+//     setProcessing(true);
+//     setProcessingMessage('System is busy, please wait...');
+//     return;
+//   }
+  
+//   setProcessing(true);
+//   setProcessingMessage('Changing fan speed, please wait...');
+  
+//   const fanSpeedMap = ['0', '1', '2', '3']; // High, Medium, Low, Off
+//   const newSpeed = fanSpeedMap[newPosition] || '3';
+  
+//   const payload = {
+//     Header: "0xAA",
+//     DI: sensorData.deviceId || "2411GM-0102",
+//     MD: parseInt(sensorData.mode) || 1,
+//     FS: parseInt(newSpeed),
+//     SRT: parseInt(sensorData.temperature) || 25,
+//     HVAC: sensorData.powerStatus === 'on' ? 1 : 0,
+//     Footer: "0xZX"
+//   };
+
+//   try {
+//     const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json"
+//       },
+//       body: JSON.stringify(payload)
+//     });
+
+//     if (!response.ok) {
+//       throw new Error('Failed to send command');
+//     }
+
+//     // Update local state only after successful API call
+//     setSensorData(prev => ({ 
+//       ...prev, 
+//       fanSpeed: newSpeed 
+//     }));
+    
+//   } catch (error) {
+//     console.error('Error sending command:', error);
+//   } finally {
+//     setProcessing(false);
+//     setProcessingMessage('');
+//   }
+// };
+
+
 const handleFanSpeedChange = async (newPosition) => {
   if (processing) return;
   
@@ -250,8 +302,9 @@ const handleFanSpeedChange = async (newPosition) => {
   setProcessing(true);
   setProcessingMessage('Changing fan speed, please wait...');
   
-  const fanSpeedMap = ['0', '1', '2', '3']; // High, Medium, Low, Off
-  const newSpeed = fanSpeedMap[newPosition] || '3';
+  // Now we only have 3 positions: 0=Low, 1=Medium, 2=High
+  const fanSpeedMap = ['0', '1', '2'];
+  const newSpeed = fanSpeedMap[newPosition] || '2';
   
   const payload = {
     Header: "0xAA",
@@ -276,7 +329,6 @@ const handleFanSpeedChange = async (newPosition) => {
       throw new Error('Failed to send command');
     }
 
-    // Update local state only after successful API call
     setSensorData(prev => ({ 
       ...prev, 
       fanSpeed: newSpeed 
@@ -303,13 +355,20 @@ const handleFanSpeedChange = async (newPosition) => {
   const modes = ['IDEC', 'Auto', 'Fan', 'Indirect', 'Direct'];
   const currentModeDescription = getModeDescription(sensorData.mode);
   
-  // Convert fan speed code to position (0-3)
-  const fanPosition = ['0', '1', '2', '3'].indexOf(sensorData.fanSpeed);
+  // // Convert fan speed code to position (0-3)
+  // const fanPosition = ['0', '1', '2', '3'].indexOf(sensorData.fanSpeed);
   
-  // Convert position (0-3) to percentage for CSS (0%, 33.33%, 66.66%, 100%)
-  const positionToPercentage = (pos) => {
-    return pos * (100 / 3);
-  };
+  // // Convert position (0-3) to percentage for CSS (0%, 33.33%, 66.66%, 100%)
+  // const positionToPercentage = (pos) => {
+  //   return pos * (100 / 3);
+  // };
+  // Convert fan speed code to position (0=Low, 1=Medium, 2=High)
+const fanPosition = ['0', '1', '2'].indexOf(sensorData.fanSpeed);
+
+// Convert position (0-2) to percentage for CSS (0%, 50%, 100%)
+const positionToPercentage = (pos) => {
+  return pos * 0;
+};
 
     const handleTempChange = (newTemp) => {
     console.log("Temperature changed:", newTemp);
@@ -398,16 +457,17 @@ const handleFanSpeedChange = async (newPosition) => {
             <div className="env-value">{formatTemp(sensorData.outsideTemp)}°C</div>
             <div className="env-label">Outside Temp</div>
           </div>
+             <div className="env-item">
+            <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
+            <div className="env-value">{formatTemp(sensorData.roomTemp)}°C</div>
+            <div className="env-label">Room Temp</div>
+          </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
             <div className="env-value">{sensorData.humidity}%</div>
             <div className="env-label">Humidity</div>
           </div>
-          <div className="env-item">
-            <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.roomTemp)}°C</div>
-            <div className="env-label">Room Temp</div>
-          </div>
+       
         </div>
 
         {/* Control Buttons Section */}
@@ -440,17 +500,18 @@ const handleFanSpeedChange = async (newPosition) => {
       if (processing) return;
       const containerWidth = e.currentTarget.offsetWidth;
       const clickPosition = e.nativeEvent.offsetX;
-      const segmentWidth = containerWidth / 4;
-      const newPosition = Math.min(3, Math.floor(clickPosition / segmentWidth));
+      const segmentWidth = containerWidth / 3;
+      const newPosition = Math.min(2, Math.floor(clickPosition / segmentWidth));
       handleFanSpeedChange(newPosition);
     }}
     style={{ cursor: processing ? 'not-allowed' : 'pointer' }}
   >
     <div className="line" />
-    {/* Add vertical markers */}
-    <div className="vertical-marker" style={{ left: '33.33%' }} />
-    <div className="vertical-marker" style={{ left: '66.66%' }} />
+    <div className="vertical-marker" style={{ left: '0%' }} />
+        <div className="vertical-marker" style={{ left: '50%' }} />
     <div className="vertical-marker" style={{ left: '100%' }} />
+
+   
     
     <div
       className="dot"
@@ -461,9 +522,8 @@ const handleFanSpeedChange = async (newPosition) => {
     />
     <div className="fan-speed-labels">
       <span style={{ left: '0%' }}>High</span>
-      <span style={{ left: '33.33%' }}>Med</span>
-      <span style={{ left: '66.66%' }}>Low</span>
-      <span style={{ left: '100%' }}>Off</span>
+      <span style={{ left: '50%' }}>Medium</span>
+      <span style={{ left: '100%' }}>Low</span>
     </div>
   </div>
 </div>
