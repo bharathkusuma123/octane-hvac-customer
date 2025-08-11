@@ -311,6 +311,7 @@ const handlePowerToggle = async () => {
          sensorData={sensorData}
           onTempChange={handleTempChange} 
           fanSpeed={fanPosition} // Add this prop
+          initialTemperature={sensorData.temperature} // Pass the API temperature here
           />
 
         <div className="env-info">

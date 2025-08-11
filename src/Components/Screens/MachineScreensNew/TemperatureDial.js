@@ -5,10 +5,22 @@ const MAX_TEMP = 30;
 const START_ANGLE = -135;
 const DEGREE_RANGE = 180;
 
-const TemperatureDial = ({ onTempChange, fanSpeed }) => {
+const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
   const [angle, setAngle] = useState(START_ANGLE);
-  const [temperature, setTemperature] = useState(MIN_TEMP);
+ const [temperature, setTemperature] = useState(initialTemperature || MIN_TEMP);
   const dialRef = useRef(null);
+
+  // Add this useEffect to sync with prop changes
+  useEffect(() => {
+    if (initialTemperature !== undefined) {
+      const tempValue = typeof initialTemperature === 'string' 
+        ? parseFloat(initialTemperature) 
+        : initialTemperature;
+      
+      setTemperature(tempValue);
+      setAngle(temperatureToAngle(tempValue));
+    }
+  }, [initialTemperature]);
 
   // Convert angle to temperature
   const angleToTemperature = (angle) => {
@@ -101,7 +113,11 @@ const TemperatureDial = ({ onTempChange, fanSpeed }) => {
               strokeWidth="6"
             />
           </svg>
-          <div className="temp-temperature">{temperature.toFixed(1)}°C</div>
+       <div className="temp-temperature">
+  {typeof temperature === 'string' 
+    ? parseFloat(temperature).toFixed(1)
+    : temperature.toFixed(1)}°C
+</div>
           <div className="temp-fan-container">
             <div className="temp-fan-icon-container">
               <div className="temp-fan-bar1" />

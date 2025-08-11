@@ -451,6 +451,7 @@ const positionToPercentage = (pos) => {
          sensorData={sensorData}
           onTempChange={handleTempChange} 
           fanSpeed={fanPosition} // Add this prop
+          initialTemperature={sensorData.temperature} // Pass the API temperature here
           />
 
         {/* Environment Info */}
