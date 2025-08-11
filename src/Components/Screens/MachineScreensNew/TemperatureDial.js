@@ -82,11 +82,10 @@ const TemperatureDial = ({ onTempChange, fanSpeed }) => {
 
    const getFanSpeedDescription = (speed) => {
     switch (speed) {
-      case 0: return 'High';
-      case 1: return 'Medium';
-      case 2: return 'Low';
-      case 3: return 'Shutdown/off';
-      default: return 'Shutdown/off';
+       case '0': return ' Low';
+      case '1': return 'Medium';
+      case '2': return 'High';
+      default: return 'High';
     }
   };
   return (

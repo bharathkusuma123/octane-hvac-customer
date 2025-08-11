@@ -370,10 +370,13 @@ const positionToPercentage = (pos) => {
   return pos * 0;
 };
 
-    const handleTempChange = (newTemp) => {
-    console.log("Temperature changed:", newTemp);
-    // Update your backend or state as needed
-  };
+ const handleTempChange = (newTemp) => {
+  console.log("Temperature changed:", newTemp);
+  setSensorData(prev => ({ 
+    ...prev, 
+    temperature: newTemp.toString() 
+ }));
+};
 
   return (
     <div className='mainmain-container' style={{ backgroundImage: 'linear-gradient(to bottom, #3E99ED, #2B7ED6)' }}>
