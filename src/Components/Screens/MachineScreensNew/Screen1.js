@@ -37,7 +37,6 @@ const Screen1 = () => {
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState('');
   const navigate = useNavigate();
-  const [showAlarmModal, setShowAlarmModal] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
 
   // Mode mapping
@@ -64,22 +63,38 @@ const Screen1 = () => {
         
         const deviceData = data.data[0];
         
+         // Fetch controller settings
+        const controllerResponse = await fetch('https://rahul21.pythonanywhere.com/controllers');
+        let latestController = {};
+        
+        if (controllerResponse.ok) {
+          const controllerData = await controllerResponse.json();
+          if (Array.isArray(controllerData)) {
+            latestController = controllerData.reduce((prev, current) => 
+              (prev.id > current.id) ? prev : current, {});
+          }
+        }
+
         setSensorData(prev => ({
+          ...prev,
           outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
           humidity: deviceData.room_humidity?.value || prev.humidity,
           roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
-          temperature: deviceData.set_temperature?.value || prev.temperature,
-          powerStatus: processing ? prev.powerStatus : (deviceData.hvac_on?.value === '1' ? 'on' : 'off'),
-          mode: deviceData.mode?.value || prev.mode,
+          fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
+          temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
+          powerStatus: processing ? prev.powerStatus : 
+            (latestController.HVAC !== undefined ? 
+              (latestController.HVAC === 1 ? 'on' : 'off') : 
+              (deviceData.hvac_on?.value === '1' ? 'on' : 'off')),
+          mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
           errorFlag: deviceData.error_flag?.value || prev.errorFlag,
           hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
           deviceId: deviceData.device_id || prev.deviceId,
           alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred
         }));
         
-        // Update error count based only on alarm_occurred (not error_flag)
-        setErrorCount(deviceData.alarm_occurred?.value === '1' ? 1 : 0);
+       // Update error count based on alarm_occurred (treat any non-'0' value as an alarm)
+setErrorCount(deviceData.alarm_occurred?.value !== '0' ? 1 : 0);
         
         // Handle processing state
         if (deviceData.hvac_busy?.value === '1') {
@@ -120,7 +135,7 @@ const Screen1 = () => {
 
     fetchData();
     fetchServiceItems();
-    const intervalId = setInterval(fetchData, 1000);
+    const intervalId = setInterval(fetchData, 50000);
 
     return () => clearInterval(intervalId);
   }, [processing]);
@@ -340,31 +355,43 @@ const handlePowerToggle = async () => {
             <span>Modes</span>
             <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
           </button>
-            <button className="control-btn" onClick={() => setShowAlarmModal(true)} disabled={processing}>
-            <div style={{ position: 'relative' }}>
-              <FiClock size={20} />
-              {errorCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-23px',
-                  backgroundColor: 'red',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '18px',
-                  height: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  fontWeight: 'bold'
-                }}>
-                  {errorCount}
-                </span>
-              )}
-            </div>
-            <span>Alarms</span>
-          </button>
+<button 
+  className="control-btn" 
+ onClick={() => navigate('/alarms', { 
+  state: { 
+    alarmData: {
+      alarmOccurred: sensorData.alarmOccurred,
+      errorCount: errorCount,
+      deviceId: sensorData.deviceId
+    }
+  }
+})}
+  disabled={processing}
+>
+  <div style={{ position: 'relative' }}>
+    <FiClock size={20} />
+    {errorCount > 0 && (
+      <span style={{
+        position: 'absolute',
+        top: '-8px',
+        right: '-23px',
+        backgroundColor: 'red',
+        color: 'white',
+        borderRadius: '50%',
+        width: '18px',
+        height: '18px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '10px',
+        fontWeight: 'bold'
+      }}>
+        {errorCount}
+      </span>
+    )}
+  </div>
+  <span>Alarms</span>
+</button>
           <button className="control-btn" onClick={() => handleNavigation('/modes')} disabled={processing}>
             <FiWatch size={20} />
             <span>Timers</span>
@@ -390,71 +417,6 @@ const handlePowerToggle = async () => {
           />
         </div>
       </div>
-      
-      {/* Alarm Modal */}
-      {showAlarmModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }} onClick={() => setShowAlarmModal(false)}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '10px',
-            width: '80%',
-            maxWidth: '400px'
-          }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, color: '#333' }}>Alarm Notifications ({errorCount})</h3>
-            <div style={{ margin: '15px 0' }}>
-              {sensorData.alarmOccurred === '1' && (
-                <div style={{ 
-                  padding: '10px', 
-                  backgroundColor: '#ffeeee', 
-                  borderRadius: '5px', 
-                  marginBottom: '10px',
-                  borderLeft: '4px solid red'
-                }}>
-                  <strong>System Alarm</strong>
-                  <p style={{ margin: '5px 0 0 0' }}>An alarm has been triggered in the system</p>
-                </div>
-              )}
-              {sensorData.alarmOccurred === '0' && (
-                <div style={{ 
-                  padding: '10px', 
-                  backgroundColor: '#eeffee', 
-                  borderRadius: '5px',
-                  borderLeft: '4px solid green'
-                }}>
-                  <strong>No Active Alarms</strong>
-                  <p style={{ margin: '5px 0 0 0' }}>System is operating normally</p>
-                </div>
-              )}
-            </div>
-            <button 
-              onClick={() => setShowAlarmModal(false)}
-              style={{
-                backgroundColor: '#2B7ED6',
-                color: 'white',
-                border: 'none',
-                padding: '8px 15px',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                float: 'right'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

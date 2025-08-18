@@ -39,6 +39,7 @@ import DelegateSignup from './Components/LoginSreens/DelegateSignup';
 
 import Screen1 from './Components/Screens/MachineScreensNew/Screen1';
 import Screen2 from './Components/Screens/MachineScreensNew/Screen2';
+import AlarmsPage from './Components/Screens/MachineScreensNew/AlarmsPage';
 
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
                 <Route path="/" element={<Login />} />
                 <Route path="/machinescreen1" element={<Screen1 />} />
                 <Route path="/machinescreen2" element={<Screen2 />} />
+                <Route path="/alarms" element={<AlarmsPage />} />
 
 
                 <Route path="/setpassword" element={<SetPasswordScreen />} />

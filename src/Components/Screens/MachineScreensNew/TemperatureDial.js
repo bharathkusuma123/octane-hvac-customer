@@ -7,10 +7,10 @@ const DEGREE_RANGE = 180;
 
 const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
   const [angle, setAngle] = useState(START_ANGLE);
- const [temperature, setTemperature] = useState(initialTemperature || MIN_TEMP);
+  const [temperature, setTemperature] = useState(initialTemperature || MIN_TEMP);
   const dialRef = useRef(null);
 
-  // Add this useEffect to sync with prop changes
+  // Sync with prop changes
   useEffect(() => {
     if (initialTemperature !== undefined) {
       const tempValue = typeof initialTemperature === 'string' 
@@ -92,14 +92,19 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
     };
   }, []);
 
-   const getFanSpeedDescription = (speed) => {
+  // Updated fan speed mapping to match main component (0=High, 1=Medium, 2=Low)
+  const getFanSpeedDescription = (speed) => {
     switch (speed) {
-       case '0': return ' Low';
+      case 0: return 'High';   // When fanSpeed is passed as number
+      case '0': return 'High'; // When fanSpeed is passed as string
+      case 1: return 'Medium';
       case '1': return 'Medium';
-      case '2': return 'High';
-      default: return 'High';
+      case 2: return 'Low';
+      case '2': return 'Low';
+      default: return 'High';  // Default case
     }
   };
+
   return (
     <div className="temp-container" ref={dialRef}>
       <div className="temp-circle-control">
@@ -113,18 +118,20 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
               strokeWidth="6"
             />
           </svg>
-       <div className="temp-temperature">
-  {typeof temperature === 'string' 
-    ? parseFloat(temperature).toFixed(1)
-    : temperature.toFixed(1)}°C
-</div>
+          
+          <div className="temp-temperature">
+            {typeof temperature === 'string' 
+              ? parseFloat(temperature).toFixed(1)
+              : temperature.toFixed(1)}°C
+          </div>
+          
           <div className="temp-fan-container">
-            <div className="temp-fan-icon-container">
+             <div className="temp-fan-icon-container">
               <div className="temp-fan-bar1" />
               <div className="temp-fan-bar2" />
               <div className="temp-fan-bar3" />
             </div>
-               <span className="temp-fan-speed">{getFanSpeedDescription(fanSpeed)}</span>
+            <span className="temp-fan-speed">{getFanSpeedDescription(fanSpeed)}</span>
           </div>
           <div className="temp-fan-label">Fan Speed</div>
         </div>
