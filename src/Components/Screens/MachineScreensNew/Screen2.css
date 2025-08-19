@@ -91,15 +91,27 @@
     border-radius: 50%;
     background-color: white;
     position: absolute;
-    top: 6px;
-    z-index: 1;
-    /* margin-left: -3%; */
+          top: -7px;
+        z-index: 1;
+        margin-left: -3%;
   }
 
   .logo-container {
     display: flex;
     justify-content: center;
     margin-top: 20px;
+  }
+
+  .loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;       /* Full viewport height */
+  width: 100vw;        /* Full viewport width */
+  background-color: #2B7ED6; /* Optional: match your page background */
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
   }
 /* 
   .logo-image {
