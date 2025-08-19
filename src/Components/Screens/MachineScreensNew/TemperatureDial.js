@@ -155,30 +155,22 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
         >
           <div
             className="temp-temperature"
-            style={{ fontSize: 32, fontWeight: 700, color: "#000", lineHeight: 1 }}
+            // style={{ fontSize: 32, fontWeight: 700, lineHeight: 1 }}
           >
             {typeof temperature === "string"
               ? parseFloat(temperature).toFixed(1)
               : temperature.toFixed(1)}
             °C
           </div>
-
-          <div className="temp-fan-container" style={{ marginTop: 6, textAlign: "center" }}>
-            <div
-              className="temp-fan-icon-container"
-              style={{ display: "flex", gap: 4, justifyContent: "center" }}
-            >
-              <div style={{ width: 6, height: 14, background: "#000", opacity: 0.5 }} />
-              <div style={{ width: 6, height: 18, background: "#000", opacity: 0.8 }} />
-              <div style={{ width: 6, height: 22, background: "#000" }} />
+   <div className="temp-fan-container">
+             <div className="temp-fan-icon-container">
+              <div className="temp-fan-bar1" />
+              <div className="temp-fan-bar2" />
+              <div className="temp-fan-bar3" />
             </div>
-            <span className="temp-fan-speed" style={{ display: "block", color: "#000" }}>
-              {getFanSpeedDescription(fanSpeed)}
-            </span>
-            <div className="temp-fan-label" style={{ fontSize: 12, color: "#000" }}>
-              Fan Speed
-            </div>
+            <span className="temp-fan-speed">{getFanSpeedDescription(fanSpeed)}</span>
           </div>
+          <div className="temp-fan-label">Fan Speed</div>
         </div>
 
         {/* HANDLE: rides on arc */}

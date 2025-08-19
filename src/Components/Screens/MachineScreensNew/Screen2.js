@@ -12,7 +12,7 @@ import AIROlogo from "./Images/AIRO.png";
 import greenAire from "./Images/greenAire.png";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext/AuthContext";
-import TemperatureDial from "./TemperatureDial_v1";
+import TemperatureDial from "./TemperatureDial";
 
 const Screen2 = () => {
   const { user } = useContext(AuthContext);

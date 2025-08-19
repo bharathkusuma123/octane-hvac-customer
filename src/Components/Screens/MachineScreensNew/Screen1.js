@@ -372,7 +372,7 @@ const Screen1 = () => {
     onClick={handlePowerToggle}
     disabled={processing}
     style={{
-      backgroundColor: sensorData.powerStatus === "on" ? "#4CAF50" : "#c80000f5",
+      backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
