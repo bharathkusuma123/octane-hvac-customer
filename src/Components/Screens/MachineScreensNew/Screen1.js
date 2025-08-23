@@ -36,7 +36,7 @@ const Screen1 = () => {
     outsideTemp: 0,
     humidity: 0,
     roomTemp: 0,
-    fanSpeed: "3", // Default to shutdown/off
+    fanSpeed: "0", // Default to shutdown/off
     temperature: 25,
     powerStatus: "off",
     mode: "3", // Default to IDEC
@@ -280,7 +280,7 @@ const Screen1 = () => {
     }
   };
 
-  const fanPosition = ["0", "1", "2", "3"].indexOf(sensorData.fanSpeed);
+  const fanPosition = ["0", "1", "2"].indexOf(sensorData.fanSpeed);
 
   const handleTempChange = (newTemp) => {
     console.log("Temperature changed:", newTemp);
