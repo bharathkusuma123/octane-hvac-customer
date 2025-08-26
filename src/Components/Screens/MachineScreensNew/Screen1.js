@@ -274,10 +274,14 @@ const Screen1 = () => {
   //   return <div className="error">Error: {error}</div>;
   // }
 
-  const handleNavigation = (path) => {
-    if (!processing) {
+  //  const handleNavigation = (path) => {
+  //   if (!processing) {
+  //     navigate(path);
+  //   }
+  // };
+  
+  const handleNavigation = (path) => { 
       navigate(path);
-    }
   };
 
   const fanPosition = ["0", "1", "2"].indexOf(sensorData.fanSpeed);
@@ -370,7 +374,7 @@ const Screen1 = () => {
   <button
     className={`power-button ${processing ? "processing" : ""}`}
     onClick={handlePowerToggle}
-    disabled={processing}
+    // disabled={processing}
     style={{
       backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
       display: "flex",
@@ -477,7 +481,7 @@ const Screen1 = () => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/machinescreen2")}
-            disabled={processing}
+            // disabled={processing}
           >
             <FiWind size={20} />
             <span>Modes</span>
@@ -498,7 +502,7 @@ const Screen1 = () => {
                 },
               })
             }
-            disabled={processing}
+            // disabled={processing}
           >
             <div style={{ position: "relative" }}>
               <FiClock size={20} />
@@ -529,7 +533,7 @@ const Screen1 = () => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/modes")}
-            disabled={processing}
+            // disabled={processing}
           >
             <FiWatch size={20} />
             <span>Timers</span>
@@ -537,7 +541,7 @@ const Screen1 = () => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/modes")}
-            disabled={processing}
+            // disabled={processing}
           >
             <FiSettings size={20} />
             <span>Settings</span>
@@ -545,7 +549,7 @@ const Screen1 = () => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/machine")}
-            disabled={processing}
+            // disabled={processing}
           >
             <FiZap size={20} />
             <span>Services</span>
@@ -553,7 +557,7 @@ const Screen1 = () => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/")}
-            disabled={processing}
+            // disabled={processing}
           >
             <FiLogOut size={20} />
             <span>Logout</span>

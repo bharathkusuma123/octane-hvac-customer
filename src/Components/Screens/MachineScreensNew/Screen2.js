@@ -196,7 +196,7 @@ const Screen2 = () => {
   };
 
   const handleModeChange = async (newMode) => {
-  if (processing) return;
+    //  if (processing) return;
 
   const modeCodeMap = {
     IDEC: 1,
@@ -259,7 +259,7 @@ const Screen2 = () => {
 };
 
 const handleFanSpeedChange = async (newPosition) => {
-  if (processing) return;
+  // if (processing) return;
 
   const fanSpeedMap = ["0", "1", "2"]; // 0=High, 1=Medium, 2=Low
   const newSpeed = fanSpeedMap[newPosition];
@@ -321,8 +321,12 @@ const handleFanSpeedChange = async (newPosition) => {
     }));
   };
 
+  // const handleBackClick = () => {
+  //   if (!processing) navigate("/machinescreen1");
+  // };
+
   const handleBackClick = () => {
-    if (!processing) navigate("/machinescreen1");
+   navigate("/machinescreen1");
   };
 
    if (loading) return <div className="loading">Loading...</div>;
@@ -334,7 +338,7 @@ const handleFanSpeedChange = async (newPosition) => {
   const positionToPercentage = (pos) => pos * 50;
 
   const handleFanClick = (e) => {
-    if (processing) return;
+    // if (processing) return;
     const containerWidth = e.currentTarget.offsetWidth;
     const clickPosition = e.nativeEvent.offsetX;
     const segmentWidth = containerWidth / 3;
@@ -355,7 +359,7 @@ const handleFanSpeedChange = async (newPosition) => {
           <button
             className="icon-button"
             onClick={handleBackClick}
-            disabled={processing}
+            // disabled={processing}
           >
             <FiArrowLeft size={24} color="white" />
           </button>
@@ -366,7 +370,7 @@ const handleFanSpeedChange = async (newPosition) => {
   <button
     className={`power-button ${processing ? "processing" : ""}`}
     onClick={handlePowerToggle}
-    disabled={processing}
+    // disabled={processing}
     style={{
       backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
      display: "flex",
@@ -462,7 +466,7 @@ const handleFanSpeedChange = async (newPosition) => {
                       ? "mode-button-selected"
                       : ""
                   } ${processing ? "disabled" : ""}`}
-                  disabled={processing}
+                  // disabled={processing}
                 >
                   <span
                     className={`mode-text ${

@@ -14,7 +14,7 @@ import baseURL from '../ApiUrl/Apiurl';
 import  Notification_Url from "../ApiUrl/PushNotificanURL";
 import { generateToken } from "../../Firebase/Firebase";
 
-export default function Login() {
+export default function Login() { 
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [autoLogin, setAutoLogin] = useState(false);
@@ -146,7 +146,7 @@ const handleLogin = async (e) => {
 
           <button type="submit" className="loginButton shadow">LOGIN</button>
 
-          <button type="button" className="socialButton">
+          {/* <button type="button" className="socialButton">
             <img src={googleicon} alt="Google Icon" className="socialIcon" />
             <span className="socialText">Login with Google ID</span>
           </button>
@@ -154,7 +154,7 @@ const handleLogin = async (e) => {
           <button className="socialButton black">
             <FaApple className="socialIcon" color="#fff" />
             <span className="socialText white">Login with Apple ID</span>
-          </button>
+          </button> */}
 
           <p className="orText">Or</p>
           <p className="registerText">
