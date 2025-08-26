@@ -145,3 +145,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.machine-components-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.machine-components-title {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 16px;
+}
+
+.machine-component-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+}
+
+.machine-component-divider {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px dashed #ddd;
+}

@@ -14,6 +14,7 @@ import AuthProvider from "./Components/AuthContext/AuthContext";
 import DashboardScreen from './Components/Screens/DashboardScreen/Dashboard';
 import MachineScreen from './Components/Screens/MachineScreen/Machine';
 import RequestScreen from './Components/Screens/RequestScreen/Request';
+import ComplaintForm from "./Components/Screens/Complaints/ComplaintsForm"
 import FeedbackScreen from './Components/Screens/FeedbackScreen/Feedback';
 import ServiceRequestForm from './Components/Screens/ServiceRequest/ServiceRequestForm';
 import './App.css';
@@ -77,6 +78,7 @@ function App() {
                 <Route path="/connect" element={<Connect />} />
                 <Route path="/machine" element={<MachineScreen />} />
                 <Route path="/request" element={<RequestScreen />} />
+                <Route path="/complaint-form" element={<ComplaintForm />} />
                 <Route path="/feedback/:requestId" element={<FeedbackScreen />} />
                 <Route path="/delegate-feedback/:requestId" element={<DelegateFeedback />} />
 

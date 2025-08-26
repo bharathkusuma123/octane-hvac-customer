@@ -80,6 +80,16 @@ const RequestScreen = () => {
     setCurrentPage(1);
   }, [searchTerm, requests]);
 
+  const handleComplaintClick = (requestId) => {
+    navigate('/complaint-form', { 
+      state: { 
+        service_request: requestId,
+        company: user?.company_id,
+        customer: user?.customer_id
+      } 
+    });
+  };
+
   const totalPages = Math.ceil(filteredRequests.length / rowsPerPage);
   const paginatedData = filteredRequests.slice(
     (currentPage - 1) * rowsPerPage,
@@ -147,7 +157,17 @@ const RequestScreen = () => {
                     <strong>Details:</strong> {req.request_details || 'N/A'}
                   </Card.Text>
                 </Card.Body>
-                <Card.Footer className="bg-white border-top-0">
+                <Card.Footer className="bg-white border-top-0 d-flex flex-column gap-2">
+                  {/* Customer Complaints Button */}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-100"
+                    onClick={() => handleComplaintClick(req.request_id)}
+                  >
+                    Customer Complaints
+                  </Button>
+                  
                   {closedRequestIds.includes(req.request_id) && (
                     <Button
                       variant={submittedFeedbackRequests.includes(req.request_id) ? "success" : "primary"}

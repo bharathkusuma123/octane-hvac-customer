@@ -1,0 +1,33 @@
+/* Full page setup */
+.complaint-form-page {
+  background: #f8f9fa;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Wrapper: fills space between top & bottom navbar */
+.complaint-form-wrapper {
+  flex: 1;
+  margin-top: 60px;  /* ✅ Push below fixed top-navbar */
+  margin-bottom: 65px; /* ✅ Push above bottom navbar */
+  padding: 16px;
+  display: flex;
+  overflow-y: auto; /* ✅ Scroll page content, not under nav */
+}
+
+/* Card styling */
+.complaint-form-card {
+  max-width: 700px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Scroll only inside form body */
+.complaint-form-card .form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

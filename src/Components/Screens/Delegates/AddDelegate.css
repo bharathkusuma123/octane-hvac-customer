@@ -63,7 +63,7 @@
   border: none !important;
 }
 
-.cancel-btn{
+.cancel-btn {
   background: #0180ff;
   color: white;
   padding: 12px 12px;
@@ -151,7 +151,7 @@
     align-items: center;
     gap: 10px;
   }
-  
+
   .button-container button {
     width: 100%;
     max-width: 100%;
