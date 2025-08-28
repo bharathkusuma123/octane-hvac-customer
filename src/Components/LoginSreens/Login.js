@@ -44,6 +44,7 @@ const handleLogin = async (e) => {
     localStorage.setItem("userMobile", user.mobile);
     localStorage.setItem("userName", user.full_name || user.delegate_name);
     localStorage.setItem("customerType", user.customer_type || "delegate");
+    localStorage.setItem("isLoggedIn", "true");
 
     login(user);
 

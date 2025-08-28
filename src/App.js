@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React ,{useEffect}from 'react';
+import { BrowserRouter as Router, Routes, Route ,useNavigate} from 'react-router-dom';
 import SetPasswordScreen from './Components/LoginSreens/SetPasswordScreen';
 import Login from './Components/LoginSreens/Login';
 import ForgotPasswordScreen from './Components/LoginSreens/ForgotPasswordScreen';
@@ -42,6 +42,20 @@ import Screen1 from './Components/Screens/MachineScreensNew/Screen1';
 import Screen2 from './Components/Screens/MachineScreensNew/Screen2';
 import AlarmsPage from './Components/Screens/MachineScreensNew/AlarmsPage';
 
+// 🔹 Wrapper component to handle auto-login check
+function AppWrapper() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn === "true") {
+      navigate("/machinescreen1");  // ✅ Redirect to dashboard
+    }
+  }, [navigate]);
+
+  return <Login />;
+}
+
 
 function App() {
   return (
@@ -55,7 +69,7 @@ function App() {
           <Router>
             <div className="App">
               <Routes>
-                <Route path="/" element={<Login />} />
+                <Route path="/" element={<AppWrapper />} />
                 <Route path="/machinescreen1" element={<Screen1 />} />
                 <Route path="/machinescreen2" element={<Screen2 />} />
                 <Route path="/alarms" element={<AlarmsPage />} />
