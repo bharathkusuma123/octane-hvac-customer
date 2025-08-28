@@ -51,6 +51,51 @@ const AddDelegates = () => {
     setCurrentPage(1);
   };
 
+  // Function to handle recall action
+  const handleRecall = async (delegateId) => {
+    try {
+      // First API call: Update delegate status to "Recalled"
+      const putResponse = await fetch(`${baseURL}/delegates/${delegateId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'Recalled'
+        })
+      });
+
+      if (putResponse.ok) {
+        // Second API call: Create delegate history entry
+        const postResponse = await fetch(`${baseURL}/delegate-history/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: "Recalled",
+            delegate: delegateId
+          })
+        });
+
+        if (postResponse.ok) {
+          // Refresh the delegates list to show updated status
+          fetchDelegates();
+          alert('Delegate recalled successfully!');
+        } else {
+          console.error('Failed to create delegate history');
+          alert('Failed to create delegate history record');
+        }
+      } else {
+        console.error('Failed to update delegate status');
+        alert('Failed to recall delegate');
+      }
+    } catch (error) {
+      console.error('Error recalling delegate:', error);
+      alert('Error recalling delegate');
+    }
+  };
+
   const filteredDelegates = delegates.filter((d) =>
     Object.values(d).some((val) =>
       val?.toString().toLowerCase().includes(searchTerm.toLowerCase())
@@ -125,6 +170,18 @@ const AddDelegates = () => {
                   </span>
                 </div>
               </div>
+              
+              {/* Add Recall button at the bottom of the card */}
+              {delegate.status === 'Active' && (
+                <div className="delegate-card-footer">
+                  <button 
+                    className="delegate-card-recall-btn"
+                    onClick={() => handleRecall(delegate.delegate_id)}
+                  >
+                    Recall
+                  </button>
+                </div>
+              )}
             </div>
           ))
         ) : (

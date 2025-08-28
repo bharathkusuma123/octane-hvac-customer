@@ -143,3 +143,26 @@
   background-color: #f8f9fa;
   border-radius: 8px;
 }
+
+/* /* .delegate-card-footer {
+  margin-top: auto;
+  padding: 10px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+} */
+
+.delegate-card-recall-btn {
+  background-color: green;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.delegate-card-recall-btn:hover {
+  background-color: #ff1a1a;
+} 
