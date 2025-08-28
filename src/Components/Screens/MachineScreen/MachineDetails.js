@@ -135,9 +135,13 @@ const handleSubmit = async (delegate) => {
       completed_at: new Date().toISOString(),
     };
 
+    console.log("Submitting payload:", JSON.stringify(payload, null, 2));
+
     permissionFields.forEach((field) => {
       payload[field.key] = delegate[field.key];
     });
+
+  
 
     const res = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`, {
       method: 'POST',
