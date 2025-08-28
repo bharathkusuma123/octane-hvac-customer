@@ -276,7 +276,6 @@ const AddDelegate = () => {
     delegate_id: '',
   });
 
-
   useEffect(() => {
     const fetchDelegates = async () => {
       try {
@@ -314,7 +313,6 @@ const AddDelegate = () => {
     }
   }, [userId]);
 
-
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -329,10 +327,6 @@ const AddDelegate = () => {
       status: "Active",
       is_registered: false,
       password: form.delegate_mobile,
-      // security_question1: "What is your mother’s maiden name?",
-      // answer1: "default",
-      // security_question2: "What is your mother’s maiden name?",
-      // answer2: "default",
       recalled_at: new Date().toISOString(),
       fcm_token: "string",
       company: company_id,
@@ -340,6 +334,10 @@ const AddDelegate = () => {
     };
 
     try {
+      console.log("Starting delegate creation process...");
+      console.log("Sending payload to delegates API:", payload);
+      
+      // First API call to create delegate
       const response = await fetch(`${baseURL}/delegates/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -347,16 +345,51 @@ const AddDelegate = () => {
       });
 
       if (response.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Success',
-          text: 'Delegate added successfully!',
-          confirmButtonColor: '#3085d6',
-        }).then(() => {
-          navigate('/view-delegates');
+        const delegateData = await response.json();
+        console.log("Delegate created successfully:", delegateData);
+        
+        // Prepare history payload
+        const historyPayload = {
+          delegate: delegateData.id || delegateData.data.delegate_id,
+          action: "Active",
+          details: `Delegate ${form.delegate_name} created with email ${form.delegate_email} and phone ${form.delegate_mobile}`,
+          action_date: new Date().toISOString()
+        };
+        
+        console.log("Sending history payload:", historyPayload);
+        
+        // Second API call to create history record
+        const historyResponse = await fetch(`${baseURL}/delegate-history/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(historyPayload),
         });
+
+        if (historyResponse.ok) {
+          console.log("Delegate history record created successfully");
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: 'Delegate added successfully with history tracking!',
+            confirmButtonColor: '#3085d6',
+          }).then(() => {
+            navigate('/view-delegates');
+          });
+        } else {
+          const errorData = await historyResponse.json();
+          console.error("Failed to create history record:", errorData);
+          Swal.fire({
+            icon: 'warning',
+            title: 'Partial Success',
+            text: 'Delegate added but history tracking failed: ' + (errorData.message || 'Unknown error'),
+            confirmButtonColor: '#d33',
+          }).then(() => {
+            navigate('/view-delegates');
+          });
+        }
       } else {
         const errorData = await response.json();
+        console.error("Failed to create delegate:", errorData);
         Swal.fire({
           icon: 'error',
           title: 'Failed',
@@ -365,7 +398,7 @@ const AddDelegate = () => {
         });
       }
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error('Error in delegate creation process:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
