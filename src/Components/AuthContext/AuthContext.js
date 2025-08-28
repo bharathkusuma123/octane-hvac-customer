@@ -12,15 +12,16 @@ const AuthProvider = ({ children }) => {
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
     }
-  }, [user]); // Automatically update localStorage when user state changes
+  }, [user]);
 
   const login = (userData) => {
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem("user");
     setUser(null);
+    localStorage.clear();
+    // ❌ no navigate here, just clear auth
   };
 
   return (

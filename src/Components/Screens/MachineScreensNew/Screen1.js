@@ -25,8 +25,9 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext/AuthContext";
 import TemperatureDial from "./TemperatureDial";
 
+
 const Screen1 = () => {
-  const { user } = useContext(AuthContext);
+  const { user,logout } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
   const [serviceItems, setServiceItems] = useState([]);
@@ -52,6 +53,11 @@ const Screen1 = () => {
   const [processingMessage, setProcessingMessage] = useState("");
   const navigate = useNavigate();
   const [errorCount, setErrorCount] = useState(0);
+
+  const handleLogout =()=>{
+    logout();
+    navigate("/");
+  }
 
   // Mode mapping
   const modeMap = {
@@ -556,7 +562,7 @@ const Screen1 = () => {
           </button>
           <button
             className="control-btn"
-            onClick={() => handleNavigation("/")}
+            onClick={handleLogout}
             // disabled={processing}
           >
             <FiLogOut size={20} />
