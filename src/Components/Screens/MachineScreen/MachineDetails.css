@@ -327,3 +327,94 @@
 .delegate-card-footer {
   padding: 10px 12px; /* Reduced padding */
 }
+/* PM Schedule Tasks Styles */
+.pm-schedule-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
+.pm-schedule-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pm-schedule-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  border-left: 4px solid #0096D6;
+}
+
+.pm-schedule-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.pm-schedule-card-sno {
+  background-color: #0096D6;
+  color: white;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.pm-schedule-card-id {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.pm-schedule-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.pm-status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.pm-status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.pm-schedule-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pm-schedule-card-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.pm-schedule-card-label {
+  font-weight: bold;
+  color: #555;
+}
+
+.pm-schedule-card-value {
+  color: #333;
+}
+
+.machine-details-error {
+  color: #dc3545;
+  padding: 10px;
+  background-color: #f8d7da;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+}

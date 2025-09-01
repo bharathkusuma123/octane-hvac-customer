@@ -26,7 +26,7 @@ import { AuthContext } from "../../AuthContext/AuthContext";
 import TemperatureDial from "./TemperatureDial";
 
 
-const Screen1 = () => {
+const Screen1 = () => { 
   const { user,logout } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
@@ -538,7 +538,7 @@ const Screen1 = () => {
           </button>
           <button
             className="control-btn"
-            onClick={() => handleNavigation("/modes")}
+            onClick={() => handleNavigation("/timers")}
             // disabled={processing}
           >
             <FiWatch size={20} />
@@ -546,7 +546,7 @@ const Screen1 = () => {
           </button>
           <button
             className="control-btn"
-            onClick={() => handleNavigation("/modes")}
+            onClick={() => handleNavigation("/settings")}
             // disabled={processing}
           >
             <FiSettings size={20} />

@@ -134,15 +134,8 @@ const handleLogin = async (e) => {
           </div>
 
           <div className="checkboxContainer">
-            <label className="switchLabel">
-              <input
-                type="checkbox"
-                checked={autoLogin}
-                onChange={(e) => setAutoLogin(e.target.checked)}
-              />
-              <span className="label">Auto Login</span>
-            </label>
-            <span className="forgot" onClick={() => navigate('/security')}>Forgot Password/Pin?</span>
+           
+            <span className="forgot" onClick={() => navigate('/security')}>Forgot Password?</span>
           </div>
 
           <button type="submit" className="loginButton shadow">LOGIN</button>

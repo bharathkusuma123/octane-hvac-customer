@@ -72,7 +72,7 @@
 
 .checkboxContainer {
   display: flex;
-  justify-content: space-between;
+  justify-content: right;
   margin: 10px 0;
   align-items: center;
 }

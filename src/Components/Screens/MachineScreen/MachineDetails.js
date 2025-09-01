@@ -13,6 +13,140 @@ const permissionFields = [
   { key: "can_control_equipment", label: "Control Equipment" },
 ];
 
+// PM Schedule Task Component
+const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
+  const [pmSchedules, setPmSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Function to convert date to Indian format (DD-MM-YYYY)
+  const formatToIndianDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Return original if formatting fails
+    }
+  };
+
+  useEffect(() => {
+    const fetchPmSchedules = async () => {
+      if (!userId || !company_id) return;
+      
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `http://175.29.21.7:8006/service-item-pm-schedules/?user_id=${userId}&company_id=${company_id}`
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch PM schedules');
+        }
+        
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          // Filter to only include schedules where responsible = "Customer" 
+          // AND service_item matches the current serviceItemId
+          const customerSchedules = result.data.filter(
+            schedule => 
+              schedule.responsible.toLowerCase() === "customer" &&
+              schedule.service_item === serviceItemId
+          );
+          setPmSchedules(customerSchedules);
+        } else {
+          throw new Error(result.message || 'Failed to retrieve PM schedules');
+        }
+      } catch (err) {
+        setError(err.message);
+        console.error("Error fetching PM schedules:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPmSchedules();
+  }, [userId, company_id, serviceItemId]);
+
+  if (loading) {
+    return <p className="machine-details-loading">Loading PM schedules...</p>;
+  }
+
+  if (error) {
+    return <p className="machine-details-error">Error: {error}</p>;
+  }
+
+  return (
+    <div className="pm-schedule-section">
+      <h3 className="machine-details-subtitle">PM Schedule Tasks</h3>
+      
+      {pmSchedules.length > 0 ? (
+        <div className="pm-schedule-cards-container">
+          {pmSchedules.map((schedule, index) => (
+            <div key={schedule.pm_schedule_id} className="pm-schedule-card">
+              <div className="pm-schedule-card-header">
+                <span className="pm-schedule-card-sno">{index + 1}</span>
+                <h4 className="pm-schedule-card-id">{schedule.pm_schedule_id}</h4>
+                <span className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}>
+                  {schedule.status}
+                </span>
+              </div>
+              
+              <div className="pm-schedule-card-body">
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Description:</span>
+                  <span className="pm-schedule-card-value">{schedule.description}</span>
+                </div>
+                
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Task Type:</span>
+                  <span className="pm-schedule-card-value">{schedule.task_type}</span>
+                </div>
+                
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Due Date:</span>
+                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.due_date)}</span>
+                </div>
+                
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Alert Date:</span>
+                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.alert_date)}</span>
+                </div>
+                
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Overdue Alert Date:</span>
+                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.overdue_alert_date)}</span>
+                </div>
+                
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Last Serviced:</span>
+                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.last_serviced_date) || 'N/A'}</span>
+                </div>
+                
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Chart:</span>
+                  <span className="pm-schedule-card-value">{schedule.chart}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="machine-details-empty">No PM schedule tasks found for this service item.</p>
+      )}
+    </div>
+  );
+};
+
 const MachineDetails = () => {
   const { serviceItemId } = useParams();
   const { user } = useContext(AuthContext);
@@ -22,70 +156,84 @@ const MachineDetails = () => {
   const [delegates, setDelegates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(null); 
-const [submittedDelegates, setSubmittedDelegates] = useState(() => {
-  const saved = localStorage.getItem('submittedDelegates');
-  return saved ? JSON.parse(saved) : [];
-});
-const [assignedPermissions, setAssignedPermissions] = useState([]);
-const [contracts, setContracts] = useState([]); // ✅ Correct
+  const [submittedDelegates, setSubmittedDelegates] = useState(() => {
+    const saved = localStorage.getItem('submittedDelegates');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [assignedPermissions, setAssignedPermissions] = useState([]);
+  const [contracts, setContracts] = useState([]);
 
+  useEffect(() => {
+    const fetchServiceContracts = async () => {
+      try {
+        const response = await fetch(
+          `http://175.29.21.7:8006/service-contracts/?user_id=${userId}&company_id=${company_id}`
+        );
 
-useEffect(() => {
-  const fetchServiceContracts = async () => {
-    try {
-      const response = await fetch(
-        `http://175.29.21.7:8006/service-contracts/?user_id=${userId}&company_id=${company_id}`
-      );
+        if (!response.ok) throw new Error("Failed to fetch contracts");
 
-      if (!response.ok) throw new Error("Failed to fetch contracts");
+        const result = await response.json();
 
-      const result = await response.json();
+        // Filter all contracts that match this serviceItemId
+        const matchedContracts = result.data.filter(
+          (item) => item.service_item === serviceItemId
+        );
 
-      // Filter all contracts that match this serviceItemId
-      const matchedContracts = result.data.filter(
-        (item) => item.service_item === serviceItemId
-      );
+        setContracts(matchedContracts);
+      } catch (err) {
+        console.error("Error fetching service contracts:", err);
+      }
+    };
 
-      setContracts(matchedContracts);
-    } catch (err) {
-      console.error("Error fetching service contracts:", err);
+    if (userId && serviceItemId) {
+      fetchServiceContracts();
     }
-  };
-
-  if (userId && serviceItemId) {
-    fetchServiceContracts();
-  }
-}, [userId, serviceItemId]);
-
+  }, [userId, serviceItemId, company_id]);
 
   useEffect(() => {
     const fetchDelegates = async () => {
       try {
-        const response = await fetch(`http://175.29.21.7:8006/delegates/`);
-        if (response.ok) {
-          const result = await response.json();
-          const filtered = result.data
-            .filter((d) => d.customer === userId)
-            .map((d) => ({
+        const [delegateRes, taskRes] = await Promise.all([
+          fetch(`http://175.29.21.7:8006/delegates/`),
+          fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`),
+        ]);
+
+        if (!delegateRes.ok || !taskRes.ok) throw new Error('API fetch error');
+
+        const delegateData = await delegateRes.json();
+        const taskData = await taskRes.json();
+
+        // Get all previous assignments
+        setAssignedPermissions(taskData.data);
+
+        const filteredDelegates = delegateData.data
+          .filter((d) => d.customer === userId)
+          .map((d) => {
+            const existing = taskData.data.find(
+              (item) =>
+                item.service_item === serviceItemId &&
+                item.delegate === d.delegate_id
+            );
+
+            return {
               ...d,
-              can_raise_service_request: false,
-              can_close_service_request: false,
-              can_submit_customer_satisfaction_survey: false,
-              can_log_customer_complaints: false,
-              can_monitor_equipment: false,
-              can_control_equipment: false,
-            }));
-          setDelegates(filtered);
-        }
+              ...permissionFields.reduce((acc, field) => {
+                acc[field.key] = existing ? Boolean(existing[field.key]) : false;
+                return acc;
+              }, {}),
+            };
+          });
+
+        setDelegates(filteredDelegates);
       } catch (err) {
-        console.error('Failed to load delegates:', err);
+        console.error('Failed to load delegates or assignments:', err);
       } finally {
         setLoading(false);
       }
     };
 
     if (userId) fetchDelegates();
-  }, [userId]);
+  }, [userId, serviceItemId]);
 
   const handleCheckboxChange = (delegateId, field, value) => {
     setDelegates((prev) =>
@@ -96,139 +244,98 @@ useEffect(() => {
   };
 
   const getNextItemId = () => {
-  const key = "item_id_counter";
-  let count = parseInt(localStorage.getItem(key) || "0", 10);
-  count += 1;
-  localStorage.setItem(key, count.toString());
-  return `IID${count.toString().padStart(2, "0")}`; 
-};
+    const key = "item_id_counter";
+    let count = parseInt(localStorage.getItem(key) || "0", 10);
+    count += 1;
+    localStorage.setItem(key, count.toString());
+    return `IID${count.toString().padStart(2, "0")}`; 
+  };
 
-const handleSubmit = async (delegate) => {
-  setSubmittingId(delegate.delegate_id);
+  const handleSubmit = async (delegate) => {
+    setSubmittingId(delegate.delegate_id);
 
-  try {
-    // Fetch existing assignments
-    const checkRes = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`);
-    if (!checkRes.ok) throw new Error("Failed to fetch existing assignments");
-
-    const existingData = await checkRes.json();
-
-    // Check if the serviceItemId is already assigned to ANY delegate
-    const existingAssignment = existingData.data.find(
-      (item) => item.service_item === serviceItemId
-    );
-
-    if (existingAssignment) {
-      if (existingAssignment.delegate !== delegate.delegate_id) {
-        alert(`Access already assigned to another delegate for this service item.`);
-        setSubmittingId(null);
-        return;
-      }
-      // If same delegate is re-assigning, allow it to proceed
-    }
-
-    // Proceed with submission
-    const payload = {
-      item_id: getNextItemId(),
-      delegate: delegate.delegate_id,
-      service_item: serviceItemId,
-      completed_at: new Date().toISOString(),
-    };
-
-    console.log("Submitting payload:", JSON.stringify(payload, null, 2));
-
-    permissionFields.forEach((field) => {
-      payload[field.key] = delegate[field.key];
-    });
-
-  
-
-    const res = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    const responseText = await res.text();
-    console.log("API Response:", res.status, responseText);
-
-    if (!res.ok) throw new Error(`Failed to submit for ${delegate.delegate_id}`);
-
-    // Update submitted delegate list
-    setSubmittedDelegates((prev) => {
-      const updated = [...prev, { delegateId: delegate.delegate_id, serviceItemId }];
-localStorage.setItem('submittedDelegates', JSON.stringify(updated));
-return updated;
-    });
-
-    alert(`Permissions submitted for ${delegate.delegate_name}`);
-  } catch (err) {
-    console.error("Error:", err);
-    alert(`Submission failed for ${delegate.delegate_name}`);
-  } finally {
-    setSubmittingId(null);
-  }
-};
-
-useEffect(() => {
-  const fetchDelegates = async () => {
     try {
-      const [delegateRes, taskRes] = await Promise.all([
-        fetch(`http://175.29.21.7:8006/delegates/`),
-        fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`),
-      ]);
+      // Fetch existing assignments
+      const checkRes = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`);
+      if (!checkRes.ok) throw new Error("Failed to fetch existing assignments");
 
-      if (!delegateRes.ok || !taskRes.ok) throw new Error('API fetch error');
+      const existingData = await checkRes.json();
 
-      const delegateData = await delegateRes.json();
-      const taskData = await taskRes.json();
+      // Check if the serviceItemId is already assigned to ANY delegate
+      const existingAssignment = existingData.data.find(
+        (item) => item.service_item === serviceItemId
+      );
 
-      // Get all previous assignments
-      setAssignedPermissions(taskData.data);
+      if (existingAssignment) {
+        if (existingAssignment.delegate !== delegate.delegate_id) {
+          alert(`Access already assigned to another delegate for this service item.`);
+          setSubmittingId(null);
+          return;
+        }
+        // If same delegate is re-assigning, allow it to proceed
+      }
 
-      const filteredDelegates = delegateData.data
-        .filter((d) => d.customer === userId)
-        .map((d) => {
-          const existing = taskData.data.find(
-            (item) =>
-              item.service_item === serviceItemId &&
-              item.delegate === d.delegate_id
-          );
+      // Proceed with submission
+      const payload = {
+        item_id: getNextItemId(),
+        delegate: delegate.delegate_id,
+        service_item: serviceItemId,
+        completed_at: new Date().toISOString(),
+      };
 
-          return {
-            ...d,
-            ...permissionFields.reduce((acc, field) => {
-              acc[field.key] = existing ? Boolean(existing[field.key]) : false;
-              return acc;
-            }, {}),
-          };
-        });
+      console.log("Submitting payload:", JSON.stringify(payload, null, 2));
 
-      setDelegates(filteredDelegates);
+      permissionFields.forEach((field) => {
+        payload[field.key] = delegate[field.key];
+      });
+
+      const res = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await res.text();
+      console.log("API Response:", res.status, responseText);
+
+      if (!res.ok) throw new Error(`Failed to submit for ${delegate.delegate_id}`);
+
+      // Update submitted delegate list
+      setSubmittedDelegates((prev) => {
+        const updated = [...prev, { delegateId: delegate.delegate_id, serviceItemId }];
+        localStorage.setItem('submittedDelegates', JSON.stringify(updated));
+        return updated;
+      });
+
+      alert(`Permissions submitted for ${delegate.delegate_name}`);
     } catch (err) {
-      console.error('Failed to load delegates or assignments:', err);
+      console.error("Error:", err);
+      alert(`Submission failed for ${delegate.delegate_name}`);
     } finally {
-      setLoading(false);
+      setSubmittingId(null);
     }
   };
 
-  if (userId) fetchDelegates();
-}, [userId, serviceItemId]);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    return `${date.getDate().toString().padStart(2, '0')}/${
+      (date.getMonth() + 1).toString().padStart(2, '0')
+    }/${date.getFullYear()}`;
+  };
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  return `${date.getDate().toString().padStart(2, '0')}/${
-    (date.getMonth() + 1).toString().padStart(2, '0')
-  }/${date.getFullYear()}`;
-};
-
-
-return (
+  return (
     <div className="machine-details-wrapper">
       <div className="machine-details-header">
         <h2 className="machine-details-title">Service Item ID: <span>{serviceItemId}</span></h2>
       </div>
+
+      {/* PM Schedule Tasks Component */}
+      <PMScheduleTasks 
+        serviceItemId={serviceItemId} 
+        userId={userId} 
+        company_id={company_id} 
+      />
 
       <div className="machine-details-section">
         <h3 className="machine-details-subtitle">Delegate Permissions</h3>

@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import Swal from "sweetalert2"; // ✅ SweetAlert2 import
+import Swal from "sweetalert2";
 import baseURL from "../../ApiUrl/Apiurl";
 import "./EditCustomer.css";
+import { AuthContext } from "../../AuthContext/AuthContext";
 
 const EditCustomer = () => {
+  const { user } = useContext(AuthContext);
+  const company_id = user?.company_id;
   const { customer_id } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -22,11 +25,15 @@ const EditCustomer = () => {
   });
 
   useEffect(() => {
-    axios.get(`${baseURL}/customers/`)
+    axios.get(`${baseURL}/customers/${customer_id}/?user_id=${customer_id}&company_id=${company_id}`)
       .then((res) => {
-        const user = res.data.data.find((u) => u.customer_id === customer_id);
-        if (user) {
-          setFormData(user);
+        // Check if response data is an array or single object
+        const customerData = Array.isArray(res.data.data) 
+          ? res.data.data.find((u) => u.customer_id === customer_id)
+          : res.data.data;
+        
+        if (customerData) {
+          setFormData(customerData);
         } else {
           Swal.fire({
             icon: "error",
@@ -46,7 +53,7 @@ const EditCustomer = () => {
           confirmButtonColor: "#d33",
         });
       });
-  }, [customer_id, navigate]);
+  }, [customer_id, navigate, company_id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -86,6 +93,8 @@ const EditCustomer = () => {
           {[
             { name: "full_name", label: "Full Name" },
             { name: "email", label: "Email", type: "email" },
+            { name: "mobile", label: "Mobile" },
+            { name: "telephone", label: "Telephone" },
             { name: "city", label: "City" },
             { name: "country_code", label: "Country Code" },
             { name: "address", label: "Address" },
@@ -98,9 +107,9 @@ const EditCustomer = () => {
               <input
                 type={type}
                 name={name}
-                value={formData[name]}
+                value={formData[name] || ""}
                 onChange={handleChange}
-                required
+                required={name === "full_name" || name === "email"}
               />
             </div>
           ))}

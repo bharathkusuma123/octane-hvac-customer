@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaHome,
@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fa';
 import './Navbar.css';
 import logo from '../../../Logos/hvac-logo-new.jpg';
+import { AuthContext } from "../../AuthContext/AuthContext";
 
 const screens = [
   { label: 'Dashboard', name: '/home', icon: <FaHome /> },
@@ -26,6 +27,14 @@ const NavScreen = () => {
   const [activeIcon, setActiveIcon] = useState(location.pathname);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef();
+  const { logout } = useContext(AuthContext);
+
+  const handleLogout = () => {
+  setShowProfileMenu(false);
+  logout();
+  navigate("/");
+};
+
 
   useEffect(() => {
     setActiveIcon(location.pathname);
@@ -70,11 +79,11 @@ const NavScreen = () => {
     Profile
   </div>
    <div onClick={() => { setShowProfileMenu(false); navigate('/connect'); }}>
-    Connect
+    Connect 
   </div>
-  <div onClick={() => { setShowProfileMenu(false); navigate('/'); }}>
-    Logout
-  </div>
+ <div onClick={handleLogout}>
+  Logout
+</div>
 </div>
 )}
 

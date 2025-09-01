@@ -51,17 +51,17 @@ const AddDelegates = () => {
     setCurrentPage(1);
   };
 
-  // Function to handle recall action
-  const handleRecall = async (delegateId) => {
+  // Function to handle status change
+  const handleStatusChange = async (delegateId, newStatus) => {
     try {
-      // First API call: Update delegate status to "Recalled"
+      // First API call: Update delegate status
       const putResponse = await fetch(`${baseURL}/delegates/${delegateId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: 'Recalled'
+          status: newStatus
         })
       });
 
@@ -73,7 +73,7 @@ const AddDelegates = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            action: "Recalled",
+            action: newStatus,
             delegate: delegateId
           })
         });
@@ -81,18 +81,18 @@ const AddDelegates = () => {
         if (postResponse.ok) {
           // Refresh the delegates list to show updated status
           fetchDelegates();
-          alert('Delegate recalled successfully!');
+          alert(`Delegate status updated to ${newStatus} successfully!`);
         } else {
           console.error('Failed to create delegate history');
           alert('Failed to create delegate history record');
         }
       } else {
         console.error('Failed to update delegate status');
-        alert('Failed to recall delegate');
+        alert('Failed to update delegate status');
       }
     } catch (error) {
-      console.error('Error recalling delegate:', error);
-      alert('Error recalling delegate');
+      console.error('Error updating delegate status:', error);
+      alert('Error updating delegate status');
     }
   };
 
@@ -171,17 +171,17 @@ const AddDelegates = () => {
                 </div>
               </div>
               
-              {/* Add Recall button at the bottom of the card */}
-              {delegate.status === 'Active' && (
-                <div className="delegate-card-footer">
-                  <button 
-                    className="delegate-card-recall-btn"
-                    onClick={() => handleRecall(delegate.delegate_id)}
-                  >
-                    Recall
-                  </button>
-                </div>
-              )}
+              {/* Replace Recall button with status dropdown */}
+              <div className="delegate-card-footer">
+                <select 
+                  value={delegate.status}
+                  onChange={(e) => handleStatusChange(delegate.delegate_id, e.target.value)}
+                  className="delegate-card-status-dropdown"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Recalled">Recalled</option>
+                </select>
+              </div>
             </div>
           ))
         ) : (
