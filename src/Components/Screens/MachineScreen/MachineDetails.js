@@ -16,6 +16,8 @@ const permissionFields = [
 // PM Schedule Task Component
 const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
   const [pmSchedules, setPmSchedules] = useState([]);
+  const [filteredSchedules, setFilteredSchedules] = useState([]);
+  const [activeFilter, setActiveFilter] = useState('customer'); // Default to customer
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,6 +40,13 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
     }
   };
 
+  const handleRaiseRequest = (schedule) => {
+    // Handle raise request logic here
+    console.log('Raising request for schedule:', schedule);
+    alert(`Raising request for PM Schedule: ${schedule.pm_schedule_id}`);
+    // You can implement your API call or navigation logic here
+  };
+
   useEffect(() => {
     const fetchPmSchedules = async () => {
       if (!userId || !company_id) return;
@@ -55,14 +64,17 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
         const result = await response.json();
         
         if (result.status === "success") {
-          // Filter to only include schedules where responsible = "Customer" 
-          // AND service_item matches the current serviceItemId
-          const customerSchedules = result.data.filter(
-            schedule => 
-              schedule.responsible.toLowerCase() === "customer" &&
-              schedule.service_item === serviceItemId
+          // Filter to only include schedules where service_item matches the current serviceItemId
+          const filteredSchedules = result.data.filter(
+            schedule => schedule.service_item === serviceItemId
           );
-          setPmSchedules(customerSchedules);
+          setPmSchedules(filteredSchedules);
+          
+          // Set initial filtered schedules (customer by default)
+          const customerSchedules = filteredSchedules.filter(
+            schedule => schedule.responsible.toLowerCase() === "customer"
+          );
+          setFilteredSchedules(customerSchedules);
         } else {
           throw new Error(result.message || 'Failed to retrieve PM schedules');
         }
@@ -77,6 +89,20 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
     fetchPmSchedules();
   }, [userId, company_id, serviceItemId]);
 
+  // Handle filter change
+  const handleFilterChange = (filterType) => {
+    setActiveFilter(filterType);
+    
+    if (filterType === 'all') {
+      setFilteredSchedules(pmSchedules);
+    } else {
+      const filtered = pmSchedules.filter(
+        schedule => schedule.responsible.toLowerCase() === filterType
+      );
+      setFilteredSchedules(filtered);
+    }
+  };
+
   if (loading) {
     return <p className="machine-details-loading">Loading PM schedules...</p>;
   }
@@ -86,22 +112,59 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
   }
 
   return (
-    <div className="pm-schedule-section">
-      <h3 className="machine-details-subtitle">PM Schedule Tasks</h3>
+     <div className="pm-schedule-section">
+      <div className="pm-schedule-header">
+        <h3 className="machine-details-subtitle">PM Schedule Tasks</h3>
+        <div className="filter-buttons">
+          <button 
+            className={`filter-btn ${activeFilter === 'factory' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('factory')}
+          >
+            Factory
+          </button>
+          <button 
+            className={`filter-btn ${activeFilter === 'customer' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('customer')}
+          >
+            Customer
+          </button>
+          {/* <button 
+            className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+            onClick={() => handleFilterChange('all')}
+          >
+            All
+          </button> */}
+        </div>
+      </div>
       
-      {pmSchedules.length > 0 ? (
+      {filteredSchedules.length > 0 ? (
         <div className="pm-schedule-cards-container">
-          {pmSchedules.map((schedule, index) => (
+          {filteredSchedules.map((schedule, index) => (
             <div key={schedule.pm_schedule_id} className="pm-schedule-card">
               <div className="pm-schedule-card-header">
                 <span className="pm-schedule-card-sno">{index + 1}</span>
                 <h4 className="pm-schedule-card-id">{schedule.pm_schedule_id}</h4>
-                <span className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}>
-                  {schedule.status}
-                </span>
+                <div className="pm-schedule-header-right">
+                  <span className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}>
+                    {schedule.status}
+                  </span>
+                  {schedule.responsible.toLowerCase() === 'customer' && schedule.status.toLowerCase() === 'pending' && (
+                    <button 
+                      className="raise-request-btn"
+                      onClick={() => handleRaiseRequest(schedule)}
+                    >
+                      Raise Request
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="pm-schedule-card-body">
+                <div className="pm-schedule-card-row">
+                  <span className="pm-schedule-card-label">Responsible:</span>
+                  <span className="pm-schedule-card-value">{schedule.responsible}</span>
+                </div>
+                
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Description:</span>
                   <span className="pm-schedule-card-value">{schedule.description}</span>
@@ -141,7 +204,7 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
           ))}
         </div>
       ) : (
-        <p className="machine-details-empty">No PM schedule tasks found for this service item.</p>
+        <p className="machine-details-empty">No PM schedule tasks found for this filter.</p>
       )}
     </div>
   );
