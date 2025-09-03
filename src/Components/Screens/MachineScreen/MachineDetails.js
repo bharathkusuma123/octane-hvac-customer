@@ -14,6 +14,204 @@ const permissionFields = [
 ];
 
 // PM Schedule Task Component
+// const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
+//   const [pmSchedules, setPmSchedules] = useState([]);
+//   const [filteredSchedules, setFilteredSchedules] = useState([]);
+//   const [activeFilter, setActiveFilter] = useState('customer'); // Default to customer
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+
+//   // Function to convert date to Indian format (DD-MM-YYYY)
+//   const formatToIndianDate = (dateString) => {
+//     if (!dateString) return 'N/A';
+    
+//     try {
+//       const date = new Date(dateString);
+//       if (isNaN(date.getTime())) return 'Invalid Date';
+      
+//       const day = String(date.getDate()).padStart(2, '0');
+//       const month = String(date.getMonth() + 1).padStart(2, '0');
+//       const year = date.getFullYear();
+      
+//       return `${day}-${month}-${year}`;
+//     } catch (error) {
+//       console.error('Error formatting date:', error);
+//       return dateString; // Return original if formatting fails
+//     }
+//   };
+
+//   const handleRaiseRequest = (schedule) => {
+//     // Handle raise request logic here
+//     console.log('Raising request for schedule:', schedule);
+//     alert(`Raising request for PM Schedule: ${schedule.pm_schedule_id}`);
+//     // You can implement your API call or navigation logic here
+//   };
+
+//   useEffect(() => {
+//     const fetchPmSchedules = async () => {
+//       if (!userId || !company_id) return;
+      
+//       try {
+//         setLoading(true);
+//         const response = await fetch(
+//           `http://175.29.21.7:8006/service-item-pm-schedules/?user_id=${userId}&company_id=${company_id}`
+//         );
+        
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch PM schedules');
+//         }
+        
+//         const result = await response.json();
+        
+//         if (result.status === "success") {
+//           // Filter to only include schedules where service_item matches the current serviceItemId
+//           const filteredSchedules = result.data.filter(
+//             schedule => schedule.service_item === serviceItemId
+//           );
+//           setPmSchedules(filteredSchedules);
+          
+//           // Set initial filtered schedules (customer by default)
+//           const customerSchedules = filteredSchedules.filter(
+//             schedule => schedule.responsible.toLowerCase() === "customer"
+//           );
+//           setFilteredSchedules(customerSchedules);
+//         } else {
+//           throw new Error(result.message || 'Failed to retrieve PM schedules');
+//         }
+//       } catch (err) {
+//         setError(err.message);
+//         console.error("Error fetching PM schedules:", err);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchPmSchedules();
+//   }, [userId, company_id, serviceItemId]);
+
+//   // Handle filter change
+//   const handleFilterChange = (filterType) => {
+//     setActiveFilter(filterType);
+    
+//     if (filterType === 'all') {
+//       setFilteredSchedules(pmSchedules);
+//     } else {
+//       const filtered = pmSchedules.filter(
+//         schedule => schedule.responsible.toLowerCase() === filterType
+//       );
+//       setFilteredSchedules(filtered);
+//     }
+//   };
+
+//   if (loading) {
+//     return <p className="machine-details-loading">Loading PM schedules...</p>;
+//   }
+
+//   if (error) {
+//     return <p className="machine-details-error">Error: {error}</p>;
+//   }
+
+//   return (
+//      <div className="pm-schedule-section">
+//       <div className="pm-schedule-header">
+//         <h3 className="machine-details-subtitle">PM Schedule Tasks</h3>
+//         <div className="filter-buttons">
+//           <button 
+//             className={`filter-btn ${activeFilter === 'factory' ? 'active' : ''}`}
+//             onClick={() => handleFilterChange('factory')}
+//           >
+//             Factory
+//           </button>
+//           <button 
+//             className={`filter-btn ${activeFilter === 'customer' ? 'active' : ''}`}
+//             onClick={() => handleFilterChange('customer')}
+//           >
+//             Customer
+//           </button>
+//           {/* <button 
+//             className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+//             onClick={() => handleFilterChange('all')}
+//           >
+//             All
+//           </button> */}
+//         </div>
+//       </div>
+      
+//       {filteredSchedules.length > 0 ? (
+//         <div className="pm-schedule-cards-container">
+//           {filteredSchedules.map((schedule, index) => (
+//             <div key={schedule.pm_schedule_id} className="pm-schedule-card">
+//               <div className="pm-schedule-card-header">
+//                 <span className="pm-schedule-card-sno">{index + 1}</span>
+//                 <h4 className="pm-schedule-card-id">{schedule.pm_schedule_id}</h4>
+//                 <div className="pm-schedule-header-right">
+//                   <span className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}>
+//                     {schedule.status}
+//                   </span>
+//                   {schedule.responsible.toLowerCase() === 'customer' && schedule.status.toLowerCase() === 'pending' && (
+//                     <button 
+//                       className="raise-request-btn"
+//                       onClick={() => handleRaiseRequest(schedule)}
+//                     >
+//                       Raise Request
+//                     </button>
+//                   )}
+//                 </div>
+//               </div>
+              
+//               <div className="pm-schedule-card-body">
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Responsible:</span>
+//                   <span className="pm-schedule-card-value">{schedule.responsible}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Description:</span>
+//                   <span className="pm-schedule-card-value">{schedule.description}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Task Type:</span>
+//                   <span className="pm-schedule-card-value">{schedule.task_type}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Due Date:</span>
+//                   <span className="pm-schedule-card-value">{formatToIndianDate(schedule.due_date)}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Alert Date:</span>
+//                   <span className="pm-schedule-card-value">{formatToIndianDate(schedule.alert_date)}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Overdue Alert Date:</span>
+//                   <span className="pm-schedule-card-value">{formatToIndianDate(schedule.overdue_alert_date)}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Last Serviced:</span>
+//                   <span className="pm-schedule-card-value">{formatToIndianDate(schedule.last_serviced_date) || 'N/A'}</span>
+//                 </div>
+                
+//                 <div className="pm-schedule-card-row">
+//                   <span className="pm-schedule-card-label">Chart:</span>
+//                   <span className="pm-schedule-card-value">{schedule.chart}</span>
+//                 </div>
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       ) : (
+//         <p className="machine-details-empty">No PM schedule tasks found for this filter.</p>
+//       )}
+//     </div>
+//   );
+// };
+
+
+// PM Schedule Task Component
 const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
   const [pmSchedules, setPmSchedules] = useState([]);
   const [filteredSchedules, setFilteredSchedules] = useState([]);
@@ -24,59 +222,91 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
   // Function to convert date to Indian format (DD-MM-YYYY)
   const formatToIndianDate = (dateString) => {
     if (!dateString) return 'N/A';
-    
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Invalid Date';
-      
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
-      
       return `${day}-${month}-${year}`;
     } catch (error) {
       console.error('Error formatting date:', error);
-      return dateString; // Return original if formatting fails
+      return dateString;
     }
   };
 
-  const handleRaiseRequest = (schedule) => {
-    // Handle raise request logic here
-    console.log('Raising request for schedule:', schedule);
-    alert(`Raising request for PM Schedule: ${schedule.pm_schedule_id}`);
-    // You can implement your API call or navigation logic here
+  // Raise Request API
+  const handleRaiseRequest = async (schedule) => {
+    try {
+      const response = await fetch(
+        `http://175.29.21.7:8006/update-pm-schedule-status/${schedule.pm_schedule_id}/`,
+        {
+          method: "POST", // or PATCH depending on your backend
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: "Completed" }), // payload if required
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update PM schedule status");
+      }
+
+      const result = await response.json();
+      alert(`Request raised successfully for ${schedule.pm_schedule_id}`);
+
+      // Update state so UI refreshes with new status
+      setPmSchedules((prev) =>
+        prev.map((s) =>
+          s.pm_schedule_id === schedule.pm_schedule_id
+            ? { ...s, status: "Completed" }
+            : s
+        )
+      );
+      setFilteredSchedules((prev) =>
+        prev.map((s) =>
+          s.pm_schedule_id === schedule.pm_schedule_id
+            ? { ...s, status: "Completed" }
+            : s
+        )
+      );
+          fetchPmSchedules();
+
+    } catch (error) {
+      console.error("Error raising request:", error);
+      alert("Failed to raise request. Please try again.");
+    }
   };
 
-  useEffect(() => {
+    
     const fetchPmSchedules = async () => {
       if (!userId || !company_id) return;
-      
+
       try {
         setLoading(true);
         const response = await fetch(
           `http://175.29.21.7:8006/service-item-pm-schedules/?user_id=${userId}&company_id=${company_id}`
         );
-        
+
         if (!response.ok) {
-          throw new Error('Failed to fetch PM schedules');
+          throw new Error("Failed to fetch PM schedules");
         }
-        
+
         const result = await response.json();
-        
+
         if (result.status === "success") {
-          // Filter to only include schedules where service_item matches the current serviceItemId
           const filteredSchedules = result.data.filter(
-            schedule => schedule.service_item === serviceItemId
+            (schedule) => schedule.service_item === serviceItemId
           );
           setPmSchedules(filteredSchedules);
-          
-          // Set initial filtered schedules (customer by default)
+
           const customerSchedules = filteredSchedules.filter(
-            schedule => schedule.responsible.toLowerCase() === "customer"
+            (schedule) => schedule.responsible.toLowerCase() === "customer"
           );
           setFilteredSchedules(customerSchedules);
         } else {
-          throw new Error(result.message || 'Failed to retrieve PM schedules');
+          throw new Error(result.message || "Failed to retrieve PM schedules");
         }
       } catch (err) {
         setError(err.message);
@@ -86,18 +316,20 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
       }
     };
 
+      useEffect(() => {
+
     fetchPmSchedules();
   }, [userId, company_id, serviceItemId]);
 
   // Handle filter change
   const handleFilterChange = (filterType) => {
     setActiveFilter(filterType);
-    
-    if (filterType === 'all') {
+
+    if (filterType === "all") {
       setFilteredSchedules(pmSchedules);
     } else {
       const filtered = pmSchedules.filter(
-        schedule => schedule.responsible.toLowerCase() === filterType
+        (schedule) => schedule.responsible.toLowerCase() === filterType
       );
       setFilteredSchedules(filtered);
     }
@@ -112,89 +344,123 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
   }
 
   return (
-     <div className="pm-schedule-section">
+    <div className="pm-schedule-section">
       <div className="pm-schedule-header">
         <h3 className="machine-details-subtitle">PM Schedule Tasks</h3>
         <div className="filter-buttons">
-          <button 
-            className={`filter-btn ${activeFilter === 'factory' ? 'active' : ''}`}
-            onClick={() => handleFilterChange('factory')}
+          <button
+            className={`filter-btn ${activeFilter === "factory" ? "active" : ""}`}
+            onClick={() => handleFilterChange("factory")}
           >
             Factory
           </button>
-          <button 
-            className={`filter-btn ${activeFilter === 'customer' ? 'active' : ''}`}
-            onClick={() => handleFilterChange('customer')}
+          <button
+            className={`filter-btn ${activeFilter === "customer" ? "active" : ""}`}
+            onClick={() => handleFilterChange("customer")}
           >
             Customer
           </button>
-          {/* <button 
-            className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
-            onClick={() => handleFilterChange('all')}
-          >
-            All
-          </button> */}
         </div>
       </div>
-      
+
       {filteredSchedules.length > 0 ? (
         <div className="pm-schedule-cards-container">
           {filteredSchedules.map((schedule, index) => (
             <div key={schedule.pm_schedule_id} className="pm-schedule-card">
-              <div className="pm-schedule-card-header">
+              {/* <div className="pm-schedule-card-header">
                 <span className="pm-schedule-card-sno">{index + 1}</span>
                 <h4 className="pm-schedule-card-id">{schedule.pm_schedule_id}</h4>
                 <div className="pm-schedule-header-right">
-                  <span className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}>
+                  <span
+                    className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}
+                  >
                     {schedule.status}
                   </span>
-                  {schedule.responsible.toLowerCase() === 'customer' && schedule.status.toLowerCase() === 'pending' && (
-                    <button 
-                      className="raise-request-btn"
-                      onClick={() => handleRaiseRequest(schedule)}
-                    >
-                      Raise Request
-                    </button>
-                  )}
+                  {schedule.responsible.toLowerCase() === "customer" &&
+                    schedule.status.toLowerCase() === "pending" &&
+                    schedule.is_alert_sent && (
+                      <button
+                        className="raise-request-btn"
+                        onClick={() => handleRaiseRequest(schedule)}
+                      >
+                        Raise Request
+                      </button>
+                    )}
                 </div>
-              </div>
-              
+              </div> */}
+              <div className="pm-schedule-card-header">
+  <span className="pm-schedule-card-sno">{index + 1}</span>
+  <h4 className="pm-schedule-card-id">{schedule.pm_schedule_id}</h4>
+  <div className="pm-schedule-header-right">
+    <span
+      className={`pm-schedule-status pm-status-${schedule.status.toLowerCase()}`}
+    >
+      {schedule.status}
+    </span>
+    {schedule.responsible.toLowerCase() === "customer" &&
+      schedule.status.toLowerCase() === "pending" && (
+        <button
+          className="raise-request-btn"
+          onClick={() => handleRaiseRequest(schedule)}
+          disabled={!schedule.is_alert_sent} // 👈 disable if alert not sent
+        >
+          Raise Request
+        </button>
+      )}
+  </div>
+</div>
+
+
               <div className="pm-schedule-card-body">
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Responsible:</span>
-                  <span className="pm-schedule-card-value">{schedule.responsible}</span>
+                  <span className="pm-schedule-card-value">
+                    {schedule.responsible}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Description:</span>
-                  <span className="pm-schedule-card-value">{schedule.description}</span>
+                  <span className="pm-schedule-card-value">
+                    {schedule.description}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Task Type:</span>
-                  <span className="pm-schedule-card-value">{schedule.task_type}</span>
+                  <span className="pm-schedule-card-value">
+                    {schedule.task_type}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Due Date:</span>
-                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.due_date)}</span>
+                  <span className="pm-schedule-card-value">
+                    {formatToIndianDate(schedule.due_date)}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Alert Date:</span>
-                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.alert_date)}</span>
+                  <span className="pm-schedule-card-value">
+                    {formatToIndianDate(schedule.alert_date)}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Overdue Alert Date:</span>
-                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.overdue_alert_date)}</span>
+                  <span className="pm-schedule-card-value">
+                    {formatToIndianDate(schedule.overdue_alert_date)}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Last Serviced:</span>
-                  <span className="pm-schedule-card-value">{formatToIndianDate(schedule.last_serviced_date) || 'N/A'}</span>
+                  <span className="pm-schedule-card-value">
+                    {formatToIndianDate(schedule.last_serviced_date) || "N/A"}
+                  </span>
                 </div>
-                
+
                 <div className="pm-schedule-card-row">
                   <span className="pm-schedule-card-label">Chart:</span>
                   <span className="pm-schedule-card-value">{schedule.chart}</span>
@@ -204,11 +470,14 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
           ))}
         </div>
       ) : (
-        <p className="machine-details-empty">No PM schedule tasks found for this filter.</p>
+        <p className="machine-details-empty">
+          No PM schedule tasks found for this filter.
+        </p>
       )}
     </div>
   );
 };
+
 
 const MachineDetails = () => {
   const { serviceItemId } = useParams();
