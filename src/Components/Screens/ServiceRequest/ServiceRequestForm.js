@@ -189,7 +189,7 @@
 //       });
 
 //       // Step 2: Fetch all users to find Service Manager
-//       const userResponse = await fetch('http://175.29.21.7:8006/users/');
+//       const userResponse = await fetch(`${baseURL}/users/`);
 //       const users = await userResponse.json();
 
 //       const serviceManager = users.find(u => u.role === 'Service Manager' && u.fcm_token);
@@ -404,7 +404,7 @@
 //           customer: user?.customer_id,
 //         });
 
-//         const userResponse = await fetch('http://175.29.21.7:8006/users/');
+//         const userResponse = await fetch(`${baseURL}/users/`);
 //         const users = await userResponse.json();
 
 //         const serviceManager = users.find(

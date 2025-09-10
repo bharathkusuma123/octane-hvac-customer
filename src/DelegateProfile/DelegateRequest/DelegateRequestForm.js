@@ -3,6 +3,7 @@ import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 import './DelegateRequestForm.css';
 import { useNavigate } from 'react-router-dom';
+import baseURL from '../../Components/ApiUrl/Apiurl';
 
 const DelegateRequestForm = () => {
   const { user } = useContext(AuthContext);
@@ -25,7 +26,7 @@ const DelegateRequestForm = () => {
       setDelegateId(user.delegate_id);
 
       // Fetch delegate details
-      fetch('http://175.29.21.7:8006/delegates/')
+      fetch(`${baseURL}/delegates/`)
         .then((res) => res.json())
         .then((data) => {
           const match = data?.data?.find(d => d.delegate_id === user.delegate_id);
@@ -39,7 +40,7 @@ const DelegateRequestForm = () => {
         });
 
       // Fetch service items for this delegate
-      fetch('http://175.29.21.7:8006/delegate-service-item-tasks/')
+      fetch(`${baseURL}/delegate-service-item-tasks/`)
         .then((res) => res.json())
         .then((data) => {
           const filteredItems = data?.data?.filter(item => item.delegate === user.delegate_id);
@@ -101,7 +102,7 @@ const handleSubmit = async (e) => {
   console.log("payload", payload);
 
   try {
-    const response = await fetch("http://175.29.21.7:8006/service-pools/", {
+    const response = await fetch(`${baseURL}/service-pools/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../AuthContext/AuthContext';
 import { useParams } from 'react-router-dom';
+import baseURL from '../../ApiUrl/Apiurl';
 
 // Star Rating Component
 const StarRating = ({ value, onChange }) => {
@@ -64,8 +65,8 @@ const FeedbackScreen = () => {
 
         // Fetch both endpoints in parallel
         const [requestsResponse, questionsResponse] = await Promise.all([
-          axios.get(`http://175.29.21.7:8006/service-pools/?user_id=${userId}&company_id=${company_id}`),
-          axios.get('http://175.29.21.7:8006/survey-questions/')
+          axios.get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${company_id}`),
+          axios.get(`${baseURL}/survey-questions/`)
         ]);
 
         if (!isMounted) return;
@@ -203,7 +204,7 @@ const handleSubmit = async (e) => {
 
     console.log('Final payload before submission:', JSON.stringify(payload, null, 2));
 
-    const response = await axios.post('http://175.29.21.7:8006/customer-surveys/', payload, {
+    const response = await axios.post(`${baseURL}/customer-surveys/`, payload, {
       headers: {
         'Content-Type': 'application/json',
       }

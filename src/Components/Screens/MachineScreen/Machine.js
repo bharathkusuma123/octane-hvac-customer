@@ -6,6 +6,7 @@ import axios from 'axios';
 import "./Machine.css";
 import EditServiceItemModal from './EditServiceItemModal';
 import { FaEdit, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import baseURL from '../../ApiUrl/Apiurl';
 
 const MachineScreen = () => {
   const { user } = useContext(AuthContext);
@@ -43,7 +44,7 @@ const MachineScreen = () => {
   useEffect(() => {
     if (userId && companyId) {
       // Fetch service items
-      axios.get(`http://175.29.21.7:8006/service-items/`, {
+      axios.get(`${baseURL}/service-items/`, {
         params: {
           user_id: userId,
           company_id: companyId
@@ -69,7 +70,7 @@ const MachineScreen = () => {
 
       // Fetch service item components
       setComponentsLoading(true);
-      axios.get(`http://175.29.21.7:8006/service-item-components/`, {
+      axios.get(`${baseURL}/service-item-components/`, {
         params: {
           user_id: userId,
           company_id: companyId

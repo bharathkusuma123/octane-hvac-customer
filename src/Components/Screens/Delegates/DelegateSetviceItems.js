@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import NavScreen from '../Navbar/Navbar';
 import './ViewDelegate.css';
+import baseURL from '../../ApiUrl/Apiurl';
 
 const DelegateServiceItems = () => {
   const { delegateId } = useParams();
@@ -11,7 +12,7 @@ const DelegateServiceItems = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await fetch('http://175.29.21.7:8006/delegate-service-item-tasks/');
+        const res = await fetch(`${baseURL}/delegate-service-item-tasks/`);
         const data = await res.json();
         if (res.ok) {
           const filtered = data.data.filter(item => item.delegate === delegateId);

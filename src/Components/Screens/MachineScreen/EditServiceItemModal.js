@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import axios from 'axios';
+import baseURL from '../../ApiUrl/Apiurl';
 
 const EditServiceItemModal = ({ show, handleClose, serviceItem, userId, companyId, onUpdate }) => {
   const [serviceItemName, setServiceItemName] = useState('');
@@ -22,7 +23,7 @@ const EditServiceItemModal = ({ show, handleClose, serviceItem, userId, companyI
 
     try {
       const response = await axios.put(
-        `http://175.29.21.7:8006/service-items/${serviceItem.service_item_id}/`,
+        `${baseURL}/service-items/${serviceItem.service_item_id}/`,
         {
           service_item_name: serviceItemName,
           user_id: userId,

@@ -24,7 +24,7 @@ import greenAire from "./Images/greenAire.png";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../AuthContext/AuthContext";
 import TemperatureDial from "./TemperatureDial";
-
+import baseURL from "../../ApiUrl/Apiurl";
 
 const Screen1 = () => { 
   const { user,logout } = useContext(AuthContext);
@@ -70,20 +70,24 @@ const Screen1 = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedService) return;
+      
       try {
+        // Use the PCB serial number from the selected service
+        const pcbSerialNumber = selectedService.pcb_serial_number;
         const response = await fetch(
-          "http://46.37.122.105:83/live_events/get-latest-data/"
+          `${baseURL}/get-latest-data/${pcbSerialNumber}/`
         );
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
         const data = await response.json();
 
-        if (data.status !== "success" || !data.data || data.data.length === 0) {
+        if (data.status !== "success" || !data.data) {
           throw new Error("Invalid data format from API");
         }
 
-        const deviceData = data.data[0];
+        const deviceData = data.data;
 
         // Fetch controller settings
         const controllerResponse = await fetch(
@@ -130,7 +134,7 @@ const Screen1 = () => {
             prev.mode,
           errorFlag: deviceData.error_flag?.value || prev.errorFlag,
           hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-          deviceId: deviceData.device_id || prev.deviceId,
+          deviceId: deviceData.pcb_serial_number || prev.deviceId,
           alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
         }));
 
@@ -161,7 +165,7 @@ const Screen1 = () => {
     const fetchServiceItems = async () => {
       try {
         const response = await fetch(
-          `http://175.29.21.7:8006/service-items/?user_id=${userId}&company_id=${company_id}`
+          `${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch service items");
@@ -176,25 +180,108 @@ const Screen1 = () => {
       }
     };
 
-    fetchData();
     fetchServiceItems();
-    const intervalId = setInterval(fetchData, 50000);
+  }, []);
 
-    return () => clearInterval(intervalId);
-  }, [processing]);
+  // Fetch data when selectedService changes
+  useEffect(() => {
+    if (selectedService) {
+      fetchData();
+      const intervalId = setInterval(fetchData, 50000);
+      return () => clearInterval(intervalId);
+    }
+  }, [selectedService, processing]);
 
-  const getFanSpeedDescription = (code) => {
-    switch (code) {
-      case "0":
-        return "High";
-      case "1":
-        return "Medium";
-      case "2":
-        return "Low";
-      case "3":
-        return "Shutdown/off";
-      default:
-        return "Shutdown/off";
+  const fetchData = async () => {
+    if (!selectedService) return;
+    
+    try {
+      // Use the PCB serial number from the selected service
+      const pcbSerialNumber = selectedService.pcb_serial_number;
+      const response = await fetch(
+        `${baseURL}/get-latest-data/${pcbSerialNumber}/`
+      );
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+
+      if (data.status !== "success" || !data.data) {
+        throw new Error("Invalid data format from API");
+      }
+
+      const deviceData = data.data;
+
+      // Fetch controller settings
+      const controllerResponse = await fetch(
+        "https://rahul21.pythonanywhere.com/controllers"
+      );
+      let latestController = {};
+
+      if (controllerResponse.ok) {
+        const controllerData = await controllerResponse.json();
+        if (Array.isArray(controllerData)) {
+          latestController = controllerData.reduce(
+            (prev, current) => (prev.id > current.id ? prev : current),
+            {}
+          );
+        }
+      }
+
+      setSensorData((prev) => ({
+        ...prev,
+        outsideTemp:
+          deviceData.outdoor_temperature?.value || prev.outsideTemp,
+        humidity: deviceData.room_humidity?.value || prev.humidity,
+        roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+        fanSpeed:
+          latestController.FS?.toString() ||
+          deviceData.fan_speed?.value ||
+          prev.fanSpeed,
+        temperature:
+          latestController.SRT?.toString() ||
+          deviceData.set_temperature?.value ||
+          prev.temperature,
+        powerStatus: processing
+          ? prev.powerStatus
+          : latestController.HVAC !== undefined
+          ? latestController.HVAC === 1
+            ? "on"
+            : "off"
+          : deviceData.hvac_on?.value === "1"
+          ? "on"
+          : "off",
+        mode:
+          latestController.MD?.toString() ||
+          deviceData.mode?.value ||
+          prev.mode,
+        errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+        hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+        deviceId: deviceData.pcb_serial_number || prev.deviceId,
+        alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+      }));
+
+      // Update error count based on alarm_occurred (treat any non-'0' value as an alarm)
+      setErrorCount(deviceData.alarm_occurred?.value !== "0" ? 1 : 0);
+
+      // Handle processing state
+      if (deviceData.hvac_busy?.value === "1") {
+        setProcessing(true);
+        setProcessingMessage("Processing, please wait...");
+      } else {
+        if (processing) {
+          setTimeout(() => {
+            setProcessing(false);
+            setProcessingMessage("");
+          }, 2000);
+        }
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setError(error.message);
+      setLoading(false);
     }
   };
 
@@ -226,7 +313,7 @@ const Screen1 = () => {
 
     const payload = {
       Header: "0xAA",
-      DI: "2411GM-0102", // Use actual device ID from state or fallback
+      DI: selectedService?.pcb_serial_number || "2411GM-0102", // Use PCB serial number from selected service
       MD: 3,
       FS: 0,
       SRT: 30,
@@ -270,8 +357,7 @@ const Screen1 = () => {
     return <div className="loading">Loading...</div>;
   }
 
-
-//   if (loading) {
+  //   if (loading) {
 //   return <div className="loading-screen">Loading...</div>;
 // }
 
@@ -285,7 +371,7 @@ const Screen1 = () => {
   //     navigate(path);
   //   }
   // };
-  
+
   const handleNavigation = (path) => { 
       navigate(path);
   };
@@ -345,21 +431,30 @@ const Screen1 = () => {
               style={{ marginBottom: "-68px" }}
             />
           </div>
-          {/* <div style={{ position: "relative" }}>
+
+          <div style={{ position: "relative" }}>
             <button
-              className={`power-button ${
-                sensorData.powerStatus === "on" ? "power-on" : "power-off"
-              } ${processing ? "processing" : ""}`}
+              className={`power-button ${processing ? "processing" : ""}`}
               onClick={handlePowerToggle}
-              disabled={processing}
+              style={{
+                backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                borderRadius: "4px",
+                padding: "8px",
+                cursor: processing ? "not-allowed" : "pointer",
+                fontWeight: "bold",
+              }}
             >
               <FiPower
                 size={24}
-                color={sensorData.powerStatus === "on" ? "#4CAF50" : "#F44336"}
+                color="#fff"
               />
               {processing && <span className="processing-indicator"></span>}
             </button>
-            
+
             {sensorData.errorFlag === "1" && (
               <div
                 style={{
@@ -374,60 +469,13 @@ const Screen1 = () => {
                 }}
               />
             )}
-          </div> */}
-
-<div style={{ position: "relative" }}>
-  <button
-    className={`power-button ${processing ? "processing" : ""}`}
-    onClick={handlePowerToggle}
-    // disabled={processing}
-    style={{
-      backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      border: "none",
-      borderRadius: "4px",
-      padding: "8px",
-      cursor: processing ? "not-allowed" : "pointer",
-      fontWeight: "bold",
-    }}
-  >
-    <FiPower
-      size={24}
-      color="#fff" // keep icon visible
-    />
-    {processing && <span className="processing-indicator"></span>}
-  </button>
-
-  {/* Show error indicator on power button if errorFlag is 1 */}
-  {sensorData.errorFlag === "1" && (
-    <div
-      style={{
-        position: "absolute",
-        top: "-5px",
-        right: "-5px",
-        backgroundColor: "red",
-        borderRadius: "50%",
-        width: "12px",
-        height: "12px",
-        border: "2px solid white",
-      }}
-    />
-  )}
-</div>
-
-
-
-
-
+          </div>
         </div>
 
         {processing && (
           <div className="processing-message">{processingMessage}</div>
         )}
 
-        {/* Show error message if errorFlag is 1 */}
         {sensorData.errorFlag === "1" && (
           <div
             className="error-message"
@@ -457,8 +505,8 @@ const Screen1 = () => {
         <TemperatureDial
           sensorData={sensorData}
           onTempChange={handleTempChange}
-          fanSpeed={fanPosition} // Add this prop
-          initialTemperature={sensorData.temperature} // Pass the API temperature here
+          fanSpeed={fanPosition}
+          initialTemperature={sensorData.temperature}
         />
 
         <div className="env-info">
@@ -486,7 +534,7 @@ const Screen1 = () => {
         <div className="control-buttons">
           <button
             className="control-btn"
-            onClick={() => handleNavigation("/machinescreen2")}
+            onClick={() => navigate("/machinescreen2", { state: { sensorData } })}
             // disabled={processing}
           >
             <FiWind size={20} />

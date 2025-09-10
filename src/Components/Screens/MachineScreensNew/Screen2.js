@@ -10,32 +10,34 @@ import "./Screen1.css";
 import "./Screen2.css";
 import AIROlogo from "./Images/AIRO.png";
 import greenAire from "./Images/greenAire.png";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../../AuthContext/AuthContext";
 import TemperatureDial from "./TemperatureDial";
 
 const Screen2 = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Get data passed from Screen1 or use defaults
+  const passedData = location.state?.sensorData || {};
+  
   const [sensorData, setSensorData] = useState({
-    outsideTemp: 0,
-    humidity: 0,
-    roomTemp: 0,
-    fanSpeed: "0", // Changed default to '0' (High)
-    temperature: 25,
-    powerStatus: "off",
-    mode: "3",
-    errorFlag: "0",
-    hvacBusy: "0",
-    deviceId: "",
-    alarmOccurred: "0",
+    outsideTemp: passedData.outsideTemp || 0,
+    humidity: passedData.humidity || 0,
+    roomTemp: passedData.roomTemp || 0,
+    fanSpeed: passedData.fanSpeed || "0",
+    temperature: passedData.temperature || 25,
+    powerStatus: passedData.powerStatus || "off",
+    mode: passedData.mode || "3",
+    errorFlag: passedData.errorFlag || "0",
+    hvacBusy: passedData.hvacBusy || "0",
+    deviceId: passedData.deviceId || "",
+    alarmOccurred: passedData.alarmOccurred || "0",
   });
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("");
-  const navigate = useNavigate();
-  const [errorCount, setErrorCount] = useState(0);
 
   const modeMap = {
     1: "IDEC",
@@ -45,94 +47,12 @@ const Screen2 = () => {
     5: "Direct",
   };
 
+  // Update sensor data when passed data changes
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(
-          "http://46.37.122.105:83/live_events/get-latest-data/"
-        );
-        if (!response.ok) throw new Error("Network response was not ok");
-
-        const data = await response.json();
-        if (data.status !== "success" || !data.data || data.data.length === 0) {
-          throw new Error("Invalid data format from API");
-        }
-
-        const deviceData = data.data[0];
-
-        // Fetch controller settings
-        const controllerResponse = await fetch(
-          "https://rahul21.pythonanywhere.com/controllers"
-        );
-        let latestController = {};
-
-        if (controllerResponse.ok) {
-          const controllerData = await controllerResponse.json();
-          if (Array.isArray(controllerData)) {
-            latestController = controllerData.reduce(
-              (prev, current) => (prev.id > current.id ? prev : current),
-              {}
-            );
-          }
-        }
-
-        setSensorData((prev) => ({
-          ...prev,
-          outsideTemp:
-            deviceData.outdoor_temperature?.value || prev.outsideTemp,
-          humidity: deviceData.room_humidity?.value || prev.humidity,
-          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          fanSpeed:
-            latestController.FS?.toString() ||
-            deviceData.fan_speed?.value ||
-            prev.fanSpeed,
-          temperature:
-            latestController.SRT?.toString() ||
-            deviceData.set_temperature?.value ||
-            prev.temperature,
-          powerStatus: processing
-            ? prev.powerStatus
-            : latestController.HVAC !== undefined
-            ? latestController.HVAC === 1
-              ? "on"
-              : "off"
-            : deviceData.hvac_on?.value === "1"
-            ? "on"
-            : "off",
-          mode:
-            latestController.MD?.toString() ||
-            deviceData.mode?.value ||
-            prev.mode,
-          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-          deviceId: deviceData.device_id || prev.deviceId,
-          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-        }));
-
-        setErrorCount(deviceData.alarm_occurred?.value === "1" ? 1 : 0);
-
-        if (deviceData.hvac_busy?.value === "1") {
-          setProcessing(true);
-          setProcessingMessage("Processing, please wait...");
-        } else if (processing) {
-          setTimeout(() => {
-            setProcessing(false);
-            setProcessingMessage("");
-          }, 2000);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError(error.message);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-    const intervalId = setInterval(fetchData, 50000);
-    return () => clearInterval(intervalId);
-  }, [processing]);
+    if (location.state?.sensorData) {
+      setSensorData(location.state.sensorData);
+    }
+  }, [location.state]);
 
   const getModeDescription = (code) => modeMap[code] || "Fan";
 
@@ -157,7 +77,6 @@ const Screen2 = () => {
     setProcessingMessage("Sending command, please wait...");
 
     const newHvacValue = sensorData.powerStatus === "on" ? 0 : 1;
-    const isTurningOn = sensorData.powerStatus === "off";
 
     const payload = {
       Header: "0xAA",
@@ -196,123 +115,119 @@ const Screen2 = () => {
   };
 
   const handleModeChange = async (newMode) => {
-    //  if (processing) return;
+    const modeCodeMap = {
+      IDEC: 1,
+      Auto: 2,
+      Fan: 3,
+      Indirect: 4,
+      Direct: 5,
+    };
 
-  const modeCodeMap = {
-    IDEC: 1,
-    Auto: 2,
-    Fan: 3,
-    Indirect: 4,
-    Direct: 5,
+    const newModeCode = modeCodeMap[newMode] || 1;
+
+    // If power is off, just update the local state
+    if (sensorData.powerStatus === "off") {
+      setSensorData((prev) => ({
+        ...prev,
+        mode: newModeCode.toString(),
+      }));
+      return;
+    }
+
+    // If power is on, make API call
+    setProcessing(true);
+    setProcessingMessage("Changing mode, please wait...");
+
+    const payload = {
+      Header: "0xAA",
+      DI: sensorData.deviceId || "2411GM-0102",
+      MD: newModeCode,
+      FS: parseInt(sensorData.fanSpeed) || 0,
+      SRT: parseInt(sensorData.temperature) || 25,
+      HVAC: 1, // Keep power on
+      Footer: "0xZX",
+    };
+
+    try {
+      const response = await fetch(
+        "https://rahul21.pythonanywhere.com/controllers",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to change mode");
+
+      // Update local state on success
+      setSensorData((prev) => ({
+        ...prev,
+        mode: newModeCode.toString(),
+      }));
+    } catch (error) {
+      console.error("Error changing mode:", error);
+    } finally {
+      setProcessing(false);
+      setProcessingMessage("");
+    }
   };
 
-  const newModeCode = modeCodeMap[newMode] || 1;
+  const handleFanSpeedChange = async (newPosition) => {
+    const fanSpeedMap = ["0", "1", "2"]; // 0=High, 1=Medium, 2=Low
+    const newSpeed = fanSpeedMap[newPosition];
 
-  // If power is off, just update the local state
-  if (sensorData.powerStatus === "off") {
-    setSensorData((prev) => ({
-      ...prev,
-      mode: newModeCode.toString(),
-    }));
-    return;
-  }
+    // If power is off, just update the local state
+    if (sensorData.powerStatus === "off") {
+      setSensorData((prev) => ({
+        ...prev,
+        fanSpeed: newSpeed,
+      }));
+      return;
+    }
 
-  // If power is on, make API call
-  setProcessing(true);
-  setProcessingMessage("Changing mode, please wait...");
+    // If power is on, make API call
+    setProcessing(true);
+    setProcessingMessage("Changing fan speed, please wait...");
 
-  const payload = {
-    Header: "0xAA",
-    DI: sensorData.deviceId || "2411GM-0102",
-    MD: newModeCode,
-    FS: parseInt(sensorData.fanSpeed) || 0,
-    SRT: parseInt(sensorData.temperature) || 25,
-    HVAC: 1, // Keep power on
-    Footer: "0xZX",
+    const payload = {
+      Header: "0xAA",
+      DI: sensorData.deviceId || "2411GM-0102",
+      MD: parseInt(sensorData.mode) || 1,
+      FS: parseInt(newSpeed),
+      SRT: parseInt(sensorData.temperature) || 25,
+      HVAC: 1, // Keep power on
+      Footer: "0xZX",
+    };
+
+    try {
+      const response = await fetch(
+        "https://rahul21.pythonanywhere.com/controllers",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to change fan speed");
+
+      // Update local state on success
+      setSensorData((prev) => ({
+        ...prev,
+        fanSpeed: newSpeed,
+      }));
+    } catch (error) {
+      console.error("Error changing fan speed:", error);
+    } finally {
+      setProcessing(false);
+      setProcessingMessage("");
+    }
   };
-
-  try {
-    const response = await fetch(
-      "https://rahul21.pythonanywhere.com/controllers",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-
-    if (!response.ok) throw new Error("Failed to change mode");
-
-    // Update local state on success
-    setSensorData((prev) => ({
-      ...prev,
-      mode: newModeCode.toString(),
-    }));
-  } catch (error) {
-    console.error("Error changing mode:", error);
-  } finally {
-    setProcessing(false);
-    setProcessingMessage("");
-  }
-};
-
-const handleFanSpeedChange = async (newPosition) => {
-  // if (processing) return;
-
-  const fanSpeedMap = ["0", "1", "2"]; // 0=High, 1=Medium, 2=Low
-  const newSpeed = fanSpeedMap[newPosition];
-
-  // If power is off, just update the local state
-  if (sensorData.powerStatus === "off") {
-    setSensorData((prev) => ({
-      ...prev,
-      fanSpeed: newSpeed,
-    }));
-    return;
-  }
-
-  // If power is on, make API call
-  setProcessing(true);
-  setProcessingMessage("Changing fan speed, please wait...");
-
-  const payload = {
-    Header: "0xAA",
-    DI: sensorData.deviceId || "2411GM-0102",
-    MD: parseInt(sensorData.mode) || 1,
-    FS: parseInt(newSpeed),
-    SRT: parseInt(sensorData.temperature) || 25,
-    HVAC: 1, // Keep power on
-    Footer: "0xZX",
-  };
-
-  try {
-    const response = await fetch(
-      "https://rahul21.pythonanywhere.com/controllers",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-
-    if (!response.ok) throw new Error("Failed to change fan speed");
-
-    // Update local state on success
-    setSensorData((prev) => ({
-      ...prev,
-      fanSpeed: newSpeed,
-    }));
-  } catch (error) {
-    console.error("Error changing fan speed:", error);
-  } finally {
-    setProcessing(false);
-    setProcessingMessage("");
-  }
-};
 
   const handleTempChange = (newTemp) => {
     setSensorData((prev) => ({
@@ -321,16 +236,9 @@ const handleFanSpeedChange = async (newPosition) => {
     }));
   };
 
-  // const handleBackClick = () => {
-  //   if (!processing) navigate("/machinescreen1");
-  // };
-
   const handleBackClick = () => {
-   navigate("/machinescreen1");
+    navigate("/machinescreen1");
   };
-
-   if (loading) return <div className="loading">Loading...</div>;
-  
 
   const modes = ["IDEC", "Auto", "Fan", "Indirect", "Direct"];
   const currentModeDescription = getModeDescription(sensorData.mode);
@@ -338,7 +246,6 @@ const handleFanSpeedChange = async (newPosition) => {
   const positionToPercentage = (pos) => pos * 50;
 
   const handleFanClick = (e) => {
-    // if (processing) return;
     const containerWidth = e.currentTarget.offsetWidth;
     const clickPosition = e.nativeEvent.offsetX;
     const segmentWidth = containerWidth / 3;
@@ -359,49 +266,47 @@ const handleFanSpeedChange = async (newPosition) => {
           <button
             className="icon-button"
             onClick={handleBackClick}
-            // disabled={processing}
           >
             <FiArrowLeft size={24} color="white" />
           </button>
 
           <img src={AIROlogo} alt="AIRO Logo" className="logo" />
 
-<div style={{ position: "relative" }}>
-  <button
-    className={`power-button ${processing ? "processing" : ""}`}
-    onClick={handlePowerToggle}
-    // disabled={processing}
-    style={{
-      backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
-     display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      border: "none",
-      borderRadius: "4px",
-      padding: "8px",
-      cursor: processing ? "not-allowed" : "pointer",
-      fontWeight: "bold",
-    }}
-  >
-    <FiPower size={24} color="white" />
-    {processing && <span className="processing-indicator"></span>}
-  </button>
+          <div style={{ position: "relative" }}>
+            <button
+              className={`power-button ${processing ? "processing" : ""}`}
+              onClick={handlePowerToggle}
+              style={{
+                backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                borderRadius: "4px",
+                padding: "8px",
+                cursor: processing ? "not-allowed" : "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              <FiPower size={24} color="white" />
+              {processing && <span className="processing-indicator"></span>}
+            </button>
 
-  {sensorData.errorFlag === "1" && (
-    <div
-      style={{
-        position: "absolute",
-        top: "-5px",
-        right: "-5px",
-        backgroundColor: "red",
-        borderRadius: "50%",
-        width: "12px",
-        height: "12px",
-        border: "2px solid white",
-      }}
-    />
-  )}
-</div>
+            {sensorData.errorFlag === "1" && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-5px",
+                  right: "-5px",
+                  backgroundColor: "red",
+                  borderRadius: "50%",
+                  width: "12px",
+                  height: "12px",
+                  border: "2px solid white",
+                }}
+              />
+            )}
+          </div>
         </div>
 
         {processing && (
@@ -466,7 +371,6 @@ const handleFanSpeedChange = async (newPosition) => {
                       ? "mode-button-selected"
                       : ""
                   } ${processing ? "disabled" : ""}`}
-                  // disabled={processing}
                 >
                   <span
                     className={`mode-text ${

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import NavScreen from '../Navbar/Navbar';
 import { AuthContext } from "../../AuthContext/AuthContext";
 import './MachineDetails.css';
+import baseURL from '../../ApiUrl/Apiurl';
 
 const permissionFields = [
   { key: "can_raise_service_request", label: "Raise Request" },
@@ -54,7 +55,7 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
       try {
         setLoading(true);
         const response = await fetch(
-          `http://175.29.21.7:8006/service-item-pm-schedules/?user_id=${userId}&company_id=${company_id}`
+          `${baseURL}/service-item-pm-schedules/?user_id=${userId}&company_id=${company_id}`
         );
         
         if (!response.ok) {
@@ -230,7 +231,7 @@ const MachineDetails = () => {
     const fetchServiceContracts = async () => {
       try {
         const response = await fetch(
-          `http://175.29.21.7:8006/service-contracts/?user_id=${userId}&company_id=${company_id}`
+          `${baseURL}/service-contracts/?user_id=${userId}&company_id=${company_id}`
         );
 
         if (!response.ok) throw new Error("Failed to fetch contracts");
@@ -257,8 +258,8 @@ const MachineDetails = () => {
     const fetchDelegates = async () => {
       try {
         const [delegateRes, taskRes] = await Promise.all([
-          fetch(`http://175.29.21.7:8006/delegates/`),
-          fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`),
+          fetch(`${baseURL}/delegates/`),
+          fetch(`${baseURL}/delegate-service-item-tasks/`),
         ]);
 
         if (!delegateRes.ok || !taskRes.ok) throw new Error('API fetch error');
@@ -319,7 +320,7 @@ const MachineDetails = () => {
 
     try {
       // Fetch existing assignments
-      const checkRes = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`);
+      const checkRes = await fetch(`${baseURL}/delegate-service-item-tasks/`);
       if (!checkRes.ok) throw new Error("Failed to fetch existing assignments");
 
       const existingData = await checkRes.json();
@@ -352,7 +353,7 @@ const MachineDetails = () => {
         payload[field.key] = delegate[field.key];
       });
 
-      const res = await fetch(`http://175.29.21.7:8006/delegate-service-item-tasks/`, {
+      const res = await fetch(`${baseURL}/delegate-service-item-tasks/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiClock } from 'react-icons/fi';
+import baseURL from '../../ApiUrl/Apiurl';
 
 const AlarmsPage = () => {
   const navigate = useNavigate();
@@ -23,8 +24,12 @@ const AlarmsPage = () => {
           throw new Error('No device ID available');
         }
 
+        //  const response = await fetch(
+        //   `http://46.37.122.105:83/live_events/errors/${alarmData.deviceId}/`
+        // );
+
         const response = await fetch(
-          `http://46.37.122.105:83/live_events/errors/${alarmData.deviceId}/`
+          `${baseURL}/errors/${alarmData.deviceId}/`
         );
         
         if (!response.ok) {
