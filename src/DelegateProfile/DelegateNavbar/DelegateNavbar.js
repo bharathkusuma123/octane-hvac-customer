@@ -124,7 +124,7 @@ const handleServiceItemChange = (e) => {
             />
             {showProfileMenu && (
               <div className="dropdown-menu" style={{ display: 'block', background: 'white' }}>
-                <div onClick={() => { setShowProfileMenu(false); navigate('/dashboard'); }}>
+                <div onClick={() => { setShowProfileMenu(false); navigate('/delegate-profile-details'); }}>
                   Profile
                 </div>
                 <div onClick={() => { setShowProfileMenu(false); navigate('/'); }}>

@@ -37,6 +37,7 @@ import RequestScreenDelegate from './DelegateProfile/DelegateRequest/RequestScre
 import DelegateFeedback from './DelegateProfile/DelegateRequest/DelegateFeedback';
 import DelegateData from './Components/LoginSreens/DelegateData';
 import DelegateSignup from './Components/LoginSreens/DelegateSignup';
+import DelegateProfileDetails from './DelegateProfile/DelegateProfileDetails/ProfileDetails'
 
 import Screen1 from './Components/Screens/MachineScreensNew/Screen1';
 import Screen2 from './Components/Screens/MachineScreensNew/Screen2';
@@ -112,6 +113,8 @@ function App() {
                 <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />
                 <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
                 <Route path="/delegate-machines" element={<DelegateServiceItems />} />
+               <Route path="/delegate-profile-details" element={<DelegateProfileDetails />} />
+
               </Routes>
             </div>
           </Router>
