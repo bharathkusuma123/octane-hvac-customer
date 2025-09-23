@@ -1,78 +1,107 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from "../../Screens/Navbar/Navbar";
 import './Connect.css';
 
 const Connect = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [simulateProgress, setSimulateProgress] = useState(0);
 
   const handleConnectClick = () => {
     setIsModalOpen(true);
-    setShowFallback(false); // reset fallback when modal is reopened
+    setShowFallback(false);
+    setConnectionStatus('connecting');
+    setSimulateProgress(0);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setConnectionStatus('disconnected');
+    setSimulateProgress(0);
   };
 
-  // Use a URL that allows embedding in iframes
-  const deviceUrl = "http://192.168.178.86/"; // Replace with your actual device connection URL
+  // Simulate connection progress
+  useEffect(() => {
+    let progressInterval;
+    if (connectionStatus === 'connecting') {
+      progressInterval = setInterval(() => {
+        setSimulateProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            setConnectionStatus('connected');
+            return 100;
+          }
+          return prev + 40;
+        });
+      }, 500);
+    }
+    
+    return () => clearInterval(progressInterval);
+  }, [connectionStatus]);
+
+  const deviceUrl = "http://192.168.178.86/";
 
   return (
     <div className="connect-container">
       <Navbar />
       <div className="connect-content">
         <h1 className="connect-title">Device Connection</h1>
-        <p className="connect-subtitle">Tap below to connect your mobile device</p>
+        <p className="connect-subtitle">Connect your device to use all features</p>
         
-        <button 
-          onClick={handleConnectClick}
-          className="connect-button"
-          aria-label="Connect device"
-        >
-          Connect Device
-        </button>
+        
+        <div className="connection-card">
+          <div className="card-icon">📱</div>
+          <h3>Ready to Connect</h3>
+          <p>Press the button below to start the connection process</p>
+          
+          <button 
+            onClick={handleConnectClick}
+            className="connect-button"
+            aria-label="Connect device"
+          >
+            Connect Device
+          </button>
+        </div>
 
-        {isModalOpen && (
-          <div className="connect-modal-overlay">
-            <div className="connect-modal-content">
-              <div className="connect-modal-header">
-                <h2 className="connect-modal-title">Device Connection</h2>
-                <button 
-                  className="connect-close-button" 
-                  onClick={closeModal}
-                  aria-label="Close connection"
-                >
-                  &times;
-                </button>
+       {isModalOpen && (
+  <div className="connect-modal-overlay">
+    <div className="connect-modal-content">
+      <div className="connect-modal-header">
+        <h2 className="connect-modal-title">Device Connection</h2>
+        <button 
+          className="connect-close-button" 
+          onClick={closeModal}
+          aria-label="Close connection"
+        >
+          &times;
+        </button>
+      </div>
+      
+      <div className="modal-body">
+        {simulateProgress < 100 ? (
+          <div className="connection-progress">
+            <div className="progress-wrapper">
+              <div className="progress-bar">
+                <div 
+                  className="progress" 
+                  style={{ width: `${simulateProgress}%` }}
+                ></div>
               </div>
-              <div className="connect-iframe-container">
-                {!showFallback ? (
-                  <iframe 
-                    src={deviceUrl}
-                    title="Device Connection Interface"
-                    className="connect-iframe"
-                    allow="camera; microphone"
-                    sandbox="allow-scripts allow-same-origin allow-forms"
-                    onError={() => setShowFallback(true)}
-                  />
-                ) : (
-                  <div className="connect-iframe-fallback">
-                    <p>Connection interface couldn't be loaded.</p>
-                    <a 
-                      href={deviceUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="connect-external-link"
-                    >
-                      Open in browser
-                    </a>
-                  </div>
-                )}
-              </div>
+              <span className="progress-value">{simulateProgress}%</span>
             </div>
           </div>
+        ) : (
+          <div className="connection-content text-center">
+            <h3 className="no-device-text">There is no device ready to connect nearby.</h3>
+            <p className="note">Note: Make sure your HVAC device is turned on.</p>
+          </div>
         )}
+      </div>
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );

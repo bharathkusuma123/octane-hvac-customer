@@ -44,6 +44,7 @@ import Screen2 from './Components/Screens/MachineScreensNew/Screen2';
 import AlarmsPage from './Components/Screens/MachineScreensNew/AlarmsPage';
 import Settings from './Components/Screens/MachineScreensNew/Settings';
 import Timers from './Components/Screens/MachineScreensNew/Timers';
+import Contact from './Components/LoginSreens/Contact';
 
 // 🔹 Wrapper component to handle auto-login check
 function AppWrapper() {
@@ -91,7 +92,7 @@ function App() {
                 <Route path="/customer-dashboard" element={<Dashboard />} />
 
                 <Route path="/navbar" element={<Navbar />} />
-
+                <Route path="/contact" element={<Contact/>} />
                 <Route path="/dashboard" element={<DashboardScreen />} />
                 <Route path="/connect" element={<Connect />} />
                 <Route path="/machine" element={<MachineScreen />} />

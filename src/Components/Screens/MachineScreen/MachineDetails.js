@@ -240,7 +240,7 @@ const PMScheduleTasks = ({ serviceItemId, userId, company_id }) => {
   const handleRaiseRequest = async (schedule) => {
     try {
       const response = await fetch(
-        `http://175.29.21.7:8006/update-pm-schedule-status/${schedule.pm_schedule_id}/`,
+        `${baseURL}/update-pm-schedule-status/${schedule.pm_schedule_id}/`,
         {
           method: "POST", // or PATCH depending on your backend
           headers: {

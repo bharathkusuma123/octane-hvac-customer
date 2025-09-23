@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaHome,
@@ -11,6 +11,7 @@ import {
 import './DelegateNavbar.css';
 import logo from '../../Logos/hvac-logo-new.jpg';
 import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
+import { AuthContext } from "../../Components/AuthContext/AuthContext";
 
 const screens = [
   { label: 'Dashboard', name: '/delegate-home', icon: <FaHome />, key: 'dashboard' },
@@ -28,6 +29,23 @@ const NavScreen = () => {
   const [permissions, setPermissions] = useState({});
   const profileRef = useRef();
   const { serviceItems } = useDelegateServiceItems();
+  const { logout } = useContext(AuthContext);
+   const [isLoggingOut, setIsLoggingOut] = useState(false); // Add this state
+
+    // Handle logout with proper async handling
+  const handleLogout = async () => {
+    setShowProfileMenu(false);
+    setIsLoggingOut(true); // Set logging out state
+    
+    try {
+      await logout(); // Wait for logout to complete
+      // Navigation happens after successful logout
+      navigate("/");
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false); // Reset if error occurs
+    }
+  };
   
 
   useEffect(() => {
@@ -127,7 +145,7 @@ const handleServiceItemChange = (e) => {
                 <div onClick={() => { setShowProfileMenu(false); navigate('/delegate-profile-details'); }}>
                   Profile
                 </div>
-                <div onClick={() => { setShowProfileMenu(false); navigate('/'); }}>
+               <div onClick={handleLogout}>
                   Logout
                 </div>
               </div>

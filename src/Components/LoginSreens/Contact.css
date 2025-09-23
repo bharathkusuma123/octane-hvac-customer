@@ -1,0 +1,123 @@
+/* Contact.css */
+.contact-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #ffffff;
+  padding: 20px;
+}
+
+.contact-card {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.contact-title {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.welcome-section {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.welcome-text {
+  color: #555;
+  line-height: 1.6;
+  font-size: 16px;
+  margin: 0;
+}
+
+.info-section,
+.contact-section {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.info-section:last-child,
+.contact-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.info-title {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.contact-text {
+  color: #555;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.contact-link {
+  color: #3498db;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.contact-link:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+.contact-back-btn {
+  background: rgb(95, 95, 235);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 30px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contact-back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .contact-container {
+    padding: 10px;
+  }
+  
+  .contact-card {
+    padding: 30px 20px;
+    margin: 10px;
+  }
+  
+  .contact-title {
+    font-size: 24px;
+  }
+  
+  .info-title {
+    font-size: 16px;
+  }
+  
+  .contact-text {
+    font-size: 14px;
+  }
+  
+  .contact-back-btn {
+    padding: 10px 25px;
+    font-size: 14px;
+  }
+}

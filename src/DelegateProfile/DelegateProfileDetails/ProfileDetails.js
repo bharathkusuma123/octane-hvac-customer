@@ -2,23 +2,39 @@ import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
-
+import baseURL from "../../Components/ApiUrl/Apiurl";
+import { useNavigate } from "react-router-dom"; // Add this import
 
 const ProfileDetails = () => {
-             const { user } = useContext(AuthContext);
-        const delegateId = user.delegate_id
-  const [profile, setProfile] = useState(null);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate(); // Initialize navigate
+  const [profile, setProfile] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Add null check for user
+  useEffect(() => {
+    if (!user) {
+      // If user is null, redirect to login
+      navigate("/");
+      return;
+    }
+  }, [user, navigate]);
+
   useEffect(() => {
     const fetchProfile = async () => {
+      // Check if user exists before making API call
+      if (!user || !user.delegate_id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://175.29.21.7:8006/delegates/${delegateId}/`
+          `${baseURL}/delegates/${user.delegate_id}/`
         );
-        setProfile(response.data.data); // Extract "data" from API response
+        setProfile(response.data.data);
       } catch (err) {
         setError("Failed to fetch delegate details.");
       } finally {
@@ -27,7 +43,12 @@ const ProfileDetails = () => {
     };
 
     fetchProfile();
-  }, [delegateId]);
+  }, [user]); // Depend on user instead of delegate_id
+
+  // Show loading or redirect if user is null
+  if (!user) {
+    return <p>Redirecting to login...</p>;
+  }
 
   if (loading) return <p>Loading profile...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
@@ -57,9 +78,7 @@ const ProfileDetails = () => {
         <p>No profile found.</p>
       )}
 
-
-            <DelegateNavbar/>
-
+      <DelegateNavbar/>
     </div>
   );
 };

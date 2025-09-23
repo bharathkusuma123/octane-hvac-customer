@@ -27,11 +27,20 @@ import TemperatureDial from "./TemperatureDial";
 import baseURL from "../../ApiUrl/Apiurl";
 
 const Screen1 = () => { 
+   const getStoredService = () => {
+    try {
+      const stored = localStorage.getItem('selectedService');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
   const { user,logout } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
   const [serviceItems, setServiceItems] = useState([]);
-  const [selectedService, setSelectedService] = useState(null);
+    const [selectedService, setSelectedService] = useState(getStoredService());
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
@@ -69,99 +78,6 @@ const Screen1 = () => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedService) return;
-      
-      try {
-        // Use the PCB serial number from the selected service
-        const pcbSerialNumber = selectedService.pcb_serial_number;
-        const response = await fetch(
-          `${baseURL}/get-latest-data/${pcbSerialNumber}/`
-        );
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data = await response.json();
-
-        if (data.status !== "success" || !data.data) {
-          throw new Error("Invalid data format from API");
-        }
-
-        const deviceData = data.data;
-
-        // Fetch controller settings
-        const controllerResponse = await fetch(
-          "https://rahul21.pythonanywhere.com/controllers"
-        );
-        let latestController = {};
-
-        if (controllerResponse.ok) {
-          const controllerData = await controllerResponse.json();
-          if (Array.isArray(controllerData)) {
-            latestController = controllerData.reduce(
-              (prev, current) => (prev.id > current.id ? prev : current),
-              {}
-            );
-          }
-        }
-
-        setSensorData((prev) => ({
-          ...prev,
-          outsideTemp:
-            deviceData.outdoor_temperature?.value || prev.outsideTemp,
-          humidity: deviceData.room_humidity?.value || prev.humidity,
-          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          fanSpeed:
-            latestController.FS?.toString() ||
-            deviceData.fan_speed?.value ||
-            prev.fanSpeed,
-          temperature:
-            latestController.SRT?.toString() ||
-            deviceData.set_temperature?.value ||
-            prev.temperature,
-          powerStatus: processing
-            ? prev.powerStatus
-            : latestController.HVAC !== undefined
-            ? latestController.HVAC === 1
-              ? "on"
-              : "off"
-            : deviceData.hvac_on?.value === "1"
-            ? "on"
-            : "off",
-          mode:
-            latestController.MD?.toString() ||
-            deviceData.mode?.value ||
-            prev.mode,
-          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-          deviceId: deviceData.pcb_serial_number || prev.deviceId,
-          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-        }));
-
-        // Update error count based on alarm_occurred (treat any non-'0' value as an alarm)
-        setErrorCount(deviceData.alarm_occurred?.value !== "0" ? 1 : 0);
-
-        // Handle processing state
-        if (deviceData.hvac_busy?.value === "1") {
-          setProcessing(true);
-          setProcessingMessage("Processing, please wait...");
-        } else {
-          if (processing) {
-            setTimeout(() => {
-              setProcessing(false);
-              setProcessingMessage("");
-            }, 2000);
-          }
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError(error.message);
-        setLoading(false);
-      }
-    };
-
     const fetchServiceItems = async () => {
       try {
         const response = await fetch(
@@ -172,7 +88,9 @@ const Screen1 = () => {
         }
         const data = await response.json();
         setServiceItems(data.data || []);
-        if (data.data && data.data.length > 0) {
+        
+        // Only set to first item if no service is already selected
+        if (data.data && data.data.length > 0 && !selectedService) {
           setSelectedService(data.data[0]);
         }
       } catch (error) {
@@ -182,6 +100,13 @@ const Screen1 = () => {
 
     fetchServiceItems();
   }, []);
+
+   // Store selected service in localStorage when it changes
+  useEffect(() => {
+    if (selectedService) {
+      localStorage.setItem('selectedService', JSON.stringify(selectedService));
+    }
+  }, [selectedService]);
 
   // Fetch data when selectedService changes
   useEffect(() => {
@@ -198,6 +123,7 @@ const Screen1 = () => {
     try {
       // Use the PCB serial number from the selected service
       const pcbSerialNumber = selectedService.pcb_serial_number;
+      console.log("PCB-serial-number:", pcbSerialNumber);
       const response = await fetch(
         `${baseURL}/get-latest-data/${pcbSerialNumber}/`
       );
@@ -228,41 +154,69 @@ const Screen1 = () => {
         }
       }
 
-      setSensorData((prev) => ({
+  //     setSensorData((prev) => ({
+  //       ...prev,
+  //       outsideTemp:
+  //         deviceData.outdoor_temperature?.value || prev.outsideTemp,
+  //       humidity: deviceData.room_humidity?.value || prev.humidity,
+  //       roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+  //       fanSpeed:
+  //         latestController.FS?.toString() ||
+  //         deviceData.fan_speed?.value ||
+  //         prev.fanSpeed,
+  //       temperature:
+  //         latestController.SRT?.toString() ||
+  //         deviceData.set_temperature?.value ||
+  //         prev.temperature,
+  //                powerStatus: processing
+  // ? prev.powerStatus
+  // : deviceData.hvac_on?.value === "1"
+  // ? "on"
+  // : "off",
+  //       mode:
+  //         latestController.MD?.toString() ||
+  //         deviceData.mode?.value ||
+  //         prev.mode,
+  //       errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+  //       hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+  //       deviceId: deviceData.pcb_serial_number || prev.deviceId,
+  //       alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+  //     }));
+
+        setSensorData((prev) => ({
         ...prev,
         outsideTemp:
-          deviceData.outdoor_temperature?.value || prev.outsideTemp,
-        humidity: deviceData.room_humidity?.value || prev.humidity,
-        roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+          deviceData.outdoor_temperature?.value,
+        humidity: deviceData.room_humidity?.value,
+        roomTemp: deviceData.room_temperature?.value,
         fanSpeed:
           latestController.FS?.toString() ||
-          deviceData.fan_speed?.value ||
-          prev.fanSpeed,
+          deviceData.fan_speed?.value,
         temperature:
           latestController.SRT?.toString() ||
-          deviceData.set_temperature?.value ||
-          prev.temperature,
-        powerStatus: processing
-          ? prev.powerStatus
-          : latestController.HVAC !== undefined
-          ? latestController.HVAC === 1
-            ? "on"
-            : "off"
-          : deviceData.hvac_on?.value === "1"
-          ? "on"
-          : "off",
+          deviceData.set_temperature?.value,
+                 powerStatus: processing
+  ? prev.powerStatus
+  : deviceData.hvac_on?.value === "1"
+  ? "on"
+  : "off",
         mode:
           latestController.MD?.toString() ||
-          deviceData.mode?.value ||
-          prev.mode,
-        errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-        hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-        deviceId: deviceData.pcb_serial_number || prev.deviceId,
-        alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+          deviceData.mode?.value,
+        errorFlag: deviceData.error_flag?.value,
+        hvacBusy: deviceData.hvac_busy?.value,
+        deviceId: deviceData.pcb_serial_number,
+        alarmOccurred: deviceData.alarm_occurred?.value,
       }));
 
+      const alarmValue = deviceData.alarm_occurred?.value;
+
+// if alarmValue is null or "0", set to 0, else convert to number
+setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+
       // Update error count based on alarm_occurred (treat any non-'0' value as an alarm)
-      setErrorCount(deviceData.alarm_occurred?.value !== "0" ? 1 : 0);
+      // setErrorCount(deviceData.alarm_occurred?.value === "1" ? 1 : 0);
+
 
       // Handle processing state
       if (deviceData.hvac_busy?.value === "1") {
@@ -383,6 +337,13 @@ const Screen1 = () => {
     // Update your backend or state as needed
   };
 
+    const handleServiceSelect = (item) => {
+    setSelectedService(item);
+    setShowServiceDropdown(false);
+    // Store the selection immediately
+    localStorage.setItem('selectedService', JSON.stringify(item));
+  };
+
   return (
     <div
       className="mainmain-container"
@@ -392,35 +353,32 @@ const Screen1 = () => {
     >
       <div className="main-container">
         {/* Service Dropdown - Moved above the header */}
-        <div className="service-dropdown-container">
-          <div
-            className="service-dropdown-header"
-            onClick={() => setShowServiceDropdown(!showServiceDropdown)}
-          >
-            <span>
-              {selectedService
-                ? selectedService.service_item_name
-                : "Select Service"}
-            </span>
-            <FiChevronDown size={18} />
-          </div>
-          {showServiceDropdown && (
-            <div className="service-dropdown-list">
-              {serviceItems.map((item) => (
-                <div
-                  key={item.service_item_id}
-                  className="service-dropdown-item"
-                  onClick={() => {
-                    setSelectedService(item);
-                    setShowServiceDropdown(false);
-                  }}
-                >
-                  {item.service_item_name}
-                </div>
-              ))}
-            </div>
-          )}
+       <div className="service-dropdown-container">
+        <div
+          className="service-dropdown-header"
+          onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+        >
+          <span>
+            {selectedService
+              ? selectedService.service_item_name
+              : "Select Service"}
+          </span>
+          <FiChevronDown size={18} />
         </div>
+        {showServiceDropdown && (
+          <div className="service-dropdown-list">
+            {serviceItems.map((item) => (
+              <div
+                key={item.service_item_id}
+                className="service-dropdown-item"
+                onClick={() => handleServiceSelect(item)}
+              >
+                {item.service_item_name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
         <div className="header1">
           <div className="logo">
@@ -506,7 +464,7 @@ const Screen1 = () => {
           sensorData={sensorData}
           onTempChange={handleTempChange}
           fanSpeed={fanPosition}
-          initialTemperature={sensorData.temperature}
+          initialTemperature={sensorData.temperature ?? 25}
         />
 
         <div className="env-info">
@@ -534,7 +492,12 @@ const Screen1 = () => {
         <div className="control-buttons">
           <button
             className="control-btn"
-            onClick={() => navigate("/machinescreen2", { state: { sensorData } })}
+            onClick={() => navigate("/machinescreen2", { 
+    state: { 
+      sensorData,
+      selectedService // Pass the selected service
+    } 
+  })}
             // disabled={processing}
           >
             <FiWind size={20} />

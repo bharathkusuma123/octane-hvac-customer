@@ -24,10 +24,6 @@ const AlarmsPage = () => {
           throw new Error('No device ID available');
         }
 
-        //  const response = await fetch(
-        //   `http://46.37.122.105:83/live_events/errors/${alarmData.deviceId}/`
-        // );
-
         const response = await fetch(
           `${baseURL}/errors/${alarmData.deviceId}/`
         );
@@ -66,6 +62,32 @@ const AlarmsPage = () => {
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleString();
+  };
+
+  const sendMachineAlert = async (errorId) => {
+    try {
+      const response = await fetch(`${baseURL}/machine-alert-request/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pcb_serial_number: alarmData.deviceId,
+          error_code_id: errorId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send machine alert');
+      }
+
+      const result = await response.json();
+      alert('Machine alert sent successfully!');
+      return result;
+    } catch (err) {
+      console.error('Error sending machine alert:', err);
+      alert('Failed to send machine alert: ' + err.message);
+    }
   };
 
   return (
@@ -145,6 +167,7 @@ const AlarmsPage = () => {
                 <th style={{ padding: '10px', textAlign: 'left' }}>Description</th>
                 <th style={{ padding: '10px', textAlign: 'left' }}>Priority</th>
                 <th style={{ padding: '10px', textAlign: 'left' }}>Occurred At</th>
+                <th style={{ padding: '10px', textAlign: 'left' }}>Machine Alert</th>
               </tr>
             </thead>
             <tbody>
@@ -170,6 +193,22 @@ const AlarmsPage = () => {
                     </span>
                   </td>
                   <td style={{ padding: '10px' }}>{formatDate(error.timestamp)}</td>
+                  <td style={{ padding: '10px' }}>
+                    <button 
+                      onClick={() => sendMachineAlert(error.id)}
+                      style={{
+                        padding: '5px 10px',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Send Machine Alert
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

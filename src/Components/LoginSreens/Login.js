@@ -96,7 +96,7 @@ const handleLogin = async (e) => {
 
 
 
-  return (
+return (
     <div className="container">
       <div className="card">
         <div className="logoContainer">
@@ -134,26 +134,29 @@ const handleLogin = async (e) => {
           </div>
 
           <div className="checkboxContainer">
-           
             <span className="forgot" onClick={() => navigate('/security')}>Forgot Password?</span>
           </div>
 
+          {error && <p className="errorText">{error}</p>}
+
           <button type="submit" className="loginButton shadow">LOGIN</button>
 
-          {/* <button type="button" className="socialButton">
-            <img src={googleicon} alt="Google Icon" className="socialIcon" />
-            <span className="socialText">Login with Google ID</span>
-          </button>
-
-          <button className="socialButton black">
-            <FaApple className="socialIcon" color="#fff" />
-            <span className="socialText white">Login with Apple ID</span>
-          </button> */}
-
           <p className="orText">Or</p>
+
+          {/* For purchased customers */}
           <p className="registerText">
-            Don’t have an account?{' '}
-            <span className="registerLink" onClick={() => navigate('/signup')}>Register</span>
+            Already purchased a product?{' '}
+            <span className="registerLink" onClick={() => navigate('/signup')}>
+              Set your password
+            </span>
+          </p>
+
+          {/* For unknown customers */}
+          <p className="registerText">
+            Not a customer yet?{' '}
+            <span className="registerLink" onClick={() => navigate('/contact')}>
+              Contact Us
+            </span>
           </p>
 
           <img src={greenaire} alt="Green Aire" className="footerLogo" />

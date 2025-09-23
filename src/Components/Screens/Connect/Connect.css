@@ -178,3 +178,208 @@
     font-size: 1rem;
   }
 }
+
+/* Connection card */
+.connection-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin: 1rem 0 2rem;
+}
+
+.card-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.connection-card h3 {
+  margin: 0 0 0.5rem;
+  color: #2c3e50;
+  font-size: 1.4rem;
+}
+
+.connection-card p {
+  color: #7f8c8d;
+  margin: 0 0 1.5rem;
+}
+
+/* Modal body */
+.modal-body {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.connection-progress {
+  margin-bottom: 1.5rem;
+}
+
+.status {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.status.connecting {
+  color: #3498db;
+}
+
+.status.connected {
+  color: #27ae60;
+}
+
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #ecf0f1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: #3498db;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-value {
+  font-weight: 600;
+  color: #7f8c8d;
+  min-width: 40px;
+}
+
+/* Connection content */
+.connection-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 250px;
+}
+
+.no-device-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 10px;
+}
+
+.note {
+  font-size: 14px;
+  color: #9e3c3c;
+  line-height: 1.5;
+  margin: 0;
+}
+
+
+.iframe-container {
+  height: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Success view */
+.success-view {
+  text-align: center;
+  padding: 1rem;
+}
+
+.success-check {
+  width: 60px;
+  height: 60px;
+  background: #27ae60;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin: 0 auto 1rem;
+}
+
+.success-view h3 {
+  color: #2c3e50;
+  margin: 0 0 0.5rem;
+}
+
+.success-view p {
+  color: #7f8c8d;
+  margin: 0 0 1.5rem;
+}
+
+.demo-controls {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.control-btn {
+  padding: 0.6rem 1.2rem;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Reviewer notes */
+.reviewer-notes {
+  background: #E3F2FD;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.reviewer-notes h4 {
+  margin: 0 0 0.5rem;
+  color: #1565C0;
+}
+
+.reviewer-notes p {
+  margin: 0;
+  color: #1976D2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .connection-card {
+    padding: 1.5rem 1rem;
+  }
+  
+  .card-icon {
+    font-size: 2.5rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .control-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .control-btn {
+    width: 100%;
+  }
+}

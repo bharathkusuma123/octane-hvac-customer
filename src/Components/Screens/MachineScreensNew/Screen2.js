@@ -13,29 +13,47 @@ import greenAire from "./Images/greenAire.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../../AuthContext/AuthContext";
 import TemperatureDial from "./TemperatureDial";
+import baseURL from "../../ApiUrl/Apiurl";
 
 const Screen2 = () => {
   const { user } = useContext(AuthContext);
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   
-  // Get data passed from Screen1 or use defaults
-  const passedData = location.state?.sensorData || {};
+  // Get selected service from localStorage or location state
+  const getSelectedService = () => {
+    try {
+      // First try to get from location state (if navigated from Screen1)
+      if (location.state && location.state.selectedService) {
+        return location.state.selectedService;
+      }
+      
+      // Fall back to localStorage
+      const stored = localStorage.getItem('selectedService');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const selectedService = getSelectedService();
+  const deviceId = selectedService ? selectedService.pcb_serial_number : "2411GM-0102";
   
   const [sensorData, setSensorData] = useState({
-    outsideTemp: passedData.outsideTemp || 0,
-    humidity: passedData.humidity || 0,
-    roomTemp: passedData.roomTemp || 0,
-    fanSpeed: passedData.fanSpeed || "0",
-    temperature: passedData.temperature || 25,
-    powerStatus: passedData.powerStatus || "off",
-    mode: passedData.mode || "3",
-    errorFlag: passedData.errorFlag || "0",
-    hvacBusy: passedData.hvacBusy || "0",
-    deviceId: passedData.deviceId || "",
-    alarmOccurred: passedData.alarmOccurred || "0",
+    outsideTemp: 0,
+    humidity: 0,
+    roomTemp: 0,
+    fanSpeed: "0",
+    temperature: 25,
+    powerStatus: "off",
+    mode: "3",
+    errorFlag: "0",
+    hvacBusy: "0",
+    deviceId: deviceId,
+    alarmOccurred: "0",
   });
 
+  const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("");
 
@@ -47,12 +65,72 @@ const Screen2 = () => {
     5: "Direct",
   };
 
-  // Update sensor data when passed data changes
   useEffect(() => {
-    if (location.state?.sensorData) {
-      setSensorData(location.state.sensorData);
+    fetchData();
+    const intervalId = setInterval(fetchData, 50000);
+    return () => clearInterval(intervalId);
+  }, [processing]);
+
+  const fetchData = async () => {
+    try {
+      const response = await fetch(
+        `${baseURL}/get-latest-data/${deviceId}/`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      
+      const data = await response.json();
+
+      if (data.status !== "success" || !data.data) {
+        throw new Error("Invalid data format from API");
+      }
+
+      const deviceData = data.data;
+      console.log("Fetched device data:", deviceData);
+
+      // Fetch controller settings
+      const controllerResponse = await fetch(
+        "https://rahul21.pythonanywhere.com/controllers"
+      );
+      let latestController = {};
+
+      if (controllerResponse.ok) {
+        const controllerData = await controllerResponse.json();
+        if (Array.isArray(controllerData)) {
+          latestController = controllerData.reduce(
+            (prev, current) => (prev.id > current.id ? prev : current),
+            {}
+          );
+        }
+      }
+
+      setSensorData((prev) => ({
+        ...prev,
+        outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
+        humidity: deviceData.room_humidity?.value || prev.humidity,
+        roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+        fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
+        temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
+        powerStatus: processing
+          ? prev.powerStatus
+          : deviceData.hvac_on?.value === "1"
+          ? "on"
+          : "off",
+        mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
+        errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+        hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+        deviceId: deviceData.pcb_serial_number || prev.deviceId,
+        alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+      }));
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setLoading(false);
     }
-  }, [location.state]);
+  };
 
   const getModeDescription = (code) => modeMap[code] || "Fan";
 
@@ -80,7 +158,7 @@ const Screen2 = () => {
 
     const payload = {
       Header: "0xAA",
-      DI: sensorData.deviceId || "2411GM-0102",
+      DI: deviceId, // Use the deviceId from selected service
       MD: parseInt(sensorData.mode) || 1,
       FS: parseInt(sensorData.fanSpeed) || 0,
       SRT: parseInt(sensorData.temperature) || 25,
@@ -140,7 +218,7 @@ const Screen2 = () => {
 
     const payload = {
       Header: "0xAA",
-      DI: sensorData.deviceId || "2411GM-0102",
+      DI: deviceId, // Use the deviceId from selected service
       MD: newModeCode,
       FS: parseInt(sensorData.fanSpeed) || 0,
       SRT: parseInt(sensorData.temperature) || 25,
@@ -194,7 +272,7 @@ const Screen2 = () => {
 
     const payload = {
       Header: "0xAA",
-      DI: sensorData.deviceId || "2411GM-0102",
+      DI: deviceId, // Use the deviceId from selected service
       MD: parseInt(sensorData.mode) || 1,
       FS: parseInt(newSpeed),
       SRT: parseInt(sensorData.temperature) || 25,
@@ -246,12 +324,18 @@ const Screen2 = () => {
   const positionToPercentage = (pos) => pos * 50;
 
   const handleFanClick = (e) => {
+    if (processing) return;
+    
     const containerWidth = e.currentTarget.offsetWidth;
     const clickPosition = e.nativeEvent.offsetX;
     const segmentWidth = containerWidth / 3;
     const newPosition = Math.min(2, Math.floor(clickPosition / segmentWidth));
     handleFanSpeedChange(newPosition);
   };
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <div
@@ -371,6 +455,7 @@ const Screen2 = () => {
                       ? "mode-button-selected"
                       : ""
                   } ${processing ? "disabled" : ""}`}
+                  disabled={processing}
                 >
                   <span
                     className={`mode-text ${
