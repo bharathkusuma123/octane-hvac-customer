@@ -36,7 +36,7 @@ display: flex;
   padding: 0 20px; /* Add some padding for better spacing */
 }
 
-.power-button {
+/* .screen1-power-button {
   background: white;
   border: none;
   border-radius: 50%;
@@ -46,7 +46,7 @@ display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-}
+} */
 
 .logo-image {
   height: 30px; /* Adjust as needed */
@@ -389,7 +389,7 @@ border-top-right-radius: 50px; */
         margin-top: 0px;
   }
 
-  .power-button {
+  /* .screen1-power-button {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -398,7 +398,7 @@ border-top-right-radius: 50px; */
   display: flex;
   align-items: center;
   justify-content: center;
-}
+} */
 
 .power-on {
   background-color: rgba(76, 175, 80, 0.2); /* Green with opacity */
@@ -560,4 +560,15 @@ border-top-right-radius: 50px; */
   pointer-events: none;
 }
 
+}
+
+.error-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: red;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid white;
 }

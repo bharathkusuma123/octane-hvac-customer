@@ -258,3 +258,71 @@
   position: relative;
   margin-top: -8%; /* Adjusted for better spacing */
 }
+
+.power-button-container {
+  position: relative;
+}
+
+.power-button {
+  background-color: #c80000f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.power-button:not(:disabled) {
+  cursor: pointer;
+}
+
+.power-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.power-button.processing {
+  cursor: not-allowed;
+}
+
+.power-button.on {
+  background-color: #5adb5eff;
+}
+
+.error-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: red;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid white;
+}
+
+.processing-message, 
+.error-message, 
+.busy-message {
+  text-align: center;
+  font-weight: bold;
+  border-radius: 4px;
+}
+
+.processing-message {
+  color: #fff;
+  background-color: #007bff;
+}
+
+.error-message {
+  color: yellow;
+  background-color: rgba(255, 0, 0, 0.1);
+}
+
+.busy-message {
+  color: orange;
+  background-color: rgba(255, 165, 0, 0.1);
+}

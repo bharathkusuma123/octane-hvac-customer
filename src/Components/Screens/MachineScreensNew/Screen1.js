@@ -26,71 +26,79 @@ import { AuthContext } from "../../AuthContext/AuthContext";
 import TemperatureDial from "./TemperatureDial";
 import baseURL from "../../ApiUrl/Apiurl";
 
-const Screen1 = () => { 
-   const getStoredService = () => {
-    try {
-      const stored = localStorage.getItem('selectedService');
-      return stored ? JSON.parse(stored) : null;
-    } catch (e) {
-      return null;
-    }
-  };
+// Mode mapping constant
+const MODE_MAP = {
+  1: "IDEC",
+  2: "Auto",
+  3: "Fan",
+  4: "Indirect",
+  5: "Direct",
+};
 
-  const { user,logout } = useContext(AuthContext);
+// Helper functions
+const getStoredService = () => {
+  try {
+    const stored = localStorage.getItem('selectedService');
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const formatTemp = (temp) => {
+  if (temp == null) return "0.0";
+  const num = parseFloat(temp);
+  return isNaN(num) ? "0.0" : num.toFixed(1);
+};
+
+const Screen1 = () => {
+  const { user, logout } = useContext(AuthContext);
   const userId = user?.customer_id;
   const company_id = user?.company_id;
+  const navigate = useNavigate();
+
+  // State management
   const [serviceItems, setServiceItems] = useState([]);
-    const [selectedService, setSelectedService] = useState(getStoredService());
+  const [selectedService, setSelectedService] = useState(getStoredService());
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [processing, setProcessing] = useState({ status: false, message: "" });
+  const [errorCount, setErrorCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
     humidity: 0,
     roomTemp: 0,
-    fanSpeed: "0", // Default to shutdown/off
+    fanSpeed: "0",
     temperature: 25,
     powerStatus: "off",
-    mode: "3", // Default to IDEC
+    mode: "3",
     errorFlag: "0",
     hvacBusy: "0",
     deviceId: "",
-    alarmOccurred: "0", // Add alarm occurred flag
+    alarmOccurred: "0",
   });
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [processing, setProcessing] = useState(false);
-  const [processingMessage, setProcessingMessage] = useState("");
-  const navigate = useNavigate();
-  const [errorCount, setErrorCount] = useState(0);
+  // Store selected service in localStorage
+  useEffect(() => {
+    if (selectedService) {
+      localStorage.setItem('selectedService', JSON.stringify(selectedService));
+    }
+  }, [selectedService]);
 
-  const handleLogout =()=>{
-    logout();
-    navigate("/");
-  }
-
-  // Mode mapping
-  const modeMap = {
-    1: "IDEC",
-    2: "Auto",
-    3: "Fan",
-    4: "Indirect",
-    5: "Direct",
-  };
-
+  // Fetch service items on component mount
   useEffect(() => {
     const fetchServiceItems = async () => {
       try {
         const response = await fetch(
           `${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`
         );
-        if (!response.ok) {
-          throw new Error("Failed to fetch service items");
-        }
+        if (!response.ok) throw new Error("Failed to fetch service items");
+        
         const data = await response.json();
         setServiceItems(data.data || []);
         
-        // Only set to first item if no service is already selected
-        if (data.data && data.data.length > 0 && !selectedService) {
+        if (data.data?.length > 0 && !selectedService) {
           setSelectedService(data.data[0]);
         }
       } catch (error) {
@@ -101,285 +109,196 @@ const Screen1 = () => {
     fetchServiceItems();
   }, []);
 
-   // Store selected service in localStorage when it changes
+  // Fetch sensor data when selectedService changes
   useEffect(() => {
-    if (selectedService) {
-      localStorage.setItem('selectedService', JSON.stringify(selectedService));
-    }
-  }, [selectedService]);
-
-  // Fetch data when selectedService changes
-  useEffect(() => {
-    if (selectedService) {
-      fetchData();
-      const intervalId = setInterval(fetchData, 50000);
-      return () => clearInterval(intervalId);
-    }
-  }, [selectedService, processing]);
-
-  const fetchData = async () => {
     if (!selectedService) return;
-    
-    try {
-      // Use the PCB serial number from the selected service
-      const pcbSerialNumber = selectedService.pcb_serial_number;
-      console.log("PCB-serial-number:", pcbSerialNumber);
-      const response = await fetch(
-        `${baseURL}/get-latest-data/${pcbSerialNumber}/`
-      );
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const data = await response.json();
 
-      if (data.status !== "success" || !data.data) {
-        throw new Error("Invalid data format from API");
-      }
+    const fetchData = async () => {
+      try {
+        const pcbSerialNumber = selectedService.pcb_serial_number;
+        console.log("PCB-serial-number:", pcbSerialNumber);
+        
+        const [dataResponse, controllerResponse] = await Promise.all([
+          fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/`),
+          fetch("https://rahul21.pythonanywhere.com/controllers")
+        ]);
 
-      const deviceData = data.data;
-
-      // Fetch controller settings
-      const controllerResponse = await fetch(
-        "https://rahul21.pythonanywhere.com/controllers"
-      );
-      let latestController = {};
-
-      if (controllerResponse.ok) {
-        const controllerData = await controllerResponse.json();
-        if (Array.isArray(controllerData)) {
-          latestController = controllerData.reduce(
-            (prev, current) => (prev.id > current.id ? prev : current),
-            {}
-          );
+        if (!dataResponse.ok) throw new Error("Network response was not ok");
+        
+        const data = await dataResponse.json();
+        if (data.status !== "success" || !data.data) {
+          throw new Error("Invalid data format from API");
         }
-      }
 
-  //     setSensorData((prev) => ({
-  //       ...prev,
-  //       outsideTemp:
-  //         deviceData.outdoor_temperature?.value || prev.outsideTemp,
-  //       humidity: deviceData.room_humidity?.value || prev.humidity,
-  //       roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-  //       fanSpeed:
-  //         latestController.FS?.toString() ||
-  //         deviceData.fan_speed?.value ||
-  //         prev.fanSpeed,
-  //       temperature:
-  //         latestController.SRT?.toString() ||
-  //         deviceData.set_temperature?.value ||
-  //         prev.temperature,
-  //                powerStatus: processing
-  // ? prev.powerStatus
-  // : deviceData.hvac_on?.value === "1"
-  // ? "on"
-  // : "off",
-  //       mode:
-  //         latestController.MD?.toString() ||
-  //         deviceData.mode?.value ||
-  //         prev.mode,
-  //       errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-  //       hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-  //       deviceId: deviceData.pcb_serial_number || prev.deviceId,
-  //       alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-  //     }));
+        const deviceData = data.data;
+        let latestController = {};
 
-        setSensorData((prev) => ({
-        ...prev,
-        outsideTemp:
-          deviceData.outdoor_temperature?.value,
-        humidity: deviceData.room_humidity?.value,
-        roomTemp: deviceData.room_temperature?.value,
-        fanSpeed:
-          latestController.FS?.toString() ||
-          deviceData.fan_speed?.value,
-        temperature:
-          latestController.SRT?.toString() ||
-          deviceData.set_temperature?.value,
-                 powerStatus: processing
-  ? prev.powerStatus
-  : deviceData.hvac_on?.value === "1"
-  ? "on"
-  : "off",
-        mode:
-          latestController.MD?.toString() ||
-          deviceData.mode?.value,
-        errorFlag: deviceData.error_flag?.value,
-        hvacBusy: deviceData.hvac_busy?.value,
-        deviceId: deviceData.pcb_serial_number,
-        alarmOccurred: deviceData.alarm_occurred?.value,
-      }));
+        if (controllerResponse.ok) {
+          const controllerData = await controllerResponse.json();
+          if (Array.isArray(controllerData)) {
+            latestController = controllerData.reduce(
+              (prev, current) => (prev.id > current.id ? prev : current),
+              {}
+            );
+          }
+        }
 
-      const alarmValue = deviceData.alarm_occurred?.value;
+        // Update sensor data
+        setSensorData(prev => ({
+          outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
+          humidity: deviceData.room_humidity?.value || prev.humidity,
+          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+          fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
+          temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
+          powerStatus: processing.status ? prev.powerStatus : (deviceData.hvac_on?.value === "1" ? "on" : "off"),
+          mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
+          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+          deviceId: deviceData.pcb_serial_number || prev.deviceId,
+          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+        }));
 
-// if alarmValue is null or "0", set to 0, else convert to number
-setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+        // Update error count
+        const alarmValue = deviceData.alarm_occurred?.value;
+        setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
 
-      // Update error count based on alarm_occurred (treat any non-'0' value as an alarm)
-      // setErrorCount(deviceData.alarm_occurred?.value === "1" ? 1 : 0);
-
-
-      // Handle processing state
-      if (deviceData.hvac_busy?.value === "1") {
-        setProcessing(true);
-        setProcessingMessage("Processing, please wait...");
-      } else {
-        if (processing) {
+        // Handle processing state based on HVAC busy status
+        if (deviceData.hvac_busy?.value === "1") {
+          setProcessing({ status: true, message: "Processing, please wait..." });
+        } else if (processing.status) {
           setTimeout(() => {
-            setProcessing(false);
-            setProcessingMessage("");
+            setProcessing({ status: false, message: "" });
           }, 2000);
         }
+setLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setProcessing({ status: false, message: "" });
+        setLoading(false);
       }
+    };
 
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setError(error.message);
-      setLoading(false);
-    }
-  };
+    fetchData();
+    const intervalId = setInterval(fetchData, 3000);
+    return () => clearInterval(intervalId);
+  }, [selectedService, processing.status]);
 
-  const getModeDescription = (code) => {
-    return modeMap[code] || "Fan";
-  };
-
-  const formatTemp = (temp) => {
-    if (typeof temp === "string") {
-      const num = parseFloat(temp);
-      return isNaN(num) ? temp : num.toFixed(1);
-    }
-    return temp;
+  // Event handlers
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   const handlePowerToggle = async () => {
-    if (processing) return;
-
-    if (sensorData.hvacBusy === "1") {
-      setProcessing(true);
-      setProcessingMessage("System is busy, please wait...");
+    if (processing.status || sensorData.hvacBusy === "1") {
+      setProcessing({ 
+        status: true, 
+        message: sensorData.hvacBusy === "1" 
+          ? "System is busy, please wait..." 
+          : "Please wait..." 
+      });
       return;
     }
 
-    setProcessing(true);
-    setProcessingMessage("Sending command, please wait...");
+    setProcessing({ status: true, message: "Sending command, please wait..." });
 
     const newHvacValue = sensorData.powerStatus === "on" ? 0 : 1;
 
     const payload = {
       Header: "0xAA",
-      DI: selectedService?.pcb_serial_number || "2411GM-0102", // Use PCB serial number from selected service
-      MD: 3,
-      FS: 0,
-      SRT: 30,
+      DI: selectedService?.pcb_serial_number || "2411GM-0102",
+      MD: sensorData.mode, // Use current mode
+      FS: sensorData.fanSpeed, // Use current fan speed
+      SRT: sensorData.temperature, // Use current temperature
       HVAC: newHvacValue,
       Footer: "0xZX",
     };
+
     console.log("Sending payload:", payload);
 
     try {
-      const response = await fetch(
-        "https://rahul21.pythonanywhere.com/controllers",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-      console.log("Response:", response);
+      const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      if (!response.ok) {
-        throw new Error("Failed to send command");
-      }
+      if (!response.ok) throw new Error("Failed to send command");
 
-      // Simulate successful command and update local state
+      // Update local state after successful command
       setTimeout(() => {
-        const newStatus = newHvacValue === 1 ? "on" : "off";
-        setSensorData((prev) => ({ ...prev, powerStatus: newStatus }));
-        setProcessing(false);
-        setProcessingMessage("");
+        setSensorData(prev => ({ 
+          ...prev, 
+          powerStatus: newHvacValue === 1 ? "on" : "off" 
+        }));
+        setProcessing({ status: false, message: "" });
       }, 2000);
+
     } catch (error) {
       console.error("Error sending command:", error);
-      setProcessing(false);
-      setProcessingMessage("Failed to send command");
+      setProcessing({ status: false, message: "Failed to send command" });
+    }
+  };
+ if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+  const handleNavigation = (path) => {
+    if (!processing.status) {
+      navigate(path);
     }
   };
 
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  //   if (loading) {
-//   return <div className="loading-screen">Loading...</div>;
-// }
-
-
-  // if (error) {
-  //   return <div className="error">Error: {error}</div>;
-  // }
-
-  //  const handleNavigation = (path) => {
-  //   if (!processing) {
-  //     navigate(path);
-  //   }
-  // };
-
-  const handleNavigation = (path) => { 
-      navigate(path);
+  const handleServiceSelect = (item) => {
+    setSelectedService(item);
+    setShowServiceDropdown(false);
   };
-
-  const fanPosition = ["0", "1", "2"].indexOf(sensorData.fanSpeed);
 
   const handleTempChange = (newTemp) => {
     console.log("Temperature changed:", newTemp);
-    // Update your backend or state as needed
+    // Update backend if needed
   };
 
-    const handleServiceSelect = (item) => {
-    setSelectedService(item);
-    setShowServiceDropdown(false);
-    // Store the selection immediately
-    localStorage.setItem('selectedService', JSON.stringify(item));
-  };
+  // Derived values
+  const fanPosition = ["0", "1", "2"].indexOf(sensorData.fanSpeed);
+  const getModeDescription = (code) => MODE_MAP[code] || "Fan";
+
+  // Loading state
+  if (!selectedService && serviceItems.length === 0) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
-    <div
-      className="mainmain-container"
-      style={{
-        backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
-      }}
-    >
+    <div className="mainmain-container" style={{
+      backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
+    }}>
       <div className="main-container">
-        {/* Service Dropdown - Moved above the header */}
-       <div className="service-dropdown-container">
-        <div
-          className="service-dropdown-header"
-          onClick={() => setShowServiceDropdown(!showServiceDropdown)}
-        >
-          <span>
-            {selectedService
-              ? selectedService.service_item_name
-              : "Select Service"}
-          </span>
-          <FiChevronDown size={18} />
-        </div>
-        {showServiceDropdown && (
-          <div className="service-dropdown-list">
-            {serviceItems.map((item) => (
-              <div
-                key={item.service_item_id}
-                className="service-dropdown-item"
-                onClick={() => handleServiceSelect(item)}
-              >
-                {item.service_item_name}
-              </div>
-            ))}
+        {/* Service Dropdown */}
+        <div className="service-dropdown-container">
+          <div
+            className="service-dropdown-header"
+            onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+          >
+            <span>
+              {selectedService ? selectedService.service_item_name : "Select Service"}
+            </span>
+            <FiChevronDown size={18} />
           </div>
-        )}
-      </div>
+          {showServiceDropdown && (
+            <div className="service-dropdown-list">
+              {serviceItems.map((item) => (
+                <div
+                  key={item.service_item_id}
+                  className="service-dropdown-item"
+                  onClick={() => handleServiceSelect(item)}
+                >
+                  {item.service_item_name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
+        {/* Header */}
         <div className="header1">
           <div className="logo">
             <img
@@ -392,7 +311,7 @@ setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
 
           <div style={{ position: "relative" }}>
             <button
-              className={`power-button ${processing ? "processing" : ""}`}
+              className={`power-button ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
               style={{
                 backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
@@ -402,64 +321,38 @@ setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
                 border: "none",
                 borderRadius: "4px",
                 padding: "8px",
-                cursor: processing ? "not-allowed" : "pointer",
+                cursor: processing.status ? "not-allowed" : "pointer",
                 fontWeight: "bold",
               }}
             >
-              <FiPower
-                size={24}
-                color="#fff"
-              />
-              {processing && <span className="processing-indicator"></span>}
+              <FiPower size={24} color="#fff" />
+              {processing.status && <span className="processing-indicator"></span>}
             </button>
 
             {sensorData.errorFlag === "1" && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-5px",
-                  right: "-5px",
-                  backgroundColor: "red",
-                  borderRadius: "50%",
-                  width: "12px",
-                  height: "12px",
-                  border: "2px solid white",
-                }}
-              />
+              <div className="error-indicator" />
             )}
           </div>
         </div>
 
-        {processing && (
-          <div className="processing-message">{processingMessage}</div>
+        {/* Status Messages */}
+        {processing.status && (
+          <div className="processing-message">{processing.message}</div>
         )}
 
         {sensorData.errorFlag === "1" && (
-          <div
-            className="error-message"
-            style={{
-              color: "yellow",
-              textAlign: "center",
-              fontWeight: "bold",
-            }}
-          >
+          <div className="error-message">
             ⚠️ System Error Detected
           </div>
         )}
 
-        {sensorData.hvacBusy === "1" && !processing && (
-          <div
-            className="busy-message"
-            style={{
-              color: "orange",
-              textAlign: "center",
-              fontWeight: "bold",
-            }}
-          >
+        {sensorData.hvacBusy === "1" && !processing.status && (
+          <div className="busy-message">
             ⏳ System is currently busy
           </div>
         )}
 
+        {/* Temperature Dial */}
         <TemperatureDial
           sensorData={sensorData}
           onTempChange={handleTempChange}
@@ -467,12 +360,11 @@ setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
           initialTemperature={sensorData.temperature ?? 25}
         />
 
+        {/* Environment Info */}
         <div className="env-info">
           <div className="env-item">
             <FiSun className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">
-              {formatTemp(sensorData.outsideTemp)}°C
-            </div>
+            <div className="env-value">{formatTemp(sensorData.outsideTemp)}°C</div>
             <div className="env-label">Outside Temp</div>
           </div>
           <div className="env-item">
@@ -488,38 +380,33 @@ setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
         </div>
       </div>
 
+      {/* Footer */}
       <div className="footer-container">
         <div className="control-buttons">
           <button
             className="control-btn"
             onClick={() => navigate("/machinescreen2", { 
-    state: { 
-      sensorData,
-      selectedService // Pass the selected service
-    } 
-  })}
-            // disabled={processing}
+              state: { sensorData, selectedService }
+            })}
+            // disabled={processing.status}
           >
             <FiWind size={20} />
             <span>Modes</span>
-            <span>
-              <strong>{getModeDescription(sensorData.mode)}</strong>
-            </span>
+            <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
           </button>
+          
           <button
             className="control-btn"
-            onClick={() =>
-              navigate("/alarms", {
-                state: {
-                  alarmData: {
-                    alarmOccurred: sensorData.alarmOccurred,
-                    errorCount: errorCount,
-                    deviceId: sensorData.deviceId,
-                  },
+            onClick={() => navigate("/alarms", {
+              state: {
+                alarmData: {
+                  alarmOccurred: sensorData.alarmOccurred,
+                  errorCount: errorCount,
+                  deviceId: sensorData.deviceId,
                 },
-              })
-            }
-            // disabled={processing}
+              },
+            })}
+            // disabled={processing.status}
           >
             <div style={{ position: "relative" }}>
               <FiClock size={20} />
@@ -547,39 +434,44 @@ setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
             </div>
             <span>Alarms</span>
           </button>
+          
           <button
             className="control-btn"
             onClick={() => handleNavigation("/timers")}
-            // disabled={processing}
+            // disabled={processing.status}
           >
             <FiWatch size={20} />
             <span>Timers</span>
           </button>
+          
           <button
             className="control-btn"
             onClick={() => handleNavigation("/settings")}
-            // disabled={processing}
+            // disabled={processing.status}
           >
             <FiSettings size={20} />
             <span>Settings</span>
           </button>
+          
           <button
             className="control-btn"
             onClick={() => handleNavigation("/machine")}
-            // disabled={processing}
+            // disabled={processing.status}
           >
             <FiZap size={20} />
             <span>Services</span>
           </button>
+          
           <button
             className="control-btn"
             onClick={handleLogout}
-            // disabled={processing}
+            // disabled={processing.status}
           >
             <FiLogOut size={20} />
             <span>Logout</span>
           </button>
         </div>
+        
         <div className="footer-logo">
           <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
         </div>
