@@ -97,22 +97,26 @@ const AlarmsPage = () => {
       margin: '0 auto',
       position: 'relative'
     }}>
-      <button 
-        onClick={() => navigate(-1)}
-        style={{
-          background: 'none',
-          border: 'none',
-          fontSize: '24px',
-          cursor: 'pointer',
-          marginBottom: '20px'
-        }}
-      >
-        <FiArrowLeft /> Back
-      </button>
+     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop:'20%' }}>
+  <button
+    onClick={() => navigate(-1)}
+    style={{
+      background: 'none',
+      border: 'none',
+      fontSize: '24px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center'
+    }}
+  >
+    <FiArrowLeft /> 
+  </button>
 
-      <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <FiClock /> Alarm Notifications
-      </h2>
+  <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+    <FiClock /> Alarm Notifications
+  </h2>
+</div>
+
       
       {/* Current Alarm Status */}
       <div style={{ margin: '20px 0' }}>

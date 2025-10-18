@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useContext } from 'react';
 import './Login.css';
 import { FaUser, FaLock } from 'react-icons/fa';
@@ -11,36 +10,40 @@ import greenaire from '../../Logos/greenAire.png';
 import axios from "axios";
 import { AuthContext } from "../AuthContext/AuthContext";
 import baseURL from '../ApiUrl/Apiurl';
-import  Notification_Url from "../ApiUrl/PushNotificanURL";
-import { generateToken } from "../../Firebase/Firebase";
 
 export default function Login() { 
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [autoLogin, setAutoLogin] = useState(false);
   const [secureText, setSecureText] = useState(true);
-   const [error, setError] = useState("");
+  const [error, setError] = useState("");
   const passwordRef = useRef();
   const navigate = useNavigate();
-   const { login } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
 
-const handleLogin = async (e) => {
+ const handleLogin = async (e) => {
   e.preventDefault();
   setError('');
 
   try {
-    const fcmToken = await generateToken();
+    let fcmToken = '';
+
+    // ✅ Use Expo-provided token
+    if (window.ReactNativeWebView && window.fcmToken) {
+      fcmToken = window.fcmToken;
+      console.log("Using Expo token:", fcmToken);
+    }
 
     const response = await axios.post(`${baseURL}/customer-login/`, {
-      mobile: mobile,
+      mobile,
       password,
-      fcm_token: fcmToken || '',
+      fcm_token: fcmToken,
     });
 
     const user = response.data.data;
 
     // Store user data in localStorage
-    localStorage.setItem("userId", user.customer_id || user.delegate_id); // fallback for delegate
+    localStorage.setItem("userId", user.customer_id || user.delegate_id);
     localStorage.setItem("userMobile", user.mobile);
     localStorage.setItem("userName", user.full_name || user.delegate_name);
     localStorage.setItem("customerType", user.customer_type || "delegate");
@@ -48,41 +51,18 @@ const handleLogin = async (e) => {
 
     login(user);
 
-    // ✅ Conditional Navigation
+    // Send login message to Expo
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(
+        JSON.stringify({ type: 'login', userId: user.customer_id || user.delegate_id })
+      );
+    }
+
+    // Navigate based on user type
     if (user.delegate_id) {
       navigate("/delegate-home", { state: { userMobile: user.mobile } });
     } else {
-      // navigate("/home", { state: { userMobile: user.mobile } });
-            navigate("/machinescreen1", { state: { userMobile: user.mobile } });
-
-    }
-
-    console.log("User data from API:", user);
-
-    if (fcmToken) {
-      try {
-        const notifyResponse = await fetch(`${Notification_Url}/send-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            token: fcmToken,
-            title: 'Welcome to Octane!',
-            body: 'You have successfully logged in.',
-          }),
-        });
-
-        const notifyData = await notifyResponse.json();
-
-        if (notifyResponse.ok) {
-          console.log('Notification sent successfully:', notifyData);
-        } else {
-          console.error('Failed to send notification:', notifyData);
-        }
-      } catch (notifyError) {
-        console.error('Error sending notification:', notifyError);
-      }
+      navigate("/machinescreen1", { state: { userMobile: user.mobile } });
     }
 
   } catch (err) {
@@ -92,11 +72,18 @@ const handleLogin = async (e) => {
 };
 
 
+  // Function to generate FCM token
+  // const generateToken = async () => {
+  //   try {
+  //     const token = await messaging().getToken(); // Get Firebase FCM token
+  //     return token;
+  //   } catch (error) {
+  //     console.error('Error getting Firebase FCM token:', error);
+  //     return '';
+  //   }
+  // };
 
-
-
-
-return (
+  return (
     <div className="container">
       <div className="card">
         <div className="logoContainer">
@@ -162,6 +149,6 @@ return (
           <img src={greenaire} alt="Green Aire" className="footerLogo" />
         </form>
       </div>
-    </div>
-  );
+    </div>
+  );
 }

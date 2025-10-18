@@ -918,7 +918,7 @@ const ServiceRequestForm = () => {
               </div>
 
               <div className="col-md-6">
-                <label className="formlabel" style={{ marginLeft: '-155px' }}>Preferred Date</label>
+                <label className="formlabel" style={{ marginLeft: '-85px' }}>Preferred Service Date</label>
                 <input
                   type="date"
                   name="preferred_date"
@@ -930,7 +930,7 @@ const ServiceRequestForm = () => {
               </div>
 
               <div className="col-md-6">
-                <label className="formlabel" style={{ marginLeft: '-152px' }}>Preferred Time</label>
+                <label className="formlabel" style={{ marginLeft: '-85px' }}>Preferred Service Time</label>
                 <input
                   type="time"
                   name="preferred_time"

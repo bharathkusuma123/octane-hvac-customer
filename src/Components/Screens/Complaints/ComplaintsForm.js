@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, use } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Form, Button, Card, Row, Col, Alert, Container } from 'react-bootstrap';
 import axios from 'axios';
@@ -47,33 +47,60 @@ const ComplaintForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      const response = await axios.post(`${baseURL}/customer-complaints/`, formData, {
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (response.status === 201) {
-        setAlertVariant('success');
-        setAlertMessage('🎉 Customer Complaint Submitted Successfully!');
-        setShowAlert(true);
-
-        // Auto redirect after 2s
-        setTimeout(() => navigate('/request'), 2000);
-      }
-    } catch (error) {
-      setAlertVariant('danger');
-      setAlertMessage('❌ Failed to submit complaint. Please try again.');
-      setShowAlert(true);
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Merge user_id and company_id into the payload
+  const payload = {
+    ...formData,
+    user_id: user?.customer_id,
+    company_id: user?.company_id,
   };
+
+  console.log('🚀 Submitting customer complaint...');
+  console.log('📝 Payload being sent:', payload);
+
+  try {
+    const response = await axios.post(
+      `${baseURL}/customer-complaints/`,
+      payload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    console.log('✅ Response received:', response);
+
+    if (response.status === 201) {
+      console.log('🎉 Complaint submitted successfully!');
+      setAlertVariant('success');
+      setAlertMessage('🎉 Customer Complaint Submitted Successfully!');
+      setShowAlert(true);
+
+      setTimeout(() => {
+        console.log('🔀 Redirecting to /request...');
+        navigate('/request');
+      }, 2000);
+    } else {
+      console.warn('⚠️ Unexpected response status:', response.status);
+    }
+  } catch (error) {
+    console.error('❌ Error submitting complaint:', error);
+    if (error.response) {
+      console.error('❌ Server responded with:', error.response.data);
+    }
+    setAlertVariant('danger');
+    setAlertMessage('❌ Failed to submit complaint. Please try again.');
+    setShowAlert(true);
+  } finally {
+    setIsSubmitting(false);
+    console.log('🟡 Submission process completed.');
+  }
+};
+
 
   return (
     <div className="complaint-form-page">

@@ -21,6 +21,23 @@ const RequestScreen = () => {
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
+  const [serviceItems, setServiceItems] = useState([]);
+useEffect(() => {
+  if (user?.customer_id) {
+    axios
+      .get(`${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`)
+      .then((response) => {
+        if (Array.isArray(response.data?.data)) {
+          setServiceItems(response.data.data);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching service items:', error);
+      });
+  }
+}, [user?.customer_id]);
+
+
   useEffect(() => {
     if (user?.customer_id) {
       axios
@@ -151,9 +168,19 @@ const RequestScreen = () => {
                     Request ID: {req.request_id}
                   </Card.Title>
                   <Card.Text>
-                    <strong>Service Item:</strong> {req.service_item}<br />
-                    <strong>Preferred Date:</strong> {req.preferred_date}<br />
-                    <strong>Preferred Time:</strong> {req.preferred_time}<br />
+                  <strong>Service Item:</strong>{" "}
+{
+  serviceItems.find(item => item.service_item_id === req.service_item)?.service_item_name
+  || req.service_item
+}
+<br />
+
+                    <strong>Preferred Service Date:</strong> {req.preferred_date}<br />
+                    <strong>Preferred Service Time:</strong> {req.preferred_time}<br />
+                <strong>Requested At:</strong>{" "}
+{new Date(req.created_at).toLocaleString()}
+<br />
+
                     <strong>Details:</strong> {req.request_details || 'N/A'}
                   </Card.Text>
                 </Card.Body>
