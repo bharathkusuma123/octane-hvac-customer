@@ -110,78 +110,74 @@ const Screen1 = () => {
   }, []);
 
   // Fetch sensor data when selectedService changes
-  useEffect(() => {
-    if (!selectedService) return;
+ // Fetch sensor data when selectedService changes
+useEffect(() => {
+  if (!selectedService) return;
 
-    const fetchData = async () => {
-      try {
-        const pcbSerialNumber = selectedService.pcb_serial_number;
-        console.log("PCB-serial-number:", pcbSerialNumber);
-        
-        const [dataResponse, controllerResponse] = await Promise.all([
-          fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/`),
-          fetch("https://rahul21.pythonanywhere.com/controllers")
-        ]);
+  const fetchData = async () => {
+    try {
+      const pcbSerialNumber = selectedService.pcb_serial_number;
+      console.log("PCB-serial-number:", pcbSerialNumber);
+      
+      const [dataResponse, controllerResponse] = await Promise.all([
+        fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`),
+        fetch("https://rahul21.pythonanywhere.com/controllers")
+      ]);
 
-        if (!dataResponse.ok) throw new Error("Network response was not ok");
-        
-        const data = await dataResponse.json();
-        if (data.status !== "success" || !data.data) {
-          throw new Error("Invalid data format from API");
-        }
-
-        const deviceData = data.data;
-        let latestController = {};
-
-        if (controllerResponse.ok) {
-          const controllerData = await controllerResponse.json();
-          if (Array.isArray(controllerData)) {
-            latestController = controllerData.reduce(
-              (prev, current) => (prev.id > current.id ? prev : current),
-              {}
-            );
-          }
-        }
-
-        // Update sensor data
-        setSensorData(prev => ({
-          outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
-          humidity: deviceData.room_humidity?.value || prev.humidity,
-          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
-          temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
-          powerStatus: processing.status ? prev.powerStatus : (deviceData.hvac_on?.value === "1" ? "on" : "off"),
-          mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
-          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-          deviceId: deviceData.pcb_serial_number || prev.deviceId,
-          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-        }));
-
-        // Update error count
-        const alarmValue = deviceData.alarm_occurred?.value;
-        setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
-
-        // Handle processing state based on HVAC busy status
-        if (deviceData.hvac_busy?.value === "1") {
-          setProcessing({ status: true, message: "Processing, please wait..." });
-        } else if (processing.status) {
-          setTimeout(() => {
-            setProcessing({ status: false, message: "" });
-          }, 2000);
-        }
-setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setProcessing({ status: false, message: "" });
-        setLoading(false);
+      if (!dataResponse.ok) throw new Error("Network response was not ok");
+      
+      const data = await dataResponse.json();
+      if (data.status !== "success" || !data.data) {
+        throw new Error("Invalid data format from API");
       }
-    };
 
-    fetchData();
-    const intervalId = setInterval(fetchData, 3000);
-    return () => clearInterval(intervalId);
-  }, [selectedService, processing.status]);
+      const deviceData = data.data;
+      let latestController = {};
+
+      if (controllerResponse.ok) {
+        const controllerData = await controllerResponse.json();
+        if (Array.isArray(controllerData)) {
+          latestController = controllerData.reduce(
+            (prev, current) => (prev.id > current.id ? prev : current),
+            {}
+          );
+        }
+      }
+
+      // Update sensor data - ALWAYS update from API, don't conditionally block updates
+      setSensorData(prev => ({
+        outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
+        humidity: deviceData.room_humidity?.value || prev.humidity,
+        roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+        // fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
+        // temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
+        fanSpeed:  deviceData.fan_speed?.value || prev.fanSpeed,
+        temperature: deviceData.set_temperature?.value || prev.temperature,
+        powerStatus: deviceData.hvac_on?.value == "1" ? "on" : "off", // Always update from API
+        // mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
+        mode: deviceData.mode?.value,
+        errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+        hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+        deviceId: deviceData.pcb_serial_number || prev.deviceId,
+        alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+      }));
+
+      // Update error count
+      const alarmValue = deviceData.alarm_occurred?.value;
+      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+
+      // Remove the processing status logic from here - let handlePowerToggle manage it
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+  const intervalId = setInterval(fetchData, 1000);
+  return () => clearInterval(intervalId);
+}, [selectedService]); // Remove processing.status from dependencies
 
   // Event handlers
   const handleLogout = () => {
@@ -189,56 +185,54 @@ setLoading(false);
     navigate("/");
   };
 
-  const handlePowerToggle = async () => {
-    if (processing.status || sensorData.hvacBusy === "1") {
-      setProcessing({ 
-        status: true, 
-        message: sensorData.hvacBusy === "1" 
-          ? "System is busy, please wait..." 
-          : "Please wait..." 
-      });
-      return;
-    }
+ const handlePowerToggle = async () => {
+  if (processing.status || sensorData.hvacBusy == "1") {
+    setProcessing({ 
+      status: true, 
+      message: sensorData.hvacBusy == "1" 
+        ? "System is busy, please wait..." 
+        : "Please wait..." 
+    });
+    return;
+  }
 
-    setProcessing({ status: true, message: "Sending command, please wait..." });
+  setProcessing({ status: true, message: "Sending command, please wait..." });
 
-    const newHvacValue = sensorData.powerStatus === "on" ? 0 : 1;
+  const newHvacValue = sensorData.powerStatus == "on" ? 0 : 1;
 
-    const payload = {
-      Header: "0xAA",
-      DI: selectedService?.pcb_serial_number || "2411GM-0102",
-      MD: sensorData.mode, // Use current mode
-      FS: sensorData.fanSpeed, // Use current fan speed
-      SRT: sensorData.temperature, // Use current temperature
-      HVAC: newHvacValue,
-      Footer: "0xZX",
-    };
-
-    console.log("Sending payload:", payload);
-
-    try {
-      const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to send command");
-
-      // Update local state after successful command
-      setTimeout(() => {
-        setSensorData(prev => ({ 
-          ...prev, 
-          powerStatus: newHvacValue === 1 ? "on" : "off" 
-        }));
-        setProcessing({ status: false, message: "" });
-      }, 2000);
-
-    } catch (error) {
-      console.error("Error sending command:", error);
-      setProcessing({ status: false, message: "Failed to send command" });
-    }
+  const payload = {
+    Header: "0xAA",
+    DI: selectedService?.pcb_serial_number || "2411GM-0102",
+    MD: sensorData.mode,
+    FS: sensorData.fanSpeed,
+    SRT: sensorData.temperature,
+    HVAC: newHvacValue,
+    Footer: "0xZX",
   };
+
+  console.log("Sending payload:", payload);
+
+  try {
+    const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Failed to send command");
+
+    // DON'T update local state immediately
+    // Just disable the button for 25 seconds
+    setTimeout(() => {
+      setProcessing({ status: false, message: "" });
+    }, 22000); // 25 seconds
+
+  } catch (error) {
+    console.error("Error sending command:", error);
+    setProcessing({ status: false, message: "Failed to send command" });
+  }
+};
+
  if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -263,7 +257,7 @@ setLoading(false);
   const getModeDescription = (code) => MODE_MAP[code] || "Fan";
 
   // Loading state
-  if (!selectedService && serviceItems.length === 0) {
+  if (!selectedService && serviceItems.length == 0) {
     return <div className="loading">Loading...</div>;
   }
 
@@ -310,26 +304,30 @@ setLoading(false);
           </div>
 
           <div style={{ position: "relative" }}>
-            <button
-              className={`power-button ${processing.status ? "processing" : ""}`}
-              onClick={handlePowerToggle}
-              style={{
-                backgroundColor: sensorData.powerStatus === "on" ? "#5adb5eff" : "#c80000f5",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "none",
-                borderRadius: "4px",
-                padding: "8px",
-                cursor: processing.status ? "not-allowed" : "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              <FiPower size={24} color="#fff" />
-              {processing.status && <span className="processing-indicator"></span>}
-            </button>
+           <button
+  className={`screen1-power-button ${processing.status ? "processing" : ""}`}
+  onClick={handlePowerToggle}
+  disabled={processing.status}
+  style={{
+    backgroundColor: sensorData.powerStatus == "on" ? "#5adb5eff" : "#c80000f5",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    height: "48px",
+    width: "48px",
+    borderRadius: "4px",
+    padding: "8px",
+    cursor: processing.status ? "not-allowed" : "pointer",
+    fontWeight: "bold",
+    opacity: processing.status ? 0.6 : 1, // Add this for visual feedback
+  }}
+>
+  <FiPower size={24} color="#fff" />
+  {processing.status && <span className="processing-indicator"></span>}
+</button>
 
-            {sensorData.errorFlag === "1" && (
+            {sensorData.errorFlag == "1" && (
               <div className="error-indicator" />
             )}
           </div>
@@ -340,13 +338,13 @@ setLoading(false);
           <div className="processing-message">{processing.message}</div>
         )}
 
-        {sensorData.errorFlag === "1" && (
+        {sensorData.errorFlag == "1" && (
           <div className="error-message">
             ⚠️ System Error Detected
           </div>
         )}
 
-        {sensorData.hvacBusy === "1" && !processing.status && (
+        {sensorData.hvacBusy == "1" && !processing.status && (
           <div className="busy-message">
             ⏳ System is currently busy
           </div>
@@ -386,7 +384,7 @@ setLoading(false);
           <button
             className="control-btn"
             onClick={() => navigate("/machinescreen2", { 
-              state: { sensorData, selectedService }
+              state: { sensorData, selectedService, userId, company_id}
             })}
             // disabled={processing.status}
           >

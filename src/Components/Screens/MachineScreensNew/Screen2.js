@@ -58,6 +58,7 @@ const Screen2 = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
+    const {userId, company_id } = location.state || {};
   
   // State management
   const selectedService = getSelectedService(location);
@@ -91,7 +92,7 @@ const Screen2 = () => {
     const fetchData = async () => {
       try {
         const [dataResponse, controllerResponse] = await Promise.all([
-          fetch(`${baseURL}/get-latest-data/${deviceId}/`),
+          fetch(`${baseURL}/get-latest-data/${deviceId}/?user_id=${userId}&company_id=${company_id}`),
           fetch("https://rahul21.pythonanywhere.com/controllers")
         ]);
 
@@ -119,16 +120,19 @@ const Screen2 = () => {
           outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
           humidity: deviceData.room_humidity?.value || prev.humidity,
           roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
-          temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
-          powerStatus: processing.status ? prev.powerStatus : (deviceData.hvac_on?.value === "1" ? "on" : "off"),
-          mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
+          // fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
+          // temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
+          // mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
+            fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
+          temperature: deviceData.set_temperature?.value || prev.temperature,
+            mode: deviceData.mode?.value || prev.mode,
+          powerStatus: deviceData.hvac_on?.value === "1" ? "on" : "off", // Always update from API
           errorFlag: deviceData.error_flag?.value || prev.errorFlag,
           hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
           deviceId: deviceData.pcb_serial_number || prev.deviceId,
           alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
         }));
-setLoading(false);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         setLoading(false);
@@ -136,12 +140,12 @@ setLoading(false);
     };
 
     fetchData();
-    const intervalId = setInterval(fetchData, 3000);
+    const intervalId = setInterval(fetchData, 1000);
     return () => clearInterval(intervalId);
-  }, [deviceId, processing.status]);
+  }, [deviceId]); // Removed processing.status from dependencies
 
   // API call handler
-  const sendCommand = async (updates = {}) => {
+  const sendCommand = async (updates = {}, commandType = "general") => {
     if (processing.status || sensorData.hvacBusy === "1") {
       setProcessing({ 
         status: true, 
@@ -173,17 +177,16 @@ setLoading(false);
 
       if (!response.ok) throw new Error("Failed to send command");
       
-      // Update local state immediately for better UX
-      if (Object.keys(updates).length > 0) {
-        setSensorData(prev => ({ ...prev, ...updates }));
-      }
+      // Disable all interactive elements for 25 seconds
+      setTimeout(() => {
+        setProcessing({ status: false, message: "" });
+      }, 25000); // 25 seconds
       
       return true;
     } catch (error) {
       console.error("Error sending command:", error);
+      setProcessing({ status: false, message: "Failed to send command" });
       return false;
-    } finally {
-      setTimeout(() => setProcessing({ status: false, message: "" }), 1000);
     }
   };
 
@@ -192,35 +195,33 @@ setLoading(false);
     const newPowerStatus = sensorData.powerStatus === "on" ? "off" : "on";
     const updates = { powerStatus: newPowerStatus };
     
-    if (newPowerStatus === "off" || await sendCommand(updates)) {
-      setSensorData(prev => ({ ...prev, ...updates }));
-    }
+    await sendCommand(updates, "power");
   };
 
   const handleModeChange = async (newMode) => {
     const newModeCode = MODE_CODE_MAP[newMode] || 1;
     const updates = { mode: newModeCode.toString() };
 
-    // If power is off, just update local state
+    // If power is off, just update local state (no API call needed)
     if (sensorData.powerStatus === "off") {
       setSensorData(prev => ({ ...prev, ...updates }));
       return;
     }
 
-    await sendCommand(updates);
+    await sendCommand(updates, "mode");
   };
 
   const handleFanSpeedChange = async (newPosition) => {
     const newSpeed = FAN_SPEEDS[newPosition];
     const updates = { fanSpeed: newSpeed };
 
-    // If power is off, just update local state
+    // If power is off, just update local state (no API call needed)
     if (sensorData.powerStatus === "off") {
       setSensorData(prev => ({ ...prev, ...updates }));
       return;
     }
 
-    await sendCommand(updates);
+    await sendCommand(updates, "fan");
   };
 
   const handleFanClick = (e) => {
@@ -234,11 +235,14 @@ setLoading(false);
   };
 
   const handleTempChange = (newTemp) => {
+    // Temperature changes are local only for now
     setSensorData(prev => ({ ...prev, temperature: newTemp.toString() }));
   };
 
   const handleBackClick = () => {
-    navigate("/machinescreen1");
+    if (!processing.status) {
+      navigate("/machinescreen1");
+    }
   };
 
   // Loading state
@@ -246,7 +250,7 @@ setLoading(false);
     return <div className="loading">Loading...</div>;
   }
 
-   if (loading) {
+  if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
@@ -257,7 +261,15 @@ setLoading(false);
       <div className="main-container">
         {/* Header Section */}
         <div className="header">
-          <button className="icon-button" onClick={handleBackClick}>
+          <button 
+            className="icon-button" 
+            onClick={handleBackClick}
+            disabled={processing.status}
+            style={{
+              opacity: processing.status ? 0.6 : 1,
+              cursor: processing.status ? "not-allowed" : "pointer"
+            }}
+          >
             <FiArrowLeft size={24} color="white" />
           </button>
 
@@ -268,6 +280,9 @@ setLoading(false);
               className={`power-button ${sensorData.powerStatus === 'on' ? 'on' : 'off'} ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
               disabled={processing.status}
+              style={{
+                opacity: processing.status ? 0.6 : 1,
+              }}
             >
               <FiPower size={24} color="white" />
               {processing.status && <span className="processing-indicator"></span>}
@@ -302,6 +317,7 @@ setLoading(false);
           onTempChange={handleTempChange}
           fanSpeed={fanPosition}
           initialTemperature={sensorData.temperature ?? 25}
+          disabled={processing.status} // Pass disabled prop to TemperatureDial if needed
         />
 
         {/* Environment Info */}
@@ -339,6 +355,10 @@ setLoading(false);
                     currentModeDescription === mode ? "mode-button-selected" : ""
                   }`}
                   disabled={processing.status}
+                  style={{
+                    opacity: processing.status ? 0.6 : 1,
+                    cursor: processing.status ? "not-allowed" : "pointer"
+                  }}
                 >
                   <span className={`mode-text ${
                     currentModeDescription === mode ? "mode-text-selected" : ""
@@ -355,8 +375,11 @@ setLoading(false);
             <h3 className="heading">Fan Speed</h3>
             <div
               className="line-with-dot-container"
-              onClick={handleFanClick}
-              style={{ cursor: processing.status ? "not-allowed" : "pointer" }}
+              onClick={processing.status ? undefined : handleFanClick}
+              style={{ 
+                cursor: processing.status ? "not-allowed" : "pointer",
+                opacity: processing.status ? 0.6 : 1,
+              }}
             >
               <div className="line" />
               {FAN_LABELS.map((_, index) => (
