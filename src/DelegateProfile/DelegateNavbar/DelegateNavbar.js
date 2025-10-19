@@ -18,6 +18,7 @@ const screens = [
   { label: 'Machines', name: '/delegate-machines', icon: <FaCogs />, key: 'machines' },
   { label: 'Requests', name: '/delegate-display-request', icon: <FaEnvelope />, key: 'requests' },
   { label: 'Feedback', name: '/delegate-survey', icon: <FaCommentDots />, key: 'feedback' },
+  { label: 'Monitor', name: '/delegate-machinescreen1', icon: <FaCogs  />, key: 'machinescreen1' },
 ];
 
 const NavScreen = () => {
@@ -105,6 +106,9 @@ const handleServiceItemChange = (e) => {
 
     if (key === 'feedback') {
       return !(permissions.can_submit_customer_satisfaction_survey && permissions.can_log_customer_complaints);
+    }
+    if (key === 'machinescreen1') {
+      return !(permissions.can_monitor_equipment && permissions.can_control_equipment);
     }
 
     return true;

@@ -45,6 +45,9 @@ import AlarmsPage from './Components/Screens/MachineScreensNew/AlarmsPage';
 import Settings from './Components/Screens/MachineScreensNew/Settings';
 import Timers from './Components/Screens/MachineScreensNew/Timers';
 import Contact from './Components/LoginSreens/Contact';
+import DelegateScreen1 from './DelegateProfile/DelegateMachineScreen/DelegateScreen1';
+import DelegateScreen2 from './DelegateProfile/DelegateMachineScreen/DelegateScreen2';
+import DelegateAlarmsPage from './DelegateProfile/DelegateMachineScreen/DelegateAlarmPage';
 
 // 🔹 Wrapper component to handle auto-login check
 function AppWrapper() {
@@ -110,6 +113,9 @@ function App() {
                 <Route path="/machines/:serviceItemId" element={<MachineDetails />} />
                 <Route path="/delegate-service-items/:delegateId" element={<DelegateSetviceItems />} />
                 <Route path="/delegate-home" element={<DelegateHome />} />
+                 <Route path="/delegate-machinescreen1" element={<DelegateScreen1 />} />
+                  <Route path="/delegate-machinescreen2" element={<DelegateScreen2 />} />
+                                    <Route path="/delegate-alarms" element={<DelegateAlarmsPage />} />
                 <Route path="/delegate-request" element={<DelegateRequestForm />} />
                 <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />
                 <Route path="/delegate-survey" element={<DelegateSurveyForm />} />

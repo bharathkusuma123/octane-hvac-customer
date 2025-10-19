@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiClock } from 'react-icons/fi';
-import baseURL from '../../ApiUrl/Apiurl';
+import baseURL from '../../Components/ApiUrl/Apiurl';
 
-const AlarmsPage = () => {
+const DelegateAlarmsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [errorData, setErrorData] = useState([]);
@@ -226,4 +226,4 @@ const AlarmsPage = () => {
   );
 };
 
-export default AlarmsPage;
+export default DelegateAlarmsPage;

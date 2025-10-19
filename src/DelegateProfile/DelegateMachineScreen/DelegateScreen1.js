@@ -18,13 +18,13 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { FaFan } from "react-icons/fa";
-import "./Screen1.css";
-import AIROlogo from "./Images/AIRO.png";
-import greenAire from "./Images/greenAire.png";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../AuthContext/AuthContext";
-import TemperatureDial from "./TemperatureDial";
-import baseURL from "../../ApiUrl/Apiurl";
+// import "./Screen1.css";
+import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png";
+import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
+import { useNavigate } from "react-router-dom"; 
+import { AuthContext } from "../../Components/AuthContext/AuthContext";
+import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial";
+import baseURL from "../../Components/ApiUrl/Apiurl";
 
 // Mode mapping constant
 const MODE_MAP = {
@@ -51,9 +51,9 @@ const formatTemp = (temp) => {
   return isNaN(num) ? "0.0" : num.toFixed(1);
 };
 
-const Screen1 = () => {
+const DelegateScreen1 = () => {
   const { user, logout } = useContext(AuthContext);
-  const userId = user?.customer_id;
+  const userId = user?.delegate_id;
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
@@ -383,7 +383,7 @@ useEffect(() => {
         <div className="control-buttons">
           <button
             className="control-btn"
-            onClick={() => navigate("/machinescreen2", { 
+            onClick={() => navigate("/delegate-machinescreen2", { 
               state: { sensorData, selectedService, userId, company_id}
             })}
             // disabled={processing.status}
@@ -395,15 +395,15 @@ useEffect(() => {
           
           <button
             className="control-btn"
-            onClick={() => navigate("/alarms", {
+            onClick={() => navigate("/Delegate-alarms", {
               state: {
                 alarmData: {
                   alarmOccurred: sensorData.alarmOccurred,
                   errorCount: errorCount,
                   deviceId: sensorData.deviceId,
                 },
-                 userId: userId,
-        company_id: company_id,
+                userId: userId,
+                company_id: company_id
               },
             })}
             // disabled={processing.status}
@@ -455,7 +455,7 @@ useEffect(() => {
           
           <button
             className="control-btn"
-            onClick={() => handleNavigation("/machine")}
+            onClick={() => handleNavigation("/delegate-home")}
             // disabled={processing.status}
           >
             <FiZap size={20} />
@@ -480,4 +480,4 @@ useEffect(() => {
   );
 };
 
-export default Screen1;
+export default DelegateScreen1;
