@@ -33,7 +33,7 @@ const DelegateHome = () => {
 
   return (
     <div style={{ marginTop: '25%' }} className="px-4">
-  
+      <h2 className='welcome-text'>Welcome, {user?.delegate_name}</h2>
 
       {/* ✅ Service Items Table */}
       <h3 className="mt-4">Delegate Service Items</h3>

@@ -17,7 +17,7 @@ const screens = [
   { label: 'Dashboard', name: '/delegate-home', icon: <FaHome />, key: 'dashboard' },
   { label: 'Requests', name: '/delegate-display-request', icon: <FaEnvelope />, key: 'requests' },
   { label: 'Feedback', name: '/delegate-survey', icon: <FaCommentDots />, key: 'feedback' },
-  { label: 'Monitor', name: '/delegate-machinescreen1', icon: <FaCogs  />, key: 'machinescreen1' },
+  { label: 'Monitor', name: '/delegate-machinescreen1', icon: <FaCogs />, key: 'machinescreen1' },
 ];
 
 const NavScreen = () => {
@@ -25,28 +25,18 @@ const NavScreen = () => {
   const location = useLocation();
   const [activeIcon, setActiveIcon] = useState(location.pathname);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [selectedServiceItemId, setSelectedServiceItemId] = useState('');
-  const [permissions, setPermissions] = useState({});
   const profileRef = useRef();
-  const { serviceItems } = useDelegateServiceItems();
   const { logout } = useContext(AuthContext);
-   const [isLoggingOut, setIsLoggingOut] = useState(false); // Add this state
-
-    // Handle logout with proper async handling
-  const handleLogout = async () => {
-    setShowProfileMenu(false);
-    setIsLoggingOut(true); // Set logging out state
-    
-    try {
-      await logout(); // Wait for logout to complete
-      // Navigation happens after successful logout
-      navigate("/");
-    } catch (error) {
-      console.error('Logout error:', error);
-      setIsLoggingOut(false); // Reset if error occurs
-    }
-  };
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
+  // Use the enhanced context
+  const { 
+    serviceItems, 
+    selectedServiceItem, 
+    serviceItemPermissions, 
+    updateSelectedServiceItem,
+    loading 
+  } = useDelegateServiceItems();
 
   useEffect(() => {
     setActiveIcon(location.pathname);
@@ -66,48 +56,61 @@ const NavScreen = () => {
     if (!isDisabled) navigate(path);
   };
 
-useEffect(() => {
-  // Load previously selected service_item from localStorage
-  const savedItemId = localStorage.getItem('selectedServiceItemId');
-  if (savedItemId) {
-    setSelectedServiceItemId(savedItemId);
-    const foundItem = serviceItems.find(item => item.service_item === savedItemId);
-    if (foundItem) {
-      setPermissions(foundItem);
-    }
-  }
-}, [serviceItems]);
-
-const handleServiceItemChange = (e) => {
-  const selectedId = e.target.value;
-  setSelectedServiceItemId(selectedId);
-  localStorage.setItem('selectedServiceItemId', selectedId); // persist selection
-
-  const foundItem = serviceItems.find(item => item.service_item === selectedId);
-  if (foundItem) {
-    setPermissions(foundItem);
-  } else {
-    setPermissions({});
-  }
-};
-
+  const handleServiceItemChange = (e) => {
+    const selectedId = e.target.value;
+    updateSelectedServiceItem(selectedId);
+  };
 
   const getDisabledStatus = (key) => {
     if (key === 'dashboard') return false;
 
     if (key === 'requests') {
-      return !(permissions.can_raise_service_request && permissions.can_close_service_request);
+      return !(serviceItemPermissions.can_raise_service_request && serviceItemPermissions.can_close_service_request);
     }
 
     if (key === 'feedback') {
-      return !(permissions.can_submit_customer_satisfaction_survey && permissions.can_log_customer_complaints);
+      return !(serviceItemPermissions.can_submit_customer_satisfaction_survey && serviceItemPermissions.can_log_customer_complaints);
     }
     if (key === 'machinescreen1') {
-      return !(permissions.can_monitor_equipment && permissions.can_control_equipment);
+      return !(serviceItemPermissions.can_monitor_equipment && serviceItemPermissions.can_control_equipment);
     }
 
     return true;
   };
+
+  const handleLogout = async () => {
+    setShowProfileMenu(false);
+    setIsLoggingOut(true);
+    
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <div className="top-navbar">
+          <img src={logo} alt="Logo" className="logo-img" />
+          <div className="top-icons">
+            <div>Loading service items...</div>
+          </div>
+        </div>
+        <div className="navbar-container">
+          {screens.map((item) => (
+            <button key={item.name} className="nav-item disabled" disabled>
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -118,7 +121,7 @@ const handleServiceItemChange = (e) => {
           <div className="service-dropdown">
             <select
               className="dropdown-select"
-              value={selectedServiceItemId}
+              value={selectedServiceItem}
               onChange={handleServiceItemChange}
             >
               <option value="">Select Service Item</option>
@@ -144,7 +147,7 @@ const handleServiceItemChange = (e) => {
                 <div onClick={() => { setShowProfileMenu(false); navigate('/delegate-profile-details'); }}>
                   Profile
                 </div>
-               <div onClick={handleLogout}>
+                <div onClick={handleLogout}>
                   Logout
                 </div>
               </div>

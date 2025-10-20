@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
+import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
 import baseURL from './../../Components/ApiUrl/Apiurl';
 import { useNavigate } from 'react-router-dom';
 import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
-import { Card, Button, Form, Row, Col } from 'react-bootstrap';
+import { Card, Button, Form, Row, Col, Alert, Spinner } from 'react-bootstrap';
 
 const RequestScreenDelegate = () => {
   const [requests, setRequests] = useState([]);
@@ -23,6 +24,9 @@ const RequestScreenDelegate = () => {
   const company_id = user?.company_id;
   const delegate_id = user?.delegate_id;
   const navigate = useNavigate();
+
+  // Use the enhanced context
+  const { selectedServiceItem, serviceItems, loading: serviceItemsLoading } = useDelegateServiceItems();
 
   // Function to format date to Indian format (dd-mm-yyyy)
   const formatToIndianDate = (dateString) => {
@@ -65,9 +69,16 @@ const RequestScreenDelegate = () => {
     }
   };
 
-  // Fetch service requests for the delegate
+  // Get service item name from service_item ID
+  const getServiceItemName = (serviceItemId) => {
+    const item = serviceItems.find(item => item.service_item === serviceItemId);
+    return item ? item.service_item_name || serviceItemId : serviceItemId;
+  };
+
+  // Fetch service requests for the delegate - filtered by selected service item
   useEffect(() => {
-    if (company_id && delegate_id) {
+    if (company_id && delegate_id && !serviceItemsLoading) {
+      setLoading(true);
       axios.get(`${baseURL}/service-pools/?company_id=${company_id}&user_id=${delegate_id}`)
         .then((response) => {
           const responseData = response.data;
@@ -79,7 +90,15 @@ const RequestScreenDelegate = () => {
             requestsArray = responseData.data;
           }
           
-          const sortedRequests = requestsArray.sort(
+          // Filter requests by selected service item if one is selected
+          let filteredRequestsArray = requestsArray;
+          if (selectedServiceItem) {
+            filteredRequestsArray = requestsArray.filter(
+              req => req.service_item === selectedServiceItem
+            );
+          }
+          
+          const sortedRequests = filteredRequestsArray.sort(
             (a, b) => new Date(b.created_at) - new Date(a.created_at)
           );
 
@@ -99,9 +118,10 @@ const RequestScreenDelegate = () => {
           setLoading(false);
         });
     }
-  }, [company_id, delegate_id]);
+  }, [company_id, delegate_id, selectedServiceItem, serviceItemsLoading]);
 
-  // Fetch survey data to check for submitted feedback
+  // Rest of your existing code remains the same for feedback, complaints, etc...
+  // [Keep all your existing useEffect hooks and functions for feedback, complaints, etc.]
   useEffect(() => {
     if (delegate_id) {
       axios.get(`${baseURL}/customer-surveys/?user_id=${delegate_id}&company_id=${company_id}`)
@@ -184,7 +204,6 @@ const RequestScreenDelegate = () => {
   };
 
   const handleViewComplaint = (requestId) => {
-    // Find the complaint for this service request
     const complaint = complaintsData.find(comp => comp.service_request === requestId);
     if (complaint) {
       navigate('/complaint-details', { 
@@ -196,7 +215,6 @@ const RequestScreenDelegate = () => {
   };
 
   const handleViewFeedback = (requestId) => {
-    // Find the feedback for this service request
     const feedback = feedbackData.find(fb => fb.service_request === requestId);
     if (feedback) {
       navigate('/feedback-details', { 
@@ -232,24 +250,68 @@ const RequestScreenDelegate = () => {
     navigate('/delegate-request');
   };
 
-  // Check if complaint is submitted for a request
   const isComplaintSubmitted = (requestId) => {
     return submittedComplaintRequests.includes(requestId);
   };
 
-  // Check if feedback is submitted for a request
   const isFeedbackSubmitted = (requestId) => {
     return submittedFeedbackRequests.includes(requestId);
   };
 
-  if (loading) {
-    return <div className="text-center mt-4">Loading requests...</div>;
+  if (serviceItemsLoading) {
+    return (
+      <div className="request-screen-wrapper">
+        <DelegateNavbar/>
+        <div className="text-center mt-4">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading service items...</span>
+          </Spinner>
+          <p>Loading service items...</p>
+        </div>
+      </div>
+    );
   }
+
+  if (loading) {
+    return (
+      <div className="request-screen-wrapper">
+        <DelegateNavbar/>
+        <div className="text-center mt-4">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading requests...</span>
+          </Spinner>
+          <p>Loading requests...</p>
+        </div>
+      </div>
+    );
+  }
+  // NEW: Handle Edit Request
+  const handleEditRequest = (request) => {
+    navigate('/delegate-request', { 
+      state: { 
+        editMode: true,
+        requestData: request 
+      }
+    });
+  };
+
+  // NEW: Check if request is editable (only allow editing for certain statuses)
+  const isEditable = (request) => {
+    const nonEditableStatuses = ['closed', 'completed', 'in progress', 'assigned'];
+    return !nonEditableStatuses.includes(request.status?.toLowerCase());
+  };
 
   return (
     <div className="request-screen-wrapper">
       <DelegateNavbar/>
       <h2 className="text-center mb-4">Request Screen</h2>
+
+      {/* Show selected service item info */}
+      {selectedServiceItem && (
+        <Alert variant="info" className="mb-3">
+          Showing requests for Service Item: <strong>{getServiceItemName(selectedServiceItem)}</strong>
+        </Alert>
+      )}
 
       <Card className="toolbar-card shadow-sm p-3 mb-4">
         <Row className="align-items-center g-3">
@@ -268,7 +330,6 @@ const RequestScreenDelegate = () => {
             </Form.Select>
           </Col>
 
-          {/* Raise Request Button */}
           <Col xs="auto">
             <Button variant="primary" onClick={handleRaiseRequest}>
               Raise Request
@@ -287,107 +348,124 @@ const RequestScreenDelegate = () => {
         </Row>
       </Card>
 
-      <Row className="g-4">
-        {paginatedData.length === 0 ? (
-          <p className="text-center">No {searchTerm ? 'matching' : ''} requests found.</p>
-        ) : (
-          paginatedData.map((req, index) => (
-            <Col xs={12} sm={6} md={4} key={index}>
-              <Card className="request-card h-100 shadow-sm">
-                <Card.Body>
-                  <Card.Title className="mb-3 text-primary fw-bold">
-                    Request ID: {req.request_id}
-                  </Card.Title>
-                  <Card.Text>
-                    <strong>Status:</strong> <span className={`status-badge ${req.status?.toLowerCase()}`}>{req.status || 'N/A'}</span><br />
-                    <strong>Service Item ID:</strong> {req.service_item}<br />
-                    <strong>Preferred Service Date:</strong> {formatToIndianDate(req.preferred_date)}<br />
-                    <strong>Preferred Service Time:</strong> {req.preferred_time}<br />
-                    <strong>Requested At:</strong> {formatToIndianDateTime(req.created_at)}<br />
-                    <strong>Details:</strong> {req.request_details || 'N/A'}
-                  </Card.Text>
-                </Card.Body>
-                <Card.Footer className="bg-white border-top-0 d-flex flex-column gap-2">
-                  
-                  {/* Complaint Buttons - Both buttons shown, but Complaints disabled if submitted */}
-                  <div className="d-flex gap-2">
+      {!selectedServiceItem ? (
+        <Alert variant="warning" className="text-center">
+          Please select a Service Item from the dropdown in the navbar to view requests.
+        </Alert>
+      ) : (
+        <>
+          <Row className="g-4">
+            {paginatedData.length === 0 ? (
+              <p className="text-center">No {searchTerm ? 'matching' : ''} requests found for the selected service item.</p>
+            ) : (
+              paginatedData.map((req, index) => (
+                <Col xs={12} sm={6} md={4} key={index}>
+                  <Card className="request-card h-100 shadow-sm">
+                    <Card.Body>
+                      <Card.Title className="mb-3 text-primary fw-bold">
+                        Request ID: {req.request_id}
+                      </Card.Title>
+                      <Card.Text>
+                        <strong>Status:</strong> <span className={`status-badge ${req.status?.toLowerCase()}`}>{req.status || 'N/A'}</span><br />
+                        <strong>Service Item:</strong> {getServiceItemName(req.service_item)}<br />
+                        <strong>Preferred Service Date:</strong> {formatToIndianDate(req.preferred_date)}<br />
+                        <strong>Preferred Service Time:</strong> {req.preferred_time}<br />
+                        <strong>Requested At:</strong> {formatToIndianDateTime(req.created_at)}<br />
+                        <strong>Details:</strong> {req.request_details || 'N/A'}
+                      </Card.Text>
+                    </Card.Body>
+                    <Card.Footer className="bg-white border-top-0 d-flex flex-column gap-2">
+                      {/* NEW: Edit Request Button - Only show for editable requests */}
+                  {isEditable(req) && (
                     <Button
-                      variant="secondary"
+                      variant="warning"
                       size="sm"
-                      className="flex-fill"
-                      onClick={() => handleComplaintClick(req.request_id)}
-                      disabled={isComplaintSubmitted(req.request_id)}
+                      className="w-100"
+                      onClick={() => handleEditRequest(req)}
                     >
-                      {isComplaintSubmitted(req.request_id) ? 'Complaint Submitted' : 'Raise Complaint'}
+                      Edit Request
                     </Button>
-                    
-                    {isComplaintSubmitted(req.request_id) && (
-                      <Button
-                        variant="info"
-                        size="sm"
-                        className="flex-fill"
-                        onClick={() => handleViewComplaint(req.request_id)}
-                      >
-                        View Complaint
-                      </Button>
                     )}
-                  </div>
-                  
-                  {/* Feedback Buttons - Show only for closed requests */}
-                  {closedRequestIds.includes(req.request_id) && (
-                    <div className="d-flex gap-2">
-                      <Button
-                        variant={isFeedbackSubmitted(req.request_id) ? "success" : "primary"}
-                        size="sm"
-                        className="flex-fill"
-                        onClick={() => !isFeedbackSubmitted(req.request_id) && navigate(`/delegate-feedback/${req.request_id}`, {
-                          state: {
-                            delegateId: delegate_id
-                          }
-                        })}
-                        disabled={isFeedbackSubmitted(req.request_id)}
-                      >
-                        {isFeedbackSubmitted(req.request_id) ? 'Feedback Submitted' : 'Give Feedback'}
-                      </Button>
                       
-                      {isFeedbackSubmitted(req.request_id) && (
+                      <div className="d-flex gap-2">
                         <Button
-                          variant="info"
+                          variant="secondary"
                           size="sm"
                           className="flex-fill"
-                          onClick={() => handleViewFeedback(req.request_id)}
+                          onClick={() => handleComplaintClick(req.request_id)}
+                          disabled={isComplaintSubmitted(req.request_id)}
                         >
-                          View Feedback
+                          {isComplaintSubmitted(req.request_id) ? 'Complaint Submitted' : 'Raise Complaint'}
                         </Button>
+                        
+                        {isComplaintSubmitted(req.request_id) && (
+                          <Button
+                            variant="info"
+                            size="sm"
+                            className="flex-fill"
+                            onClick={() => handleViewComplaint(req.request_id)}
+                          >
+                            View Complaint
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {closedRequestIds.includes(req.request_id) && (
+                        <div className="d-flex gap-2">
+                          <Button
+                            variant={isFeedbackSubmitted(req.request_id) ? "success" : "primary"}
+                            size="sm"
+                            className="flex-fill"
+                            onClick={() => !isFeedbackSubmitted(req.request_id) && navigate(`/delegate-feedback/${req.request_id}`, {
+                              state: {
+                                delegateId: delegate_id
+                              }
+                            })}
+                            disabled={isFeedbackSubmitted(req.request_id)}
+                          >
+                            {isFeedbackSubmitted(req.request_id) ? 'Feedback Submitted' : 'Give Feedback'}
+                          </Button>
+                          
+                          {isFeedbackSubmitted(req.request_id) && (
+                            <Button
+                              variant="info"
+                              size="sm"
+                              className="flex-fill"
+                              onClick={() => handleViewFeedback(req.request_id)}
+                            >
+                              View Feedback
+                            </Button>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                </Card.Footer>
-              </Card>
-            </Col>
-          ))
-        )}
-      </Row>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              ))
+            )}
+          </Row>
 
-      <div className="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
-        <Button
-          variant="primary"
-          disabled={currentPage === 1}
-          onClick={() => handlePageChange(currentPage - 1)}
-        >
-          Previous
-        </Button>
-        <span className="fw-semibold">
-          Page {currentPage} of {totalPages}
-        </span>
-        <Button
-          variant="primary"
-          disabled={currentPage === totalPages}
-          onClick={() => handlePageChange(currentPage + 1)}
-        >
-          Next
-        </Button>
-      </div>
+          <div className="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
+            <Button
+              variant="primary"
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              Previous
+            </Button>
+            <span className="fw-semibold">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="primary"
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

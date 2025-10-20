@@ -4,22 +4,32 @@ import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 import './DelegateRequestForm.css';
 import { useNavigate } from 'react-router-dom';
 import baseURL from '../../Components/ApiUrl/Apiurl';
+import { useDelegateServiceItems } from '../../Components/AuthContext/DelegateServiceItemContext';
 
 const DelegateRequestForm = () => {
   const { user } = useContext(AuthContext);
   const [delegateId, setDelegateId] = useState('');
   const [company, setCompany] = useState('');
   const [customer, setCustomer] = useState('');
-  const [serviceItems, setServiceItems] = useState([]); // 👈 New state for service items
   const navigate = useNavigate();
-
+  const { selectedServiceItem, serviceItems } = useDelegateServiceItems();
 
   const [formData, setFormData] = useState({
-    serviceItem: '',
+    serviceItem: selectedServiceItem || '', // Set initial value from context
     preferredDate: '',
     preferredTime: '',
     description: ''
   });
+
+  // Update formData when selectedServiceItem changes
+  useEffect(() => {
+    if (selectedServiceItem) {
+      setFormData(prev => ({
+        ...prev,
+        serviceItem: selectedServiceItem
+      }));
+    }
+  }, [selectedServiceItem]);
 
   useEffect(() => {
     if (user?.delegate_id) {
@@ -38,17 +48,6 @@ const DelegateRequestForm = () => {
         .catch((err) => {
           console.error("Error fetching delegate data:", err);
         });
-
-      // Fetch service items for this delegate
-      fetch(`${baseURL}/delegate-service-item-tasks/`)
-        .then((res) => res.json())
-        .then((data) => {
-          const filteredItems = data?.data?.filter(item => item.delegate === user.delegate_id);
-          setServiceItems(filteredItems || []);
-        })
-        .catch((err) => {
-          console.error("Error fetching service items:", err);
-        });
     }
   }, [user]);
 
@@ -59,107 +58,124 @@ const DelegateRequestForm = () => {
     }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // Format preferred_time to "HH:mm:ss"
-  const preferredTimeFormatted = `${formData.preferredTime}:00`;
-
-  // Get current date and time for other datetime fields (still using full ISO format where needed)
-  const now = new Date().toISOString();
-
-  const payload = {
-    dynamics_service_order_no: "",
-    source_type: "Machine Alert",
-    request_details: formData.description,
-    alert_details: "",
-    requested_by: delegateId,
-    preferred_date: formData.preferredDate,
-    preferred_time: preferredTimeFormatted,
-    status: "Open",
-    estimated_completion_time: null, // <- FIXED format
-    // estimated_completion_time: preferredTimeFormatted, // <- FIXED format
-    estimated_price: "0",
-    est_start_datetime: now,
-    est_end_datetime: now,
-    act_start_datetime: now,
-    act_end_datetime: now,
-    act_material_cost: "0",
-    act_labour_hours: "0",
-    act_labour_cost: "0",
-    completion_notes: "",
-    created_by: delegateId,
-    updated_by: delegateId,
-    company: company,
-    service_item: formData.serviceItem,
-    customer: customer,
-    pm_group: "",
-    assigned_engineer: "",
-    reopened_from: "",
-    user_id: customer,
-    company_id: company
-  };
-  console.log("payload", payload);
-
-  try {
-    const response = await fetch(`${baseURL}/service-pools/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-    console.log("API Response:", result);
-
-    if (response.ok) {
-      alert("Service request submitted successfully!");
-      setFormData({
-        serviceItem: '',
-        preferredDate: '',
-        preferredTime: '',
-        description: ''
-      });
-    } else {
-      console.error("Failed response:", result);
-      alert("Submission failed: " + (result.message || "Please check the input."));
+    // Check if service item is selected
+    if (!selectedServiceItem) {
+      alert("Please select a Service Item from the navbar dropdown first.");
+      return;
     }
-    navigate('/delegate-display-request'); // Navigate to your desired path
 
-  } catch (error) {
-    console.error("Submission error:", error);
-    alert("Something went wrong while submitting the form.");
-  }
-};
+    // Format preferred_time to "HH:mm:ss"
+    const preferredTimeFormatted = `${formData.preferredTime}:00`;
 
+    // Get current date and time for other datetime fields
+    const now = new Date().toISOString();
 
+    const payload = {
+      dynamics_service_order_no: "",
+      source_type: "Machine Alert",
+      request_details: formData.description,
+      alert_details: "",
+      requested_by: delegateId,
+      preferred_date: formData.preferredDate,
+      preferred_time: preferredTimeFormatted,
+      status: "Open",
+      estimated_completion_time: null,
+      estimated_price: "0",
+      est_start_datetime: now,
+      est_end_datetime: now,
+      act_start_datetime: now,
+      act_end_datetime: now,
+      act_material_cost: "0",
+      act_labour_hours: "0",
+      act_labour_cost: "0",
+      completion_notes: "",
+      created_by: delegateId,
+      updated_by: delegateId,
+      company: company,
+      service_item: formData.serviceItem, // This will be the selectedServiceItem
+      customer: customer,
+      pm_group: "",
+      assigned_engineer: "",
+      reopened_from: "",
+      user_id: customer,
+      company_id: company
+    };
+    console.log("payload", payload);
+
+    try {
+      const response = await fetch(`${baseURL}/service-pools/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      console.log("API Response:", result);
+
+      if (response.ok) {
+        alert("Service request submitted successfully!");
+        setFormData({
+          serviceItem: selectedServiceItem, // Keep the selected service item
+          preferredDate: '',
+          preferredTime: '',
+          description: ''
+        });
+      } else {
+        console.error("Failed response:", result);
+        alert("Submission failed: " + (result.message || "Please check the input."));
+      }
+      navigate('/delegate-display-request');
+
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("Something went wrong while submitting the form.");
+    }
+  };
+
+  // Get service item name for display
+  const getServiceItemName = () => {
+    if (!selectedServiceItem) return 'Not Selected';
+    const item = serviceItems.find(item => item.service_item === selectedServiceItem);
+    return item ? item.service_item_name || selectedServiceItem : selectedServiceItem;
+  };
 
   return (
     <div className="form-container">
       <DelegateNavbar />
       <h3>Delegate Request Form</h3>
 
-      {/* <p><strong>Delegate ID:</strong> {delegateId}</p>
-      <p><strong>Company:</strong> {company}</p>
-      <p><strong>Customer:</strong> {customer}</p> */}
+      {/* Display selected service item information */}
+      <div className="service-item-info">
+        {!selectedServiceItem && (
+          <p className="warning-text">
+            ⚠️ Please select a Service Item from the navbar dropdown first.
+          </p>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit}>
-        <label htmlFor="serviceItem">Service Item</label>
-        <select
+        {/* Service Item Display (non-editable) */}
+        <label htmlFor="serviceItemDisplay">Service Item</label>
+        <input
+          type="text"
+          id="serviceItemDisplay"
+          value={getServiceItemName()}
+          disabled
+          className="disabled-field"
+          placeholder="Select a service item from navbar"
+        />
+
+        {/* Hidden field to store the actual service_item value */}
+        <input
+          type="hidden"
           name="serviceItem"
-          id="serviceItem"
-          value={formData.serviceItem}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Select Service Item</option>
-          {serviceItems.map(item => (
-            <option key={item.item_id} value={item.service_item}>
-              {item.service_item}
-            </option>
-          ))}
-        </select>
+          value={selectedServiceItem}
+        />
 
         <label htmlFor="preferredDate">Preferred Date</label>
         <input
@@ -169,6 +185,7 @@ const handleSubmit = async (e) => {
           value={formData.preferredDate}
           onChange={handleChange}
           required
+          disabled={!selectedServiceItem}
         />
 
         <label htmlFor="preferredTime">Preferred Time</label>
@@ -179,6 +196,7 @@ const handleSubmit = async (e) => {
           value={formData.preferredTime}
           onChange={handleChange}
           required
+          disabled={!selectedServiceItem}
         />
 
         <label htmlFor="description">Description</label>
@@ -189,15 +207,26 @@ const handleSubmit = async (e) => {
           onChange={handleChange}
           rows={4}
           required
+          disabled={!selectedServiceItem}
+          placeholder={!selectedServiceItem ? "Please select a service item first" : ""}
         />
 
-        <button type="submit">Submit Request</button>
-         <button 
-        type="requestbackbutton" // Important to prevent form submission
-        onClick={() => navigate(-1)} // This will go back in history
-      >
-        Back
-      </button>
+        <div className="button-group">
+          <button 
+            type="submit" 
+            disabled={!selectedServiceItem}
+            className={!selectedServiceItem ? 'disabled-button' : ''}
+          >
+            {!selectedServiceItem ? 'Select Service Item First' : 'Submit Request'}
+          </button>
+          {/* <button 
+            type="button"
+            onClick={() => navigate(-1)}
+            className="back-button"
+          >
+            Back
+          </button> */}
+        </div>
       </form>
     </div>
   );
