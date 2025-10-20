@@ -15,7 +15,6 @@ import { AuthContext } from "../../Components/AuthContext/AuthContext";
 
 const screens = [
   { label: 'Dashboard', name: '/delegate-home', icon: <FaHome />, key: 'dashboard' },
-  // { label: 'Machines', name: '/delegate-machines', icon: <FaCogs />, key: 'machines' },
   { label: 'Requests', name: '/delegate-display-request', icon: <FaEnvelope />, key: 'requests' },
   { label: 'Feedback', name: '/delegate-survey', icon: <FaCommentDots />, key: 'feedback' },
   { label: 'Monitor', name: '/delegate-machinescreen1', icon: <FaCogs  />, key: 'machinescreen1' },
@@ -95,10 +94,6 @@ const handleServiceItemChange = (e) => {
 
   const getDisabledStatus = (key) => {
     if (key === 'dashboard') return false;
-
-    // if (key === 'machines') {
-    //   return !(permissions.can_monitor_equipment && permissions.can_control_equipment);
-    // }
 
     if (key === 'requests') {
       return !(permissions.can_raise_service_request && permissions.can_close_service_request);

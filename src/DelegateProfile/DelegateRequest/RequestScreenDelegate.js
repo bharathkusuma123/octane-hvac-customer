@@ -4,6 +4,7 @@ import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import baseURL from './../../Components/ApiUrl/Apiurl';
 import { useNavigate } from 'react-router-dom';
 import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
+import { Card, Button, Form, Row, Col } from 'react-bootstrap';
 
 const RequestScreenDelegate = () => {
   const [requests, setRequests] = useState([]);
@@ -14,11 +15,55 @@ const RequestScreenDelegate = () => {
   const [loading, setLoading] = useState(true);
   const [closedRequestIds, setClosedRequestIds] = useState([]);
   const [submittedFeedbackRequests, setSubmittedFeedbackRequests] = useState([]);
+  const [submittedComplaintRequests, setSubmittedComplaintRequests] = useState([]);
+  const [complaintsData, setComplaintsData] = useState([]);
+  const [feedbackData, setFeedbackData] = useState([]);
 
   const { user } = useContext(AuthContext);
   const company_id = user?.company_id;
   const delegate_id = user?.delegate_id;
   const navigate = useNavigate();
+
+  // Function to format date to Indian format (dd-mm-yyyy)
+  const formatToIndianDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
+  };
+
+  // Function to format datetime to Indian format with time
+  const formatToIndianDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
+  };
 
   // Fetch service requests for the delegate
   useEffect(() => {
@@ -70,14 +115,44 @@ const RequestScreenDelegate = () => {
               survey => survey.service_request
             );
             setSubmittedFeedbackRequests(feedbackSubmittedRequests);
+            setFeedbackData(data);
           } catch (error) {
             console.error('Error processing survey data:', error);
             setSubmittedFeedbackRequests([]);
+            setFeedbackData([]);
           }
         })
         .catch((error) => {
           console.error('Error fetching survey data:', error);
           setSubmittedFeedbackRequests([]);
+          setFeedbackData([]);
+        });
+    }
+  }, [delegate_id, company_id]);
+
+  // Fetch complaints data for delegate
+  useEffect(() => {
+    if (delegate_id) {
+      axios.get(`${baseURL}/customer-complaints/?user_id=${delegate_id}&company_id=${company_id}`)
+        .then((response) => {
+          try {
+            const data = Array.isArray(response.data) ? response.data : 
+                        (response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
+            
+            // Extract service_request IDs from complaints to track which requests have complaints submitted
+            const complaintRequestIds = data.map(complaint => complaint.service_request);
+            setSubmittedComplaintRequests(complaintRequestIds);
+            setComplaintsData(data);
+          } catch (error) {
+            console.error('Error processing complaints data:', error);
+            setSubmittedComplaintRequests([]);
+            setComplaintsData([]);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching complaints data:', error);
+          setSubmittedComplaintRequests([]);
+          setComplaintsData([]);
         });
     }
   }, [delegate_id, company_id]);
@@ -89,7 +164,7 @@ const RequestScreenDelegate = () => {
       const filtered = requests.filter(request => 
         String(request.request_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
         String(request.service_item).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(request.preferred_date).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        formatToIndianDate(request.preferred_date).toLowerCase().includes(searchTerm.toLowerCase()) ||
         String(request.preferred_time).toLowerCase().includes(searchTerm.toLowerCase()) ||
         (request.request_details && String(request.request_details).toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -97,6 +172,40 @@ const RequestScreenDelegate = () => {
     }
     setCurrentPage(1);
   }, [searchTerm, requests]);
+
+  const handleComplaintClick = (requestId) => {
+    navigate('/delegate-complaint-form', { 
+      state: { 
+        service_request: requestId,
+        company: company_id,
+        delegate: delegate_id
+      } 
+    });
+  };
+
+  const handleViewComplaint = (requestId) => {
+    // Find the complaint for this service request
+    const complaint = complaintsData.find(comp => comp.service_request === requestId);
+    if (complaint) {
+      navigate('/complaint-details', { 
+        state: { 
+          complaintData: complaint 
+        } 
+      });
+    }
+  };
+
+  const handleViewFeedback = (requestId) => {
+    // Find the feedback for this service request
+    const feedback = feedbackData.find(fb => fb.service_request === requestId);
+    if (feedback) {
+      navigate('/feedback-details', { 
+        state: { 
+          feedbackData: feedback 
+        } 
+      });
+    }
+  };
 
   const totalPages = Math.ceil(filteredRequests.length / rowsPerPage);
   const paginatedData = filteredRequests.slice(
@@ -119,8 +228,18 @@ const RequestScreenDelegate = () => {
     setSearchTerm(e.target.value);
   };
 
-   const handleRaiseRequest = () => {
+  const handleRaiseRequest = () => {
     navigate('/delegate-request');
+  };
+
+  // Check if complaint is submitted for a request
+  const isComplaintSubmitted = (requestId) => {
+    return submittedComplaintRequests.includes(requestId);
+  };
+
+  // Check if feedback is submitted for a request
+  const isFeedbackSubmitted = (requestId) => {
+    return submittedFeedbackRequests.includes(requestId);
   };
 
   if (loading) {
@@ -130,120 +249,144 @@ const RequestScreenDelegate = () => {
   return (
     <div className="request-screen-wrapper">
       <DelegateNavbar/>
-      <h2 className="text-center mt-1 mb-4">Request Screen</h2>
+      <h2 className="text-center mb-4">Request Screen</h2>
 
-      {/* Updated layout for mobile responsiveness */}
-      <div className="mb-3">
-        {/* First row: Show dropdown and Raise Request button */}
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <div className="d-flex align-items-center">
-            <span className="me-2 text-nowrap">Show:</span>
-            <select
+      <Card className="toolbar-card shadow-sm p-3 mb-4">
+        <Row className="align-items-center g-3">
+          <Col xs="auto">
+            <Form.Label className="mb-0 fw-semibold">Show:</Form.Label>
+          </Col>
+          <Col xs="auto">
+            <Form.Select
               value={rowsPerPage}
               onChange={handleRowsPerPageChange}
-              className="form-select d-inline-block w-auto me-3"
+              className="rows-select"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
-            </select>
-          </div>
-          
-          <button 
-            className="btn btn-primary"
-            onClick={handleRaiseRequest}
-          >
-            Raise Request
-          </button>
-        </div>
+            </Form.Select>
+          </Col>
 
-        {/* Second row: Search field */}
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search by ID, Service, Date..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="form-control w-100"
-          />
-        </div>
-      </div>
+          {/* Raise Request Button */}
+          <Col xs="auto">
+            <Button variant="primary" onClick={handleRaiseRequest}>
+              Raise Request
+            </Button>
+          </Col>
 
-      <div className="table-container table-responsive p-0">
-        <table className="table table-bordered table-hover mb-0">
-          <thead className="table-secondary">
-            <tr>
-              <th>S.No</th>
-              <th>Request ID</th>
-              <th>Service Item ID</th>
-              <th>Preferred Date</th>
-              <th>Preferred Time</th>
-              <th>Request Details</th>
-              <th>Feedback</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="text-center">
-                  {searchTerm ? 'No matching requests found.' : 'No requests found.'}
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((req, index) => (
-                <tr key={index}>
-                  <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                  <td>{req.request_id}</td>
-                  <td>{req.service_item}</td>
-                 <td>{new Date(req.preferred_date).toLocaleDateString('en-IN')}</td>
-                  <td>{req.preferred_time}</td>
-                  <td>{req.request_details}</td>
-                  <td>
-                    {closedRequestIds.includes(req.request_id) && (
-                      <button
-                        className={`btn btn-sm mt-2 ${
-                          submittedFeedbackRequests.includes(req.request_id) 
-                            ? 'btn-secondary' 
-                            : 'btn-success'
-                        }`}
-                        onClick={() => navigate(`/delegate-feedback/${req.request_id}`, {
+          <Col className="ms-auto">
+            <Form.Control
+              type="text"
+              placeholder="Search by ID, Service, Date..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+          </Col>
+        </Row>
+      </Card>
+
+      <Row className="g-4">
+        {paginatedData.length === 0 ? (
+          <p className="text-center">No {searchTerm ? 'matching' : ''} requests found.</p>
+        ) : (
+          paginatedData.map((req, index) => (
+            <Col xs={12} sm={6} md={4} key={index}>
+              <Card className="request-card h-100 shadow-sm">
+                <Card.Body>
+                  <Card.Title className="mb-3 text-primary fw-bold">
+                    Request ID: {req.request_id}
+                  </Card.Title>
+                  <Card.Text>
+                    <strong>Status:</strong> <span className={`status-badge ${req.status?.toLowerCase()}`}>{req.status || 'N/A'}</span><br />
+                    <strong>Service Item ID:</strong> {req.service_item}<br />
+                    <strong>Preferred Service Date:</strong> {formatToIndianDate(req.preferred_date)}<br />
+                    <strong>Preferred Service Time:</strong> {req.preferred_time}<br />
+                    <strong>Requested At:</strong> {formatToIndianDateTime(req.created_at)}<br />
+                    <strong>Details:</strong> {req.request_details || 'N/A'}
+                  </Card.Text>
+                </Card.Body>
+                <Card.Footer className="bg-white border-top-0 d-flex flex-column gap-2">
+                  
+                  {/* Complaint Buttons - Both buttons shown, but Complaints disabled if submitted */}
+                  <div className="d-flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-fill"
+                      onClick={() => handleComplaintClick(req.request_id)}
+                      disabled={isComplaintSubmitted(req.request_id)}
+                    >
+                      {isComplaintSubmitted(req.request_id) ? 'Complaint Submitted' : 'Raise Complaint'}
+                    </Button>
+                    
+                    {isComplaintSubmitted(req.request_id) && (
+                      <Button
+                        variant="info"
+                        size="sm"
+                        className="flex-fill"
+                        onClick={() => handleViewComplaint(req.request_id)}
+                      >
+                        View Complaint
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Feedback Buttons - Show only for closed requests */}
+                  {closedRequestIds.includes(req.request_id) && (
+                    <div className="d-flex gap-2">
+                      <Button
+                        variant={isFeedbackSubmitted(req.request_id) ? "success" : "primary"}
+                        size="sm"
+                        className="flex-fill"
+                        onClick={() => !isFeedbackSubmitted(req.request_id) && navigate(`/delegate-feedback/${req.request_id}`, {
                           state: {
                             delegateId: delegate_id
                           }
                         })}
-                        disabled={submittedFeedbackRequests.includes(req.request_id)}
+                        disabled={isFeedbackSubmitted(req.request_id)}
                       >
-                        {submittedFeedbackRequests.includes(req.request_id) 
-                          ? 'Feedback Submitted' 
-                          : 'Give Feedback'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                        {isFeedbackSubmitted(req.request_id) ? 'Feedback Submitted' : 'Give Feedback'}
+                      </Button>
+                      
+                      {isFeedbackSubmitted(req.request_id) && (
+                        <Button
+                          variant="info"
+                          size="sm"
+                          className="flex-fill"
+                          onClick={() => handleViewFeedback(req.request_id)}
+                        >
+                          View Feedback
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </Card.Footer>
+              </Card>
+            </Col>
+          ))
+        )}
+      </Row>
 
-      <div className="d-flex justify-content-center align-items-center mt-3 gap-3 flex-wrap">
-        <button
-          className="btn btn-primary"
+      <div className="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
+        <Button
+          variant="primary"
           disabled={currentPage === 1}
           onClick={() => handlePageChange(currentPage - 1)}
         >
           Previous
-        </button>
+        </Button>
         <span className="fw-semibold">
           Page {currentPage} of {totalPages}
         </span>
-        <button
-          className="btn btn-primary"
+        <Button
+          variant="primary"
           disabled={currentPage === totalPages}
           onClick={() => handlePageChange(currentPage + 1)}
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

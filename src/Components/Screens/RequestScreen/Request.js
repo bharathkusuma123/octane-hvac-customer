@@ -1136,7 +1136,7 @@ const RequestScreen = () => {
                       onClick={() => handleComplaintClick(req.request_id)}
                       disabled={isComplaintSubmitted(req.request_id)}
                     >
-                      {isComplaintSubmitted(req.request_id) ? 'Complaint Submitted' : 'Customer Complaints'}
+                      {isComplaintSubmitted(req.request_id) ? 'Complaint Submitted' : 'Raise Complaint'}
                     </Button>
                     
                     {isComplaintSubmitted(req.request_id) && (
