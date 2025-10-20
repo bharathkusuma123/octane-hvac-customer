@@ -106,7 +106,32 @@ const DelegateServiceItems = () => {
     }
   }, [userId, delegateId, user?.company_id]);
 
+  const validateControlEquipmentPermission = (serviceItemId, permissionKey, value) => {
+    if (permissionKey === 'can_control_equipment' && value === true) {
+      const item = serviceItems.find(item => item.service_item_id === serviceItemId);
+      if (item && !item.can_monitor_equipment) {
+        alert('You cannot give permission to Control Equipment without Monitor Equipment permission.');
+        return false;
+      }
+    }
+    
+    if (permissionKey === 'can_monitor_equipment' && value === false) {
+      const item = serviceItems.find(item => item.service_item_id === serviceItemId);
+      if (item && item.can_control_equipment) {
+        alert('You cannot remove Monitor Equipment permission while Control Equipment permission is active.');
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handlePermissionChange = (serviceItemId, permissionKey, value) => {
+    // Validate the change
+    if (!validateControlEquipmentPermission(serviceItemId, permissionKey, value)) {
+      return;
+    }
+
     setServiceItems(prev => 
       prev.map(item => 
         item.service_item_id === serviceItemId 
@@ -158,6 +183,22 @@ const DelegateServiceItems = () => {
     );
   };
 
+  const validateSubmitPermissions = () => {
+    const selectedItems = serviceItems.filter(item => !item.isAssigned && item.isSelected);
+    
+    // Check for control equipment without monitor equipment in selected items
+    const invalidItems = selectedItems.filter(item => 
+      item.can_control_equipment && !item.can_monitor_equipment
+    );
+
+    if (invalidItems.length > 0) {
+      alert('You cannot assign Control Equipment permission without Monitor Equipment permission. Please review your selections.');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmitPermissions = async () => {
     if (!delegateId) return;
     
@@ -165,6 +206,11 @@ const DelegateServiceItems = () => {
     
     if (selectedItems.length === 0) {
       alert('Please select at least one service item to assign permissions.');
+      return;
+    }
+
+    // Validate permissions before submitting
+    if (!validateSubmitPermissions()) {
       return;
     }
 
@@ -231,7 +277,7 @@ const DelegateServiceItems = () => {
 
     
       {serviceItems.length > 0 ? (
-        <>
+        <> 
           <div className="delegate-service-items-table-container">
             <table className="delegate-service-items-table">
               <thead>

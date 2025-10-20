@@ -192,7 +192,7 @@ const ComplaintForm = () => {
                   </Form.Select>
                 </Form.Group>
 
-                <Row className="mb-3">
+                {/* <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label className="fw-semibold">Service Manager Email</Form.Label>
@@ -219,7 +219,7 @@ const ComplaintForm = () => {
                       />
                     </Form.Group>
                   </Col>
-                </Row>
+                </Row> */}
 
                 <Form.Group className="mb-4">
                   <Form.Label className="fw-semibold">Resolution Details (Optional)</Form.Label>

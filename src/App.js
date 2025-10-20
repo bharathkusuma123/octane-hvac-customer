@@ -28,7 +28,6 @@ import DelegateSetviceItems from './Components/Screens/Delegates/DelegateSetvice
 import DelegateHome from "./DelegateProfile/DelegateHome/DelegateHome";
 import DelegateRequestForm from './DelegateProfile/DelegateRequest/DelegateRequestForm';
 import DelegateSurveyForm from './DelegateProfile/DelegateSurvey/DelegateSurveyForm';
-import DelegateServiceItems from './DelegateProfile/DelegateServiceItems/DelegateServiceItems';
 import { DelegateServiceItemProvider } from "./Components/AuthContext/DelegateServiceItemContext";
 import Connect from './Components/Screens/Connect/Connect';
 import { db, auth, storage } from "./Firebase/Firebase";
@@ -115,11 +114,11 @@ function App() {
                 <Route path="/delegate-home" element={<DelegateHome />} />
                  <Route path="/delegate-machinescreen1" element={<DelegateScreen1 />} />
                   <Route path="/delegate-machinescreen2" element={<DelegateScreen2 />} />
-                                    <Route path="/delegate-alarms" element={<DelegateAlarmsPage />} />
+                  <Route path="/delegate-alarms" element={<DelegateAlarmsPage />} />
                 <Route path="/delegate-request" element={<DelegateRequestForm />} />
                 <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />
                 <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
-                <Route path="/delegate-machines" element={<DelegateServiceItems />} />
+            
                <Route path="/delegate-profile-details" element={<DelegateProfileDetails />} />
 
               </Routes>
