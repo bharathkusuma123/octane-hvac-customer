@@ -15,7 +15,10 @@ import DashboardScreen from './Components/Screens/DashboardScreen/Dashboard';
 import MachineScreen from './Components/Screens/MachineScreen/Machine';
 import RequestScreen from './Components/Screens/RequestScreen/Request';
 import ComplaintForm from "./Components/Screens/Complaints/ComplaintsForm"
+import ComplaintDetails from "./Components/Screens/Complaints/ComplaintDetails"
+
 import FeedbackScreen from './Components/Screens/FeedbackScreen/Feedback';
+import FeedbackDetails from './Components/Screens/FeedbackScreen/FeedbackDetails';
 import ServiceRequestForm from './Components/Screens/ServiceRequest/ServiceRequestForm';
 import './App.css';
 import ViewDelegates from './Components/Screens/Delegates/ViewDelegates';
@@ -100,7 +103,10 @@ function App() {
                 <Route path="/machine" element={<MachineScreen />} />
                 <Route path="/request" element={<RequestScreen />} />
                 <Route path="/complaint-form" element={<ComplaintForm />} />
+                <Route path="/complaint-details" element={<ComplaintDetails />} />
+
                 <Route path="/feedback/:requestId" element={<FeedbackScreen />} />
+                <Route path="/feedback-details" element={<FeedbackDetails />} />
                 <Route path="/delegate-feedback/:requestId" element={<DelegateFeedback />} />
 
                 <Route path="/display-feedback" element={<DisplayFeedback />} />
