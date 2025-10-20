@@ -126,3 +126,100 @@ button[type="requestbackbutton"]:hover {
   margin-top: 5px;
 }
 
+
+/* Add these to your existing DelegateRequestForm.css */
+
+.warning-text {
+  color: #856404;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.info-text {
+  color: #0c5460;
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.disabled-field {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.disabled-button {
+  background-color: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+/* Button Group Styles */
+.button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.btn-submit {
+  padding: 12px 24px;
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  min-width: 140px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-cancel {
+  padding: 12px 24px;
+  background-color: #6c757d;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  min-width: 140px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.btn-submit:disabled,
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile responsiveness for button group */
+@media (max-width: 600px) {
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .btn-submit,
+  .btn-cancel {
+    min-width: 100%;
+    width: 100%;
+  }
+}
+
