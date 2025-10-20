@@ -1,0 +1,10 @@
+.custom-thead {
+  color: #ffffff;
+  background-color: #0096D6;
+  border-color: #0096D6;
+}
+
+.custom-thead th {
+  border-color: #007bb8 !important;
+  font-weight: 600;
+}

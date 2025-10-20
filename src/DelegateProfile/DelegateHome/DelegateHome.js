@@ -12,7 +12,7 @@ const DelegateHome = () => {
   }, [user]);
 
   return (
-    <div>
+    <div style={{marginTop:'70px'}}>
       <h2 className='mt-5'>Delegate Home</h2>
       <p><strong>Delegate ID:</strong> {delegateId}</p>
      

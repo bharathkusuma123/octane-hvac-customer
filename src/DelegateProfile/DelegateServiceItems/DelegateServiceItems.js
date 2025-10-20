@@ -34,7 +34,7 @@ const DelegateServiceItems = () => {
 
   return (
     <div className='mt-5 px-4'>
-      <h2>Delegate Service Items</h2>
+      <h2 style={{marginTop:'70px'}}>Delegate Service Items</h2>
       <p><strong>Delegate ID:</strong> {delegateId}</p>
       <DelegateNavbar />
 

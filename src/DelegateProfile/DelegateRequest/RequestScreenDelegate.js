@@ -120,9 +120,8 @@ const RequestScreenDelegate = () => {
   };
 
    const handleRaiseRequest = () => {
-    navigate('/delegate-request'); // Update this path to your actual request creation route
+    navigate('/delegate-request');
   };
-
 
   if (loading) {
     return <div className="text-center mt-4">Loading requests...</div>;
@@ -133,45 +132,46 @@ const RequestScreenDelegate = () => {
       <DelegateNavbar/>
       <h2 className="text-center mt-1 mb-4">Request Screen</h2>
 
-     <div className="d-flex justify-content-between align-items-center mb-3">
-  <div className="d-flex align-items-center">
-    <label className="mb-0 me-2 text-nowrap">
-      Show:
-      <select
-        value={rowsPerPage}
-        onChange={handleRowsPerPageChange}
-        className="form-select d-inline-block w-auto ms-2"
-      >
-        <option value={5}>5</option>
-        <option value={10}>10</option>
-        <option value={25}>25</option>
-      </select>
-    </label>
-  </div>
-  
-  <div className="d-flex align-items-center">
-    <div className="search-bar me-3">
-      <input
-        type="text"
-        placeholder="Search..."
-        value={searchTerm}
-        onChange={handleSearchChange}
-        className="form-control"
-        style={{ minWidth: '200px' }}
-      />
-    </div>
-    <button 
-      className="btn btn-primary"
-      onClick={handleRaiseRequest}
-    >
-      Raise Request
-    </button>
-  </div>
-</div>
+      {/* Updated layout for mobile responsiveness */}
+      <div className="mb-3">
+        {/* First row: Show dropdown and Raise Request button */}
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <div className="d-flex align-items-center">
+            <span className="me-2 text-nowrap">Show:</span>
+            <select
+              value={rowsPerPage}
+              onChange={handleRowsPerPageChange}
+              className="form-select d-inline-block w-auto me-3"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+          </div>
+          
+          <button 
+            className="btn btn-primary"
+            onClick={handleRaiseRequest}
+          >
+            Raise Request
+          </button>
+        </div>
+
+        {/* Second row: Search field */}
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Search by ID, Service, Date..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="form-control w-100"
+          />
+        </div>
+      </div>
 
       <div className="table-container table-responsive p-0">
         <table className="table table-bordered table-hover mb-0">
-          <thead className="table-dark">
+          <thead className="table-secondary">
             <tr>
               <th>S.No</th>
               <th>Request ID</th>

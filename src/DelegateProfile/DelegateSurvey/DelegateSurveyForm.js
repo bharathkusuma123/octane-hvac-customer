@@ -11,9 +11,12 @@ const DelegateSurveyForm = () => {
         }
       }, [user]);
   return (
-    <div className='mt-5'>DelegateSurveyForm
+    <div  >
+       <h2 style={{marginTop:'70px'}}>DelegateSurveyForm</h2>
+    {/* <div style={{marginTop:'70px'}}>DelegateSurveyForm */}
         <p><strong>Delegate ID:</strong> {delegateId}</p>
       <DelegateNavbar/>
+    {/* </div> */}
     </div>
   )
 }
