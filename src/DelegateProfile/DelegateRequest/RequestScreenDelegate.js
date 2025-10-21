@@ -198,7 +198,7 @@ const RequestScreenDelegate = () => {
       state: { 
         service_request: requestId,
         company: company_id,
-        delegate: delegate_id
+        customer: delegate_id
       } 
     });
   };
