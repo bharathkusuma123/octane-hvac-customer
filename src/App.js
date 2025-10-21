@@ -40,7 +40,7 @@ import DelegateFeedback from './DelegateProfile/DelegateRequest/DelegateFeedback
 import DelegateData from './Components/LoginSreens/DelegateData';
 import DelegateSignup from './Components/LoginSreens/DelegateSignup';
 import DelegateProfileDetails from './DelegateProfile/DelegateProfileDetails/ProfileDetails'
-
+import DelegateComplaintsForm from './DelegateProfile/DelegateRequest/DelegateComplaintsForm'
 import Screen1 from './Components/Screens/MachineScreensNew/Screen1';
 import Screen2 from './Components/Screens/MachineScreensNew/Screen2';
 import AlarmsPage from './Components/Screens/MachineScreensNew/AlarmsPage';
@@ -126,6 +126,8 @@ function App() {
                 <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
             
                <Route path="/delegate-profile-details" element={<DelegateProfileDetails />} />
+                <Route path="/delegate-complaint-form" element={<DelegateComplaintsForm />} />
+
 
               </Routes>
             </div>
