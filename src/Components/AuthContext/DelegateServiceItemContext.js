@@ -11,30 +11,49 @@ export const DelegateServiceItemProvider = ({ children }) => {
   const [serviceItems, setServiceItems] = useState([]);
   const [selectedServiceItem, setSelectedServiceItem] = useState('');
   const [serviceItemPermissions, setServiceItemPermissions] = useState({});
+  const [serviceItemDetails, setServiceItemDetails] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchServiceItems = async () => {
       if (user?.delegate_id) {
         try {
-          const response = await axios.get(`${baseURL}/delegate-service-item-tasks/`);
-          const allItems = response.data.data || [];
-          const filteredItems = allItems.filter(
+          // Fetch delegate service item permissions
+          const delegateResponse = await axios.get(`${baseURL}/delegate-service-item-tasks/`);
+          const allDelegateItems = delegateResponse.data.data || [];
+          const filteredDelegateItems = allDelegateItems.filter(
             item => item.delegate === user.delegate_id
           );
-          setServiceItems(filteredItems);
+          setServiceItems(filteredDelegateItems);
+
+          // Fetch complete service item details
+          const serviceItemsResponse = await axios.get(`${baseURL}/service-items/?user_id=${user.delegate_id}&company_id=${user.company_id}`);
+          const allServiceItems = serviceItemsResponse.data.data || [];
+
+          // Create a mapping of service_item_id to service item details
+          const serviceItemsMap = {};
+          allServiceItems.forEach(item => {
+            serviceItemsMap[item.service_item_id] = item;
+          });
+          setServiceItemDetails(serviceItemsMap);
           
           // Load previously selected service item from localStorage
           const savedItemId = localStorage.getItem('selectedServiceItemId');
           if (savedItemId) {
-            const foundItem = filteredItems.find(item => item.service_item === savedItemId);
-            if (foundItem) {
+            const foundDelegateItem = filteredDelegateItems.find(item => item.service_item === savedItemId);
+            if (foundDelegateItem) {
               setSelectedServiceItem(savedItemId);
-              setServiceItemPermissions(foundItem);
+              setServiceItemPermissions(foundDelegateItem);
             }
+          } else if (filteredDelegateItems.length > 0) {
+            // Auto-select first item if none saved
+            const firstItem = filteredDelegateItems[0];
+            setSelectedServiceItem(firstItem.service_item);
+            setServiceItemPermissions(firstItem);
+            localStorage.setItem('selectedServiceItemId', firstItem.service_item);
           }
         } catch (error) {
-          console.error('Error fetching delegate service items:', error);
+          console.error('Error fetching service items:', error);
         } finally {
           setLoading(false);
         }
@@ -50,10 +69,6 @@ export const DelegateServiceItemProvider = ({ children }) => {
       setSelectedServiceItem(serviceItemId);
       setServiceItemPermissions(foundItem);
       localStorage.setItem('selectedServiceItemId', serviceItemId);
-    } else {
-      setSelectedServiceItem(serviceItemId);
-      setServiceItemPermissions({});
-      localStorage.setItem('selectedServiceItemId', serviceItemId);
     }
   };
 
@@ -63,10 +78,20 @@ export const DelegateServiceItemProvider = ({ children }) => {
     localStorage.removeItem('selectedServiceItemId');
   };
 
+  // Get the complete service item details for the selected item
+  const getSelectedServiceDetails = () => {
+    if (selectedServiceItem && serviceItemDetails[selectedServiceItem]) {
+      return serviceItemDetails[selectedServiceItem];
+    }
+    return null;
+  };
+
   const value = {
     serviceItems,
     selectedServiceItem,
     serviceItemPermissions,
+    serviceItemDetails,
+    getSelectedServiceDetails,
     updateSelectedServiceItem,
     clearSelectedServiceItem,
     loading

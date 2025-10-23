@@ -82,7 +82,7 @@ const ComplaintForm = () => {
 
       setTimeout(() => {
         console.log('🔀 Redirecting to /request...');
-        navigate('/request');
+        navigate('/delegate-request');
       }, 2000);
     } else {
       console.warn('⚠️ Unexpected response status:', response.status);
@@ -236,7 +236,7 @@ const ComplaintForm = () => {
                 <div className="d-flex justify-content-between">
                   <Button 
                     variant="outline-secondary" 
-                    onClick={() => navigate('/request')}
+                    onClick={() => navigate('/delegate-request')}
                     disabled={isSubmitting}
                   >
                     Cancel

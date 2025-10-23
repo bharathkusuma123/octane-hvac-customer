@@ -65,14 +65,16 @@ const NavScreen = () => {
     if (key === 'dashboard') return false;
 
     if (key === 'requests') {
-      return !(serviceItemPermissions.can_raise_service_request && serviceItemPermissions.can_close_service_request);
+      return !(serviceItemPermissions.can_raise_service_request);
+      // return !(serviceItemPermissions.can_raise_service_request && serviceItemPermissions.can_close_service_request);
     }
 
     if (key === 'feedback') {
       return !(serviceItemPermissions.can_submit_customer_satisfaction_survey && serviceItemPermissions.can_log_customer_complaints);
     }
     if (key === 'machinescreen1') {
-      return !(serviceItemPermissions.can_monitor_equipment && serviceItemPermissions.can_control_equipment);
+      return !(serviceItemPermissions.can_monitor_equipment);
+      // return !(serviceItemPermissions.can_monitor_equipment && serviceItemPermissions.can_control_equipment);
     }
 
     return true;

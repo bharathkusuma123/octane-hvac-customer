@@ -25,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial";
 import baseURL from "../../Components/ApiUrl/Apiurl";
+import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
 
 // Mode mapping constant
 const MODE_MAP = {
@@ -36,15 +37,6 @@ const MODE_MAP = {
 };
 
 // Helper functions
-const getStoredService = () => {
-  try {
-    const stored = localStorage.getItem('selectedService');
-    return stored ? JSON.parse(stored) : null;
-  } catch (e) {
-    return null;
-  }
-};
-
 const formatTemp = (temp) => {
   if (temp == null) return "0.0";
   const num = parseFloat(temp);
@@ -53,14 +45,19 @@ const formatTemp = (temp) => {
 
 const DelegateScreen1 = () => {
   const { user, logout } = useContext(AuthContext);
+  const { 
+    selectedServiceItem,
+    getSelectedServiceDetails,
+    serviceItemPermissions,
+    loading: serviceItemsLoading 
+  } = useDelegateServiceItems();
+  
   const userId = user?.delegate_id;
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
   // State management
-  const [serviceItems, setServiceItems] = useState([]);
-  const [selectedService, setSelectedService] = useState(getStoredService());
-  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
   const [processing, setProcessing] = useState({ status: false, message: "" });
   const [errorCount, setErrorCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -79,105 +76,84 @@ const DelegateScreen1 = () => {
     alarmOccurred: "0",
   });
 
-  // Store selected service in localStorage
+  // Get the complete service details when selectedServiceItem changes
   useEffect(() => {
-    if (selectedService) {
-      localStorage.setItem('selectedService', JSON.stringify(selectedService));
+    if (!serviceItemsLoading && selectedServiceItem) {
+      const serviceDetails = getSelectedServiceDetails();
+      console.log("Selected Service Details:", serviceDetails);
+      setSelectedService(serviceDetails);
     }
-  }, [selectedService]);
+  }, [selectedServiceItem, serviceItemsLoading, getSelectedServiceDetails]);
 
-  // Fetch service items on component mount
+  // Fetch sensor data when selectedService changes
   useEffect(() => {
-    const fetchServiceItems = async () => {
+    if (!selectedService || !selectedService.pcb_serial_number) {
+      console.log("Waiting for service details with PCB serial number:", selectedService);
+      return;
+    }
+
+    const fetchData = async () => {
       try {
-        const response = await fetch(
-          `${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`
-        );
-        if (!response.ok) throw new Error("Failed to fetch service items");
+        const pcbSerialNumber = selectedService.pcb_serial_number;
+        console.log("Fetching data for PCB-serial-number:", pcbSerialNumber);
         
-        const data = await response.json();
-        setServiceItems(data.data || []);
+        const [dataResponse, controllerResponse] = await Promise.all([
+          fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`),
+          fetch("https://rahul21.pythonanywhere.com/controllers")
+        ]);
+
+        if (!dataResponse.ok) throw new Error("Network response was not ok");
         
-        if (data.data?.length > 0 && !selectedService) {
-          setSelectedService(data.data[0]);
+        const data = await dataResponse.json();
+        console.log("API response data:", data);
+        
+        if (data.status !== "success" || !data.data) {
+          throw new Error("Invalid data format from API");
         }
+
+        const deviceData = data.data;
+        let latestController = {};
+
+        if (controllerResponse.ok) {
+          const controllerData = await controllerResponse.json();
+          if (Array.isArray(controllerData)) {
+            latestController = controllerData.reduce(
+              (prev, current) => (prev.id > current.id ? prev : current),
+              {}
+            );
+          }
+        }
+
+        // Update sensor data
+        setSensorData(prev => ({
+          outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
+          humidity: deviceData.room_humidity?.value || prev.humidity,
+          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+          fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
+          temperature: deviceData.set_temperature?.value || prev.temperature,
+          powerStatus: deviceData.hvac_on?.value == "1" ? "on" : "off",
+          mode: deviceData.mode?.value,
+          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+          deviceId: deviceData.pcb_serial_number || prev.deviceId,
+          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+        }));
+
+        // Update error count
+        const alarmValue = deviceData.alarm_occurred?.value;
+        setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+
+        setLoading(false);
       } catch (error) {
-        console.error("Error fetching service items:", error);
+        console.error("Error fetching data:", error);
+        setLoading(false);
       }
     };
 
-    fetchServiceItems();
-  }, []);
-
-  // Fetch sensor data when selectedService changes
- // Fetch sensor data when selectedService changes
-useEffect(() => {
-  if (!selectedService) return;
-
-  const fetchData = async () => {
-    try {
-      const pcbSerialNumber = selectedService.pcb_serial_number;
-      console.log("PCB-serial-number:", pcbSerialNumber);
-      
-      const [dataResponse, controllerResponse] = await Promise.all([
-        fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`),
-        fetch("https://rahul21.pythonanywhere.com/controllers")
-      ]);
-
-      if (!dataResponse.ok) throw new Error("Network response was not ok");
-      
-      const data = await dataResponse.json();
-      if (data.status !== "success" || !data.data) {
-        throw new Error("Invalid data format from API");
-      }
-
-      const deviceData = data.data;
-      let latestController = {};
-
-      if (controllerResponse.ok) {
-        const controllerData = await controllerResponse.json();
-        if (Array.isArray(controllerData)) {
-          latestController = controllerData.reduce(
-            (prev, current) => (prev.id > current.id ? prev : current),
-            {}
-          );
-        }
-      }
-
-      // Update sensor data - ALWAYS update from API, don't conditionally block updates
-      setSensorData(prev => ({
-        outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
-        humidity: deviceData.room_humidity?.value || prev.humidity,
-        roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-        // fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
-        // temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
-        fanSpeed:  deviceData.fan_speed?.value || prev.fanSpeed,
-        temperature: deviceData.set_temperature?.value || prev.temperature,
-        powerStatus: deviceData.hvac_on?.value == "1" ? "on" : "off", // Always update from API
-        // mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
-        mode: deviceData.mode?.value,
-        errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-        hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-        deviceId: deviceData.pcb_serial_number || prev.deviceId,
-        alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-      }));
-
-      // Update error count
-      const alarmValue = deviceData.alarm_occurred?.value;
-      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
-
-      // Remove the processing status logic from here - let handlePowerToggle manage it
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setLoading(false);
-    }
-  };
-
-  fetchData();
-  const intervalId = setInterval(fetchData, 10000);
-  return () => clearInterval(intervalId);
-}, [selectedService]); // Remove processing.status from dependencies
+    fetchData();
+    const intervalId = setInterval(fetchData, 10000);
+    return () => clearInterval(intervalId);
+  }, [selectedService, userId, company_id]);
 
   // Event handlers
   const handleLogout = () => {
@@ -185,66 +161,91 @@ useEffect(() => {
     navigate("/");
   };
 
- const handlePowerToggle = async () => {
-  if (processing.status || sensorData.hvacBusy == "1") {
-    setProcessing({ 
-      status: true, 
-      message: sensorData.hvacBusy == "1" 
-        ? "System is busy, please wait..." 
-        : "Please wait..." 
-    });
-    return;
-  }
+  const handlePowerToggle = async () => {
+    if (!selectedService?.pcb_serial_number) {
+      console.error("No PCB serial number available");
+      return;
+    }
 
-  setProcessing({ status: true, message: "Sending command, please wait..." });
+    if (processing.status || sensorData.hvacBusy == "1") {
+      setProcessing({ 
+        status: true, 
+        message: sensorData.hvacBusy == "1" 
+          ? "System is busy, please wait..." 
+          : "Please wait..." 
+      });
+      return;
+    }
 
-  const newHvacValue = sensorData.powerStatus == "on" ? 0 : 1;
+    setProcessing({ status: true, message: "Sending command, please wait..." });
 
-  const payload = {
-    Header: "0xAA",
-    DI: selectedService?.pcb_serial_number || "2411GM-0102",
-    MD: sensorData.mode,
-    FS: sensorData.fanSpeed,
-    SRT: sensorData.temperature,
-    HVAC: newHvacValue,
-    Footer: "0xZX",
+    const newHvacValue = sensorData.powerStatus == "on" ? 0 : 1;
+
+    const payload = {
+      Header: "0xAA",
+      DI: selectedService.pcb_serial_number,
+      MD: sensorData.mode,
+      FS: sensorData.fanSpeed,
+      SRT: sensorData.temperature,
+      HVAC: newHvacValue,
+      Footer: "0xZX",
+    };
+
+    console.log("Sending payload:", payload);
+
+    try {
+      const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Failed to send command");
+
+      setTimeout(() => {
+        setProcessing({ status: false, message: "" });
+      }, 22000);
+
+    } catch (error) {
+      console.error("Error sending command:", error);
+      setProcessing({ status: false, message: "Failed to send command" });
+    }
   };
 
-  console.log("Sending payload:", payload);
-
-  try {
-    const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("Failed to send command");
-
-    // DON'T update local state immediately
-    // Just disable the button for 25 seconds
-    setTimeout(() => {
-      setProcessing({ status: false, message: "" });
-    }, 22000); // 25 seconds
-
-  } catch (error) {
-    console.error("Error sending command:", error);
-    setProcessing({ status: false, message: "Failed to send command" });
+  // Show loading state
+  if (serviceItemsLoading) {
+    return <div className="loading">Loading service items...</div>;
   }
-};
 
- if (loading) {
-    return <div className="loading">Loading...</div>;
+  if (!selectedServiceItem) {
+    return (
+      <div className="mainmain-container" style={{
+        backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
+      }}>
+        <div className="main-container">
+          <div className="error-message">
+            No service item selected. Please select a service item first.
+          </div>
+          <button 
+            className="control-btn" 
+            onClick={() => navigate("/delegate-home")}
+            style={{ marginTop: '20px' }}
+          >
+            Go Back to Services
+          </button>
+        </div>
+      </div>
+    );
   }
+
+  if (loading && !selectedService?.pcb_serial_number) {
+    return <div className="loading">Initializing device data...</div>;
+  }
+
   const handleNavigation = (path) => {
     if (!processing.status) {
       navigate(path);
     }
-  };
-
-  const handleServiceSelect = (item) => {
-    setSelectedService(item);
-    setShowServiceDropdown(false);
   };
 
   const handleTempChange = (newTemp) => {
@@ -256,40 +257,26 @@ useEffect(() => {
   const fanPosition = ["0", "1", "2"].indexOf(sensorData.fanSpeed);
   const getModeDescription = (code) => MODE_MAP[code] || "Fan";
 
-  // Loading state
-  if (!selectedService && serviceItems.length == 0) {
-    return <div className="loading">Loading...</div>;
-  }
-
   return (
     <div className="mainmain-container" style={{
       backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
     }}>
       <div className="main-container">
-        {/* Service Dropdown */}
-        <div className="service-dropdown-container">
-          <div
-            className="service-dropdown-header"
-            onClick={() => setShowServiceDropdown(!showServiceDropdown)}
-          >
+        {/* Service Display (No Dropdown) */}
+        <div className="service-display-container">
+          <div className="service-display-header">
             <span>
-              {selectedService ? selectedService.service_item_name : "Select Service"}
+              {selectedService?.service_item_name || "Loading..."}
             </span>
-            <FiChevronDown size={18} />
-          </div>
-          {showServiceDropdown && (
-            <div className="service-dropdown-list">
-              {serviceItems.map((item) => (
-                <div
-                  key={item.service_item_id}
-                  className="service-dropdown-item"
-                  onClick={() => handleServiceSelect(item)}
-                >
-                  {item.service_item_name}
-                </div>
-              ))}
+            <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
+              PCB: {selectedService?.pcb_serial_number || 'Loading...'}
             </div>
-          )}
+            {serviceItemPermissions.can_control_equipment && (
+              <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '2px' }}>
+                • Control Enabled
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Header */}
@@ -304,28 +291,28 @@ useEffect(() => {
           </div>
 
           <div style={{ position: "relative" }}>
-           <button
-  className={`screen1-power-button ${processing.status ? "processing" : ""}`}
-  onClick={handlePowerToggle}
-  disabled={processing.status}
-  style={{
-    backgroundColor: sensorData.powerStatus == "on" ? "#5adb5eff" : "#c80000f5",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    height: "48px",
-    width: "48px",
-    borderRadius: "4px",
-    padding: "8px",
-    cursor: processing.status ? "not-allowed" : "pointer",
-    fontWeight: "bold",
-    opacity: processing.status ? 0.6 : 1, // Add this for visual feedback
-  }}
->
-  <FiPower size={24} color="#fff" />
-  {processing.status && <span className="processing-indicator"></span>}
-</button>
+            <button
+              className={`screen1-power-button ${processing.status ? "processing" : ""}`}
+              onClick={handlePowerToggle}
+              disabled={processing.status || !selectedService?.pcb_serial_number || !serviceItemPermissions.can_control_equipment}
+              style={{
+                backgroundColor: sensorData.powerStatus == "on" ? "#5adb5eff" : "#c80000f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                height: "48px",
+                width: "48px",
+                borderRadius: "4px",
+                padding: "8px",
+                cursor: (processing.status || !serviceItemPermissions.can_control_equipment) ? "not-allowed" : "pointer",
+                fontWeight: "bold",
+                opacity: (processing.status || !serviceItemPermissions.can_control_equipment) ? 0.6 : 1,
+              }}
+            >
+              <FiPower size={24} color="#fff" />
+              {processing.status && <span className="processing-indicator"></span>}
+            </button>
 
             {sensorData.errorFlag == "1" && (
               <div className="error-indicator" />
@@ -347,6 +334,12 @@ useEffect(() => {
         {sensorData.hvacBusy == "1" && !processing.status && (
           <div className="busy-message">
             ⏳ System is currently busy
+          </div>
+        )}
+
+        {!serviceItemPermissions.can_control_equipment && (
+          <div className="warning-message">
+            ⚠️ Control permissions not available
           </div>
         )}
 
@@ -386,7 +379,7 @@ useEffect(() => {
             onClick={() => navigate("/delegate-machinescreen2", { 
               state: { sensorData, selectedService, userId, company_id}
             })}
-            // disabled={processing.status}
+            disabled={!serviceItemPermissions.can_control_equipment}
           >
             <FiWind size={20} />
             <span>Modes</span>
@@ -406,7 +399,6 @@ useEffect(() => {
                 company_id: company_id
               },
             })}
-            // disabled={processing.status}
           >
             <div style={{ position: "relative" }}>
               <FiClock size={20} />
@@ -438,7 +430,7 @@ useEffect(() => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/timers")}
-            // disabled={processing.status}
+            disabled={!serviceItemPermissions.can_control_equipment}
           >
             <FiWatch size={20} />
             <span>Timers</span>
@@ -447,7 +439,6 @@ useEffect(() => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/settings")}
-            // disabled={processing.status}
           >
             <FiSettings size={20} />
             <span>Settings</span>
@@ -456,7 +447,6 @@ useEffect(() => {
           <button
             className="control-btn"
             onClick={() => handleNavigation("/delegate-home")}
-            // disabled={processing.status}
           >
             <FiZap size={20} />
             <span>Services</span>
@@ -465,7 +455,6 @@ useEffect(() => {
           <button
             className="control-btn"
             onClick={handleLogout}
-            // disabled={processing.status}
           >
             <FiLogOut size={20} />
             <span>Logout</span>
