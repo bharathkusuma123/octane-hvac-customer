@@ -1,4 +1,4 @@
-import React, { useState, useContext, use } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Form, Button, Card, Row, Col, Alert, Container } from 'react-bootstrap';
 import axios from 'axios';
@@ -11,17 +11,16 @@ const ComplaintForm = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
-  const { service_request, company, customer } = location.state || {};
+  const { service_request, company, customer, request_status } = location.state || {};
 
   // ✅ Dropdown choices
   const COMPLAINT_TYPE_CHOICES = ['Service Delay', 'Engineer Behavior', 'Spare Issue', 'Other'];
-  const STATUS_CHOICES = ['Open', 'In Progress', 'Resolved', 'Closed'];
   const ESCALATION_LEVEL_CHOICES = ['None', 'Service Manager', 'GM'];
 
   const [formData, setFormData] = useState({
     complaint_type: '',
     complaint_details: '',
-    status: 'Open',
+    status: request_status || 'Open', // Set default value from request_status
     escalation_level: 'None',
     service_manager_email: '',
     gm_email: '',
@@ -47,60 +46,59 @@ const ComplaintForm = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  // Merge user_id and company_id into the payload
-  const payload = {
-    ...formData,
-    user_id: user?.customer_id,
-    company_id: user?.company_id,
-  };
+    // Merge user_id and company_id into the payload
+    const payload = {
+      ...formData,
+      user_id: user?.customer_id,
+      company_id: user?.company_id,
+    };
 
-  console.log('🚀 Submitting customer complaint...');
-  console.log('📝 Payload being sent:', payload);
+    console.log('🚀 Submitting customer complaint...');
+    console.log('📝 Payload being sent:', payload);
 
-  try {
-    const response = await axios.post(
-      `${baseURL}/customer-complaints/`,
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+    try {
+      const response = await axios.post(
+        `${baseURL}/customer-complaints/`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      console.log('✅ Response received:', response);
+
+      if (response.status === 201) {
+        console.log('🎉 Complaint submitted successfully!');
+        setAlertVariant('success');
+        setAlertMessage('🎉 Customer Complaint Submitted Successfully!');
+        setShowAlert(true);
+
+        setTimeout(() => {
+          console.log('🔀 Redirecting to /request...');
+          navigate('/request');
+        }, 2000);
+      } else {
+        console.warn('⚠️ Unexpected response status:', response.status);
       }
-    );
-
-    console.log('✅ Response received:', response);
-
-    if (response.status === 201) {
-      console.log('🎉 Complaint submitted successfully!');
-      setAlertVariant('success');
-      setAlertMessage('🎉 Customer Complaint Submitted Successfully!');
+    } catch (error) {
+      console.error('❌ Error submitting complaint:', error);
+      if (error.response) {
+        console.error('❌ Server responded with:', error.response.data);
+      }
+      setAlertVariant('danger');
+      setAlertMessage('❌ Failed to submit complaint. Please try again.');
       setShowAlert(true);
-
-      setTimeout(() => {
-        console.log('🔀 Redirecting to /request...');
-        navigate('/request');
-      }, 2000);
-    } else {
-      console.warn('⚠️ Unexpected response status:', response.status);
+    } finally {
+      setIsSubmitting(false);
+      console.log('🟡 Submission process completed.');
     }
-  } catch (error) {
-    console.error('❌ Error submitting complaint:', error);
-    if (error.response) {
-      console.error('❌ Server responded with:', error.response.data);
-    }
-    setAlertVariant('danger');
-    setAlertMessage('❌ Failed to submit complaint. Please try again.');
-    setShowAlert(true);
-  } finally {
-    setIsSubmitting(false);
-    console.log('🟡 Submission process completed.');
-  }
-};
-
+  };
 
   return (
     <div className="complaint-form-page">
@@ -150,17 +148,16 @@ const ComplaintForm = () => {
 
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label className="fw-semibold">Status</Form.Label>
-                      <Form.Select
-                        name="status"
+                      <Form.Label className="fw-semibold">Complaint Status</Form.Label>
+                      <Form.Control
+                        type="text"
                         value={formData.status}
-                        onChange={handleChange}
-                        required
-                      >
-                        {STATUS_CHOICES.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </Form.Select>
+                        readOnly
+                        className="bg-light"
+                      />
+                      <Form.Text className="text-muted">
+                        Status inherited from service request
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -191,35 +188,6 @@ const ComplaintForm = () => {
                     ))}
                   </Form.Select>
                 </Form.Group>
-
-                {/* <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">Service Manager Email</Form.Label>
-                      <Form.Control
-                        type="email"
-                        placeholder="manager@example.com"
-                        name="service_manager_email"
-                        value={formData.service_manager_email}
-                        onChange={handleChange}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label className="fw-semibold">GM Email</Form.Label>
-                      <Form.Control
-                        type="email"
-                        placeholder="gm@example.com"
-                        name="gm_email"
-                        value={formData.gm_email}
-                        onChange={handleChange}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row> */}
 
                 <Form.Group className="mb-4">
                   <Form.Label className="fw-semibold">Resolution Details (Optional)</Form.Label>
