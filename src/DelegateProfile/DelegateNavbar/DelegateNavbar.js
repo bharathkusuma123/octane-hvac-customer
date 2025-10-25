@@ -12,6 +12,8 @@ import './DelegateNavbar.css';
 import logo from '../../Logos/hvac-logo-new.jpg';
 import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
+import axios from 'axios';
+import baseURL from '../../Components/ApiUrl/Apiurl';
 
 const screens = [
   { label: 'Dashboard', name: '/delegate-home', icon: <FaHome />, key: 'dashboard' },
@@ -26,8 +28,9 @@ const NavScreen = () => {
   const [activeIcon, setActiveIcon] = useState(location.pathname);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef();
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [serviceItemsList, setServiceItemsList] = useState([]); // NEW: Store service items from API
   
   // Use the enhanced context
   const { 
@@ -37,6 +40,27 @@ const NavScreen = () => {
     updateSelectedServiceItem,
     loading 
   } = useDelegateServiceItems();
+
+  // NEW: Fetch service items from API to get service_item_name
+  useEffect(() => {
+    if (user?.company_id && user?.delegate_id) {
+      axios.get(`${baseURL}/service-items/?user_id=${user.delegate_id}&company_id=${user.company_id}`)
+        .then((response) => {
+          try {
+            const data = Array.isArray(response.data) ? response.data : 
+                        (response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
+            setServiceItemsList(data);
+          } catch (error) {
+            console.error('Error processing service items data:', error);
+            setServiceItemsList([]);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching service items:', error);
+          setServiceItemsList([]);
+        });
+    }
+  }, [user?.company_id, user?.delegate_id]);
 
   useEffect(() => {
     setActiveIcon(location.pathname);
@@ -59,6 +83,27 @@ const NavScreen = () => {
   const handleServiceItemChange = (e) => {
     const selectedId = e.target.value;
     updateSelectedServiceItem(selectedId);
+  };
+
+  // UPDATED: Get service item name for display
+  const getServiceItemName = (serviceItemId) => {
+    if (!serviceItemId) return 'Select Service Item';
+    
+    // First check in the serviceItemsList from API
+    const itemFromApi = serviceItemsList.find(item => item.service_item_id === serviceItemId);
+    if (itemFromApi) {
+      return itemFromApi.service_item_name || serviceItemId;
+    }
+    
+    // Fallback to context service items
+    const itemFromContext = serviceItems.find(item => item.service_item === serviceItemId);
+    return itemFromContext ? itemFromContext.service_item_name || serviceItemId : serviceItemId;
+  };
+
+  // UPDATED: Get display name for selected service item
+  const getSelectedServiceItemDisplayName = () => {
+    if (!selectedServiceItem) return 'Select Service Item';
+    return getServiceItemName(selectedServiceItem);
   };
 
   const getDisabledStatus = (key) => {
@@ -127,12 +172,23 @@ const NavScreen = () => {
               onChange={handleServiceItemChange}
             >
               <option value="">Select Service Item</option>
-              {serviceItems.map((item) => (
-                <option key={item.item_id} value={item.service_item}>
-                  {item.service_item}
-                </option>
-              ))}
+              {serviceItems.map((item) => {
+                // UPDATED: Get display name for each option
+                const displayName = getServiceItemName(item.service_item);
+                return (
+                  <option key={item.service_item} value={item.service_item}>
+                    {displayName}
+                  </option>
+                );
+              })}
             </select>
+            
+            {/* Display selected service item name for better UX */}
+            {/* {selectedServiceItem && (
+              <div className="selected-service-info">
+                <small>Selected: {getSelectedServiceItemDisplayName()}</small>
+              </div>
+            )} */}
           </div>
 
           <FaBell className="top-icon" onClick={() => alert('Notifications Clicked!')} />

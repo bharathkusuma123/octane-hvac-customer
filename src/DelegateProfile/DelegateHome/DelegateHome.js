@@ -8,6 +8,7 @@ const DelegateHome = () => {
   const { user } = useContext(AuthContext);
   const [delegateId, setDelegateId] = useState('');
   const [serviceItems, setServiceItems] = useState([]);
+  const [serviceItemNames, setServiceItemNames] = useState({});
 
   useEffect(() => {
     if (user?.delegate_id) {
@@ -21,6 +22,9 @@ const DelegateHome = () => {
               item => item.delegate === user.delegate_id
             );
             setServiceItems(filteredItems);
+
+            // Fetch service item names for all filtered items
+            fetchServiceItemNames(filteredItems);
           } else {
             console.error("API Error:", response.data.message);
           }
@@ -30,6 +34,37 @@ const DelegateHome = () => {
         });
     }
   }, [user]);
+
+  const fetchServiceItemNames = async (items) => {
+    try {
+      const namesMap = {};
+      
+      // Fetch names for each service item
+      for (const item of items) {
+        try {
+          const response = await axios.get(
+            `${baseURL}/service-items/?user_id=${user.delegate_id}&company_id=${user.company_id}`
+          );
+          
+          if (response.data.status === "success") {
+            const serviceItemData = response.data.data.find(
+              serviceItem => serviceItem.service_item_id === item.service_item
+            );
+            
+            if (serviceItemData) {
+              namesMap[item.service_item] = serviceItemData.service_item_name;
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching service item ${item.service_item}:`, error);
+        }
+      }
+      
+      setServiceItemNames(namesMap);
+    } catch (error) {
+      console.error("Error in fetchServiceItemNames:", error);
+    }
+  };
 
   return (
     <div style={{ marginTop: '25%' }} className="px-4">
@@ -49,7 +84,9 @@ const DelegateHome = () => {
             serviceItems.map((item, index) => (
               <tr key={item.item_id}>
                 <td>{index + 1}</td>
-                <td>{item.service_item}</td>
+                <td>
+                  {serviceItemNames[item.service_item] || "Loading..."}
+                </td>
               </tr>
             ))
           ) : (
