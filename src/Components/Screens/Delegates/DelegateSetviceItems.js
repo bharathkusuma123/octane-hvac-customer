@@ -19,7 +19,7 @@ const DelegateServiceItems = () => {
 
   const permissionFields = [
     { key: "can_raise_service_request", label: "Raise Request" },
-    { key: "can_close_service_request", label: "Close Request" },
+    // { key: "can_close_service_request", label: "Close Request" },
     { key: "can_submit_customer_satisfaction_survey", label: "CSAT Survey" },
     { key: "can_log_customer_complaints", label: "Customer Complaints" },
     { key: "can_monitor_equipment", label: "Monitor Equipment" },
@@ -71,7 +71,7 @@ const DelegateServiceItems = () => {
               assignedToId: existingAssignment.delegate,
               // Include permission data for assigned items
               can_raise_service_request: existingAssignment.can_raise_service_request,
-              can_close_service_request: existingAssignment.can_close_service_request,
+              // can_close_service_request: existingAssignment.can_close_service_request,
               can_submit_customer_satisfaction_survey: existingAssignment.can_submit_customer_satisfaction_survey,
               can_log_customer_complaints: existingAssignment.can_log_customer_complaints,
               can_monitor_equipment: existingAssignment.can_monitor_equipment,
@@ -84,7 +84,7 @@ const DelegateServiceItems = () => {
               isAssigned: false,
               isSelected: false,
               can_raise_service_request: false,
-              can_close_service_request: false,
+              // can_close_service_request: false,
               can_submit_customer_satisfaction_survey: false,
               can_log_customer_complaints: false,
               can_monitor_equipment: false,
@@ -152,7 +152,7 @@ const DelegateServiceItems = () => {
           ? {
               ...item,
               can_raise_service_request: value,
-              can_close_service_request: value,
+              // can_close_service_request: value,
               can_submit_customer_satisfaction_survey: value,
               can_log_customer_complaints: value,
               can_monitor_equipment: value,
@@ -172,7 +172,7 @@ const DelegateServiceItems = () => {
               ...item,
               isSelected: value,
               can_raise_service_request: value,
-              can_close_service_request: value,
+              // can_close_service_request: value,
               can_submit_customer_satisfaction_survey: value,
               can_log_customer_complaints: value,
               can_monitor_equipment: value,
@@ -221,7 +221,7 @@ const DelegateServiceItems = () => {
         service_items: selectedItems.map(item => ({
           service_item_id: item.service_item_id,
           can_raise_service_request: item.can_raise_service_request,
-          can_close_service_request: item.can_close_service_request,
+          // can_close_service_request: item.can_close_service_request,
           can_submit_customer_satisfaction_survey: item.can_submit_customer_satisfaction_survey,
           can_log_customer_complaints: item.can_log_customer_complaints,
           can_monitor_equipment: item.can_monitor_equipment,

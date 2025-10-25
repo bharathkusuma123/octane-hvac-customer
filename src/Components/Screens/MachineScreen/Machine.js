@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import "./Machine.css";
 import EditServiceItemModal from './EditServiceItemModal';
-import { FaEdit, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaEdit, FaChevronDown, FaChevronUp, FaTachometerAlt } from 'react-icons/fa';
 import baseURL from '../../ApiUrl/Apiurl';
 
 const MachineScreen = () => {
@@ -117,10 +117,20 @@ const MachineScreen = () => {
     }));
   };
 
-  return (
+ return (
     <div className="machine-screen-wrapper">
       <div className="machine-screen-header">
-        <h2 className="machine-screen-title">Machine Screen</h2>
+        <div className="machine-header-content">
+          <h2 className="machine-screen-title">Machine Screen</h2>
+          <button 
+            className="btn btn-primary machine-monitor-btn"
+            onClick={() => navigate('/machinescreen1')}
+            title="View Machine Monitoring Dashboard"
+          >
+            <FaTachometerAlt className="me-2" />
+            Machine Monitor/Control
+          </button>
+        </div>
       </div>
 
       <NavScreen />
