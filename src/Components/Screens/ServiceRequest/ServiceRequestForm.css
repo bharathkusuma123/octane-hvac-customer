@@ -223,3 +223,122 @@
     width: 100%;
   }
 }
+
+
+/* Existing Media Files Styles */
+.existing-media {
+  border-top: 1px solid #dee2e6;
+  padding-top: 15px;
+}
+
+.existing-file {
+  background: #f8f9fa;
+  border-left: 4px solid #28a745;
+}
+
+.new-file {
+  background: #e7f3ff;
+  border-left: 4px solid #007bff;
+}
+
+.file-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.file-type {
+  font-size: 0.8rem;
+  color: #6c757d;
+  text-transform: capitalize;
+}
+
+.deleted-files {
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+}
+
+/* File item hover effects */
+.file-item:hover {
+  background: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .file-info {
+    width: 100%;
+  }
+  
+  .file-actions {
+    align-self: flex-end;
+  }
+}
+
+
+/* Existing Media Styles */
+.existing-media {
+  border-top: 2px solid #28a745;
+  padding-top: 15px;
+}
+
+.existing-file {
+  background: #f8fff9;
+  border-left: 4px solid #28a745;
+}
+
+.deletion-file {
+  background: #fff5f5;
+  border-left: 4px solid #dc3545;
+  opacity: 0.7;
+}
+
+.marked-for-deletion {
+  border-top: 2px solid #dc3545;
+  padding-top: 15px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.file-type {
+  font-size: 0.8rem;
+  color: #6c757d;
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.file-date {
+  font-size: 0.75rem;
+  color: #868e96;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .file-info {
+    width: 100%;
+  }
+  
+  .file-actions {
+    align-self: flex-end;
+  }
+}
