@@ -178,7 +178,7 @@ const MachineDetails = () => {
                           onClick={() => handleRaiseRequest(schedule)}
                           disabled={!schedule.is_alert_sent}
                         >
-                          Raise Request
+                          Mark Completed
                         </button>
                       )}
                   </div>

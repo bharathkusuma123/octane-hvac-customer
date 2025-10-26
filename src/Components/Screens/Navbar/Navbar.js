@@ -197,6 +197,12 @@ const NavScreen = () => {
       <div className="top-navbar">
         <img src={logo} alt="Logo" className="logo-img" />
         <div className="top-icons">
+            <FaHome
+      className="top-icon"
+      onClick={() => navigate("/machinescreen1")}
+      style={{ cursor: "pointer" }}
+    />
+
           <FaBell className="top-icon" onClick={() => alert('Notifications Clicked!')} />
 
           {/* Profile Dropdown */}

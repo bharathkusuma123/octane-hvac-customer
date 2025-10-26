@@ -8,7 +8,7 @@ import EditServiceItemModal from './EditServiceItemModal';
 import { FaEdit, FaChevronDown, FaChevronUp, FaTachometerAlt } from 'react-icons/fa';
 import baseURL from '../../ApiUrl/Apiurl';
 
-const MachineScreen = () => {
+const MachineScreen = () => { 
   const { user } = useContext(AuthContext);
   const userId = user?.customer_id;
   const companyId = user?.company_id;
@@ -128,7 +128,7 @@ const MachineScreen = () => {
             title="View Machine Monitoring Dashboard"
           >
             <FaTachometerAlt className="me-2" />
-            Machine Monitor/Control
+            Show Complete Machine Data
           </button>
         </div>
       </div>
