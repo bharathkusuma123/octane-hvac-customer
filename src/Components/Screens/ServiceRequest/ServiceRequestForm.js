@@ -1004,7 +1004,7 @@ const ServiceRequestForm = () => {
     preferred_date: '',
     preferred_time: '',
     status: 'Unassigned',
-    source_type: 'Machine Alert',
+    source_type: 'Customer Request',
     service_item: '',
     customer: userId,
   });
@@ -1019,7 +1019,7 @@ const ServiceRequestForm = () => {
         preferred_date: existingRequest.preferred_date || '',
         preferred_time: existingRequest.preferred_time ? existingRequest.preferred_time.slice(0, 5) : '',
         status: existingRequest.status || 'Unassigned',
-        source_type: existingRequest.source_type || 'Machine Alert',
+        source_type: existingRequest.source_type || 'Customer Request',
         service_item: existingRequest.service_item || '',
         customer: existingRequest.customer || userId,
       });
@@ -1246,7 +1246,7 @@ const ServiceRequestForm = () => {
             preferred_date: '',
             preferred_time: '',
             status: 'Unassigned',
-            source_type: 'Machine Alert',
+            source_type: 'Customer Request',
             service_item: '',
             customer: user?.customer_id,
           });

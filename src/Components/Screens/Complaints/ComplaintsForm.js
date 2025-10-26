@@ -17,10 +17,10 @@ const ComplaintForm = () => {
   const COMPLAINT_TYPE_CHOICES = ['Service Delay', 'Engineer Behavior', 'Spare Issue', 'Other'];
   const ESCALATION_LEVEL_CHOICES = ['None', 'Service Manager', 'GM'];
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({ 
     complaint_type: '',
     complaint_details: '',
-    status: request_status || 'Open', // Set default value from request_status
+    status: request_status || 'Open',
     escalation_level: 'None',
     service_manager_email: '',
     gm_email: '',
@@ -32,10 +32,87 @@ const ComplaintForm = () => {
     updated_by: user?.customer_id || ''
   });
 
+  const [companyData, setCompanyData] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertVariant, setAlertVariant] = useState('success');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingCompany, setLoadingCompany] = useState(false);
+
+  // Fetch company details when component mounts or company changes
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      const companyId = company || user?.company_id;
+      
+      if (!companyId) {
+        console.warn('⚠️ No company ID available');
+        return;
+      }
+
+      setLoadingCompany(true);
+      try {
+        console.log(`🔄 Fetching company details for ID: ${companyId}`);
+        const response = await axios.get(
+          `${baseURL}/companies/${companyId}/`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          }
+        );
+
+        if (response.data.status === 'success') {
+          console.log('✅ Company details fetched successfully:', response.data.data);
+          setCompanyData(response.data.data);
+        } else {
+          console.warn('⚠️ Unexpected response format:', response.data);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching company details:', error);
+        if (error.response) {
+          console.error('❌ Server responded with:', error.response.data);
+        }
+      } finally {
+        setLoadingCompany(false);
+      }
+    };
+
+    fetchCompanyDetails();
+  }, [company, user?.company_id]);
+
+  // Update escalation emails when escalation level or company data changes
+  useEffect(() => {
+    if (!companyData) return;
+
+    let service_manager_email = '';
+    let gm_email = '';
+
+    switch (formData.escalation_level) {
+      case 'Service Manager':
+        service_manager_email = companyData.service_email || '';
+        break;
+      case 'GM':
+        gm_email = companyData.gm_email || '';
+        break;
+      default:
+        // For 'None' or any other value, clear both emails
+        service_manager_email = '';
+        gm_email = '';
+        break;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      service_manager_email,
+      gm_email
+    }));
+
+    console.log(`🔄 Escalation level changed to: ${formData.escalation_level}`);
+    console.log(`📧 Service Manager Email: ${service_manager_email}`);
+    console.log(`📧 GM Email: ${gm_email}`);
+
+  }, [formData.escalation_level, companyData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,15 +126,19 @@ const ComplaintForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Merge user_id and company_id into the payload
+    // Prepare payload with appropriate escalation emails
     const payload = {
       ...formData,
       user_id: user?.customer_id,
       company_id: user?.company_id,
+      // Ensure only the relevant email is sent based on escalation level
+      service_manager_email: formData.escalation_level === 'Service Manager' ? formData.service_manager_email : '',
+      gm_email: formData.escalation_level === 'GM' ? formData.gm_email : ''
     };
 
     console.log('🚀 Submitting customer complaint...');
     console.log('📝 Payload being sent:', payload);
+    console.log('🏢 Company Data:', companyData);
 
     try {
       const response = await axios.post(
@@ -113,6 +194,11 @@ const ComplaintForm = () => {
               <h3 className="fw-bold text-center text-primary m-0">
                 Customer Complaints
               </h3>
+              {companyData && (
+                <p className="text-center text-muted mb-0 mt-2">
+                  Company: <strong>{companyData.company_name}</strong>
+                </p>
+              )}
             </Card.Header>
 
             <Card.Body className="form-scroll p-4">
@@ -124,6 +210,12 @@ const ComplaintForm = () => {
                   className="fw-semibold text-center"
                 >
                   {alertMessage}
+                </Alert>
+              )}
+
+              {loadingCompany && (
+                <Alert variant="info" className="fw-semibold text-center">
+                  🔄 Loading company details...
                 </Alert>
               )}
 
@@ -187,6 +279,23 @@ const ComplaintForm = () => {
                       <option key={level} value={level}>{level}</option>
                     ))}
                   </Form.Select>
+                  
+                  {/* Display escalation email information */}
+                  {formData.escalation_level === 'Service Manager' && formData.service_manager_email && (
+                    <Form.Text className="text-success">
+                      📧 Will be escalated to: <strong>{formData.service_manager_email}</strong>
+                    </Form.Text>
+                  )}
+                  {formData.escalation_level === 'GM' && formData.gm_email && (
+                    <Form.Text className="text-success">
+                      📧 Will be escalated to: <strong>{formData.gm_email}</strong>
+                    </Form.Text>
+                  )}
+                  {formData.escalation_level === 'None' && (
+                    <Form.Text className="text-muted">
+                      No email escalation will be sent
+                    </Form.Text>
+                  )}
                 </Form.Group>
 
                 <Form.Group className="mb-4">
@@ -212,7 +321,7 @@ const ComplaintForm = () => {
                   <Button 
                     variant="primary" 
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || loadingCompany}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Complaint'}
                   </Button>
