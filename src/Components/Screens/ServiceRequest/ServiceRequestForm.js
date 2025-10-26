@@ -969,7 +969,6 @@
 
 // export default ServiceRequestForm;
 
-
 import React, { useEffect, useState, useContext } from 'react';
 import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import './ServiceRequestForm.css';
@@ -978,7 +977,7 @@ import baseURL from '../../ApiUrl/Apiurl';
 import Notification_Url from '../../ApiUrl/PushNotificanURL';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { FaTimes, FaUpload, FaImage, FaVideo } from 'react-icons/fa';
+import { FaTimes, FaUpload, FaImage, FaVideo, FaEye, FaTrash } from 'react-icons/fa';
 
 const ServiceRequestForm = () => {
   const navigate = useNavigate();
@@ -999,6 +998,8 @@ const ServiceRequestForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [existingMedia, setExistingMedia] = useState([]);
+  const [deletingMedia, setDeletingMedia] = useState([]);
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -1010,6 +1011,13 @@ const ServiceRequestForm = () => {
   });
 
   const [serviceItems, setServiceItems] = useState([]);
+
+  // Fetch existing media when in edit mode
+  useEffect(() => {
+    if (isEditMode && existingRequest?.request_id) {
+      fetchExistingMedia(existingRequest.request_id);
+    }
+  }, [isEditMode, existingRequest]);
 
   // Initialize form with existing data if in edit mode
   useEffect(() => {
@@ -1068,6 +1076,213 @@ const ServiceRequestForm = () => {
     fetchServiceItems();
   }, [userId]);
 
+  // Fetch existing media files
+  const fetchExistingMedia = async (requestId) => {
+    try {
+      const response = await fetch(
+        `${baseURL}/service-pools/${requestId}/media/?user_id=${userId}&company_id=${company_id}`
+      );
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.status === "success") {
+          setExistingMedia(result.data || []);
+        }
+      } else {
+        console.error('Failed to fetch existing media');
+      }
+    } catch (error) {
+      console.error('Error fetching existing media:', error);
+    }
+  };
+
+  // Delete media file immediately - FIXED VERSION
+  const deleteMediaFile = async (mediaId) => {
+    try {
+      setDeletingMedia(prev => [...prev, mediaId]);
+      
+      // Construct the URL properly - try different parameter formats
+      let deleteUrl;
+      
+      // Try option 1: With user_id and company_id as query parameters
+      deleteUrl = `${baseURL}/service-pools/${existingRequest.request_id}/media/${mediaId}/?user_id=${userId}&company_id=${company_id}`;
+      
+      console.log('DELETE URL attempt 1:', deleteUrl);
+      
+      let response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // If first attempt fails with 404, try without query parameters
+      if (response.status === 404) {
+        console.log('First attempt failed, trying without query parameters...');
+        
+        deleteUrl = `${baseURL}/service-pools/${existingRequest.request_id}/media/${mediaId}/`;
+        console.log('DELETE URL attempt 2:', deleteUrl);
+        
+        response = await fetch(deleteUrl, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      // If still failing, try with different parameter format
+      if (response.status === 404) {
+        console.log('Second attempt failed, trying with different parameter format...');
+        
+        deleteUrl = `${baseURL}/service-pools/${existingRequest.request_id}/media/${mediaId}/?customer_id=${userId}&company=${company_id}`;
+        console.log('DELETE URL attempt 3:', deleteUrl);
+        
+        response = await fetch(deleteUrl, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      if (response.ok || response.status === 204) {
+        // Remove from existing media immediately
+        setExistingMedia(prev => prev.filter(media => media.media_id !== mediaId));
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Media file deleted successfully!',
+          confirmButtonColor: '#3085d6',
+        });
+        
+        return true;
+      } else {
+        let errorMessage = 'Failed to delete media file';
+        let errorData = null;
+        
+        try {
+          // Try to parse error response
+          errorData = await response.json();
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+          
+          // Check for specific authentication errors
+          if (errorMessage.includes('User') || errorMessage.includes('Customer') || errorMessage.includes('CustomerDelegate')) {
+            errorMessage = 'Authentication failed. Please check your user permissions.';
+          }
+        } catch (parseError) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        console.error('Delete failed with response:', response.status, errorData);
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error deleting media file:', error);
+      
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'Failed to delete media file. Please try again.',
+        confirmButtonColor: '#d33',
+      });
+      
+      throw error;
+    } finally {
+      setDeletingMedia(prev => prev.filter(id => id !== mediaId));
+    }
+  };
+
+  // Alternative delete method using request body instead of query parameters
+  const deleteMediaFileWithBody = async (mediaId) => {
+    try {
+      setDeletingMedia(prev => [...prev, mediaId]);
+      
+      const deleteUrl = `${baseURL}/service-pools/${existingRequest.request_id}/media/${mediaId}/`;
+      
+      console.log('DELETE URL with body:', deleteUrl);
+      
+      const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          company_id: company_id,
+          customer_id: userId
+        }),
+      });
+
+      if (response.ok || response.status === 204) {
+        // Remove from existing media immediately
+        setExistingMedia(prev => prev.filter(media => media.media_id !== mediaId));
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Media file deleted successfully!',
+          confirmButtonColor: '#3085d6',
+        });
+        
+        return true;
+      } else {
+        let errorMessage = 'Failed to delete media file';
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.detail || errorMessage;
+        } catch (parseError) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error deleting media file with body:', error);
+      throw error;
+    } finally {
+      setDeletingMedia(prev => prev.filter(id => id !== mediaId));
+    }
+  };
+
+  // Delete media file with confirmation
+  const handleDeleteMedia = async (media) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to delete ${getFileNameFromPath(media.file)}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // First try the standard method
+        await deleteMediaFile(media.media_id);
+      } catch (error) {
+        // If standard method fails, try with request body
+        console.log('Standard delete failed, trying with request body...');
+        try {
+          await deleteMediaFileWithBody(media.media_id);
+        } catch (secondError) {
+          // Both methods failed, show error
+          await Swal.fire({
+            icon: 'error',
+            title: 'Delete Failed',
+            text: 'Unable to delete the media file. Please try again later or contact support.',
+            confirmButtonColor: '#d33',
+          });
+        }
+      }
+    }
+  };
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -1113,6 +1328,15 @@ const ServiceRequestForm = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // View media file
+  const viewMedia = (media) => {
+    // Use the full URL path from the media object
+    const fullUrl = media.file.startsWith('http') 
+      ? media.file 
+      : `http://175.29.21.7:8006${media.file}`;
+    window.open(fullUrl, '_blank');
+  };
+
   // Upload media files to the service request
   const uploadMediaFiles = async (requestId, serviceItemId) => {
     if (selectedFiles.length === 0) return true;
@@ -1133,7 +1357,6 @@ const ServiceRequestForm = () => {
       const response = await fetch(mediaUrl, {
         method: 'POST',
         body: formData,
-        // Note: Don't set Content-Type header for FormData, browser will set it automatically with boundary
       });
 
       if (response.ok) {
@@ -1178,7 +1401,7 @@ const ServiceRequestForm = () => {
       requested_by: user?.customer_id || "unknown",
       preferred_date: form.preferred_date,
       preferred_time: `${form.preferred_time}:00`,
-      status: isEditMode ? existingRequest.status : "Open", // Keep existing status in edit mode
+      status: isEditMode ? existingRequest.status : "Open",
       estimated_completion_time: isEditMode ? existingRequest.estimated_completion_time : null,
       estimated_price: isEditMode ? existingRequest.estimated_price : "0.00",
       est_start_datetime: `${form.preferred_date}T${form.preferred_time}:00Z`,
@@ -1220,12 +1443,11 @@ const ServiceRequestForm = () => {
         const data = await response.json();
         const requestId = data.data?.request_id || existingRequest?.request_id;
 
-        // Upload media files if any (only for new requests or if files are selected in edit mode)
+        // Upload new media files for both new and edit modes
         if (selectedFiles.length > 0 && requestId) {
           try {
             await uploadMediaFiles(requestId, form.service_item);
           } catch (mediaError) {
-            // Even if media upload fails, we still show success for the main request
             console.warn('Media upload failed but request was created:', mediaError);
           }
         }
@@ -1233,7 +1455,7 @@ const ServiceRequestForm = () => {
         await Swal.fire({
           icon: 'success',
           title: 'Success',
-          text: `Service request ${isEditMode ? 'updated' : 'submitted'} successfully!${selectedFiles.length > 0 ? ' Media files uploaded.' : ''}`,
+          text: `Service request ${isEditMode ? 'updated' : 'submitted'} successfully!`,
           confirmButtonColor: '#3085d6',
         });
         
@@ -1329,6 +1551,11 @@ const ServiceRequestForm = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Get file name from path
+  const getFileNameFromPath = (filePath) => {
+    return filePath.split('/').pop() || 'File';
+  };
+
   return (
     <div className="container service-request-form">
       <div className="card">
@@ -1406,7 +1633,7 @@ const ServiceRequestForm = () => {
               {/* File Upload Section */}
               <div className="col-12">
                 <label className="formlabel" style={{ marginLeft: '-137px' }}>
-                  Upload Images & Videos (Optional)
+                  {isEditMode ? 'Manage Images & Videos' : 'Upload Images & Videos (Optional)'}
                 </label>
                 <div className="file-upload-section">
                   <div className="file-upload-area">
@@ -1420,17 +1647,70 @@ const ServiceRequestForm = () => {
                     />
                     <label htmlFor="file-upload" className="file-upload-label">
                       <FaUpload className="me-2" />
-                      Choose Images & Videos
+                      {isEditMode ? 'Add More Files' : 'Choose Images & Videos'}
                     </label>
                     <small className="text-muted d-block mt-2">
                       Supported formats: JPG, PNG, GIF, MP4, AVI, MOV. Max file size: 50MB
                     </small>
                   </div>
 
-                  {/* Selected Files Preview */}
+                  {/* Existing Media Files (Edit Mode Only) */}
+                  {isEditMode && existingMedia.length > 0 && (
+                    <div className="existing-media mt-4">
+                      <h6>Existing Media Files ({existingMedia.length}):</h6>
+                      <div className="file-list">
+                        {existingMedia.map((media) => (
+                          <div key={media.media_id} className="file-item existing-file">
+                            <div className="file-info">
+                              {media.media_type === 'Image' ? (
+                                <FaImage className="file-icon text-success" />
+                              ) : (
+                                <FaVideo className="file-icon text-warning" />
+                              )}
+                              <div className="file-details">
+                                <span className="file-name">{getFileNameFromPath(media.file)}</span>
+                                <span className="file-type">{media.media_type}</span>
+                                <span className="file-date">
+                                  Uploaded: {new Date(media.uploaded_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="file-actions">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary me-2"
+                                onClick={() => viewMedia(media)}
+                                title="View File"
+                                disabled={deletingMedia.includes(media.media_id)}
+                              >
+                                <FaEye />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDeleteMedia(media)}
+                                title="Delete File"
+                                disabled={deletingMedia.includes(media.media_id)}
+                              >
+                                {deletingMedia.includes(media.media_id) ? (
+                                  <div className="spinner-border spinner-border-sm" role="status">
+                                    <span className="visually-hidden">Deleting...</span>
+                                  </div>
+                                ) : (
+                                  <FaTrash />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Selected Files */}
                   {selectedFiles.length > 0 && (
                     <div className="selected-files mt-3">
-                      <h6>Selected Files ({selectedFiles.length}):</h6>
+                      <h6>New Files to Upload ({selectedFiles.length}):</h6>
                       <div className="file-list">
                         {selectedFiles.map((file, index) => (
                           <div key={index} className="file-item">
