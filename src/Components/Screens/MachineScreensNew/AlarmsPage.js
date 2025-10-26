@@ -1,7 +1,239 @@
+// import React, { useState, useEffect } from 'react';
+// import { useLocation, useNavigate } from 'react-router-dom';
+// import { FiArrowLeft, FiClock } from 'react-icons/fi';
+// import baseURL from '../../ApiUrl/Apiurl';
+
+// const AlarmsPage = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+//   const [errorData, setErrorData] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+  
+//   // Get alarm data passed from navigation
+//   const alarmData = location.state?.alarmData || {
+//     alarmOccurred: '0',
+//     errorCount: 0,
+//     deviceId: ''
+//   };
+//     // Get user and company IDs separately
+//   const userId = location.state?.userId || null;
+//   const companyId = location.state?.company_id || null;
+
+//   useEffect(() => {
+//     const fetchErrorData = async () => {
+//       try {
+//         if (!alarmData.deviceId) {
+//           throw new Error('No device ID available');
+//         }
+
+//         const response = await fetch(
+//           `${baseURL}/errors/${alarmData.deviceId}/?user_id=${userId}&company_id=${companyId}`
+//         );
+        
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch error data');
+//         }
+
+//         const data = await response.json();
+        
+//         if (data.status !== "success") {
+//           throw new Error(data.message || 'Error in response data');
+//         }
+
+//         setErrorData(data.data || []);
+//         setLoading(false);
+//       } catch (err) {
+//         console.error('Error fetching error data:', err);
+//         setError(err.message);
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchErrorData();
+//   }, [alarmData.deviceId]);
+
+//   const getPriorityColor = (priority) => {
+//     switch (priority) {
+//       case 'HIGH': return 'red';
+//       case 'MEDIUM': return 'orange';
+//       case 'LOW': return 'yellow';
+//       default: return 'gray';
+//     }
+//   };
+
+//   const formatDate = (timestamp) => {
+//     const date = new Date(timestamp);
+//     return date.toLocaleString();
+//   };
+
+//   const sendMachineAlert = async (errorId) => {
+//     try {
+//       const response = await fetch(`${baseURL}/machine-alert-request/`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           pcb_serial_number: alarmData.deviceId,
+//           error_code_id: errorId
+//         })
+//       });
+
+//       if (!response.ok) {
+//         throw new Error('Failed to send machine alert');
+//       }
+
+//       const result = await response.json();
+//       alert('Machine alert sent successfully!');
+//       return result;
+//     } catch (err) {
+//       console.error('Error sending machine alert:', err);
+//       alert('Failed to send machine alert: ' + err.message);
+//     }
+//   };
+
+//   return (
+//     <div style={{
+//       padding: '20px',
+//       maxWidth: '800px',
+//       margin: '0 auto',
+//       position: 'relative'
+//     }}>
+//      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop:'20%' }}>
+//   <button
+//     onClick={() => navigate(-1)}
+//     style={{
+//       background: 'none',
+//       border: 'none',
+//       fontSize: '24px',
+//       cursor: 'pointer',
+//       display: 'flex',
+//       alignItems: 'center'
+//     }}
+//   >
+//     <FiArrowLeft /> 
+//   </button>
+
+//   <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+//     <FiClock /> Alarm Notifications
+//   </h2>
+// </div>
+
+      
+//       {/* Current Alarm Status */}
+//       <div style={{ margin: '20px 0' }}>
+//         {alarmData.alarmOccurred !== '0' ? (
+//           <div style={{ 
+//             padding: '15px', 
+//             backgroundColor: '#ffeeee', 
+//             borderRadius: '8px',
+//             borderLeft: '5px solid red',
+//             marginBottom: '20px'
+//           }}>
+//             <h3 style={{ color: 'red', marginTop: 0 }}>Current Alarm Status</h3>
+//             <p><strong>Device ID:</strong> {alarmData.deviceId}</p>
+//             <p><strong>Active Alarm Code:</strong> {alarmData.alarmOccurred}</p>
+//           </div>
+//         ) : (
+//           <div style={{ 
+//             padding: '15px', 
+//             backgroundColor: '#eeffee', 
+//             borderRadius: '8px',
+//             borderLeft: '5px solid green',
+//             marginBottom: '20px'
+//           }}>
+//             <h3 style={{ color: 'green', marginTop: 0 }}>Current Alarm Status</h3>
+//             <p><strong>Device ID:</strong> {alarmData.deviceId}</p>
+//             <p>No active alarms - System is operating normally</p>
+//           </div>
+//         )}
+//       </div>
+
+//       {/* Historical Errors */}
+//       <h3>Historical Error Logs</h3>
+      
+//       {loading ? (
+//         <div>Loading error history...</div>
+//       ) : error ? (
+//         <div style={{ color: 'red' }}>Error: {error}</div>
+//       ) : errorData.length === 0 ? (
+//         <div>No historical errors found</div>
+//       ) : (
+//         <div style={{
+//           maxHeight: '500px',
+//           overflowY: 'auto',
+//           border: '1px solid #eee',
+//           borderRadius: '8px'
+//         }}>
+//           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+//             <thead>
+//               <tr style={{ backgroundColor: '#f5f5f5' }}>
+//                 <th style={{ padding: '10px', textAlign: 'left' }}>S.No</th>
+//                 <th style={{ padding: '10px', textAlign: 'left' }}>Error Code</th>
+//                 <th style={{ padding: '10px', textAlign: 'left' }}>Description</th>
+//                 <th style={{ padding: '10px', textAlign: 'left' }}>Priority</th>
+//                 <th style={{ padding: '10px', textAlign: 'left' }}>Occurred At</th>
+//                 <th style={{ padding: '10px', textAlign: 'left' }}>Machine Alert</th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {errorData.map((error, index) => (
+//                 <tr 
+//                   key={index}
+//                   style={{ 
+//                     borderBottom: '1px solid #eee',
+//                     backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9'
+//                   }}
+//                 >
+//                   <td style={{ padding: '10px' }}>{index + 1}</td>
+//                   <td style={{ padding: '10px' }}>{error.error_code}</td>
+//                   <td style={{ padding: '10px' }}>{error.description}</td>
+//                   <td style={{ padding: '10px' }}>
+//                     <span style={{
+//                       padding: '3px 8px',
+//                       borderRadius: '4px',
+//                       backgroundColor: getPriorityColor(error.priority),
+//                       color: error.priority === 'LOW' ? 'black' : 'white'
+//                     }}>
+//                       {error.priority}
+//                     </span>
+//                   </td>
+//                   <td style={{ padding: '10px' }}>{formatDate(error.timestamp)}</td>
+//                   <td style={{ padding: '10px' }}>
+//                     <button 
+//                       onClick={() => sendMachineAlert(error.id)}
+//                       style={{
+//                         padding: '5px 10px',
+//                         backgroundColor: '#007bff',
+//                         color: 'white',
+//                         border: 'none',
+//                         borderRadius: '4px',
+//                         cursor: 'pointer',
+//                         fontSize: '14px'
+//                       }}
+//                     >
+//                       Send Machine Alert
+//                     </button>
+//                   </td>
+//                 </tr>
+//               ))}
+//             </tbody>
+//           </table>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default AlarmsPage;
+
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiClock } from 'react-icons/fi';
 import baseURL from '../../ApiUrl/Apiurl';
+import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 
 const AlarmsPage = () => {
   const navigate = useNavigate();
@@ -16,7 +248,8 @@ const AlarmsPage = () => {
     errorCount: 0,
     deviceId: ''
   };
-    // Get user and company IDs separately
+  
+  // Get user and company IDs separately
   const userId = location.state?.userId || null;
   const companyId = location.state?.company_id || null;
 
@@ -51,7 +284,7 @@ const AlarmsPage = () => {
     };
 
     fetchErrorData();
-  }, [alarmData.deviceId]);
+  }, [alarmData.deviceId, userId, companyId]);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -94,134 +327,150 @@ const AlarmsPage = () => {
   };
 
   return (
-    <div style={{
-      padding: '20px',
-      maxWidth: '800px',
-      margin: '0 auto',
-      position: 'relative'
-    }}>
-     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop:'20%' }}>
-  <button
-    onClick={() => navigate(-1)}
-    style={{
-      background: 'none',
-      border: 'none',
-      fontSize: '24px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center'
-    }}
-  >
-    <FiArrowLeft /> 
-  </button>
-
-  <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
-    <FiClock /> Alarm Notifications
-  </h2>
-</div>
-
-      
-      {/* Current Alarm Status */}
-      <div style={{ margin: '20px 0' }}>
-        {alarmData.alarmOccurred !== '0' ? (
-          <div style={{ 
-            padding: '15px', 
-            backgroundColor: '#ffeeee', 
-            borderRadius: '8px',
-            borderLeft: '5px solid red',
-            marginBottom: '20px'
+    <div className="delegate-card-container">
+      {/* Header Section */}
+      <div className="delegate-card-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              color: '#333'
+            }}
+          >
+            <FiArrowLeft /> 
+          </button>
+          <h2 style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px', 
+            margin: 0,
+            fontSize: '1.5rem',
+            fontWeight: '600'
           }}>
-            <h3 style={{ color: 'red', marginTop: 0 }}>Current Alarm Status</h3>
-            <p><strong>Device ID:</strong> {alarmData.deviceId}</p>
-            <p><strong>Active Alarm Code:</strong> {alarmData.alarmOccurred}</p>
-          </div>
+            <FiClock /> Alarm Notifications
+          </h2>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{
+        padding: '20px',
+        maxWidth: '800px',
+        margin: '0 auto',
+        position: 'relative',
+        flex: '1'
+      }}>
+        {/* Current Alarm Status */}
+        <div style={{ margin: '20px 0' }}>
+          {alarmData.alarmOccurred !== '0' ? (
+            <div style={{ 
+              padding: '15px', 
+              backgroundColor: '#ffeeee', 
+              borderRadius: '8px',
+              borderLeft: '5px solid red',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ color: 'red', marginTop: 0 }}>Current Alarm Status</h3>
+              <p><strong>Device ID:</strong> {alarmData.deviceId}</p>
+              <p><strong>Active Alarm Code:</strong> {alarmData.alarmOccurred}</p>
+            </div>
+          ) : (
+            <div style={{ 
+              padding: '15px', 
+              backgroundColor: '#eeffee', 
+              borderRadius: '8px',
+              borderLeft: '5px solid green',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ color: 'green', marginTop: 0 }}>Current Alarm Status</h3>
+              <p><strong>Device ID:</strong> {alarmData.deviceId}</p>
+              <p>No active alarms - System is operating normally</p>
+            </div>
+          )}
+        </div>
+
+        {/* Historical Errors */}
+        <h3>Historical Error Logs</h3>
+        
+        {loading ? (
+          <div className="delegate-card-loading-message">Loading error history...</div>
+        ) : error ? (
+          <div style={{ color: 'red' }}>Error: {error}</div>
+        ) : errorData.length === 0 ? (
+          <div className="delegate-card-empty-message">No historical errors found</div>
         ) : (
-          <div style={{ 
-            padding: '15px', 
-            backgroundColor: '#eeffee', 
-            borderRadius: '8px',
-            borderLeft: '5px solid green',
-            marginBottom: '20px'
+          <div style={{
+            maxHeight: '500px',
+            overflowY: 'auto',
+            border: '1px solid #eee',
+            borderRadius: '8px'
           }}>
-            <h3 style={{ color: 'green', marginTop: 0 }}>Current Alarm Status</h3>
-            <p><strong>Device ID:</strong> {alarmData.deviceId}</p>
-            <p>No active alarms - System is operating normally</p>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f5f5f5' }}>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>S.No</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Error Code</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Description</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Priority</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Occurred At</th>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Machine Alert</th>
+                </tr>
+              </thead>
+              <tbody>
+                {errorData.map((error, index) => (
+                  <tr 
+                    key={index}
+                    style={{ 
+                      borderBottom: '1px solid #eee',
+                      backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9'
+                    }}
+                  >
+                    <td style={{ padding: '10px' }}>{index + 1}</td>
+                    <td style={{ padding: '10px' }}>{error.error_code}</td>
+                    <td style={{ padding: '10px' }}>{error.description}</td>
+                    <td style={{ padding: '10px' }}>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: getPriorityColor(error.priority),
+                        color: error.priority === 'LOW' ? 'black' : 'white'
+                      }}>
+                        {error.priority}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px' }}>{formatDate(error.timestamp)}</td>
+                    <td style={{ padding: '10px' }}>
+                      <button 
+                        onClick={() => sendMachineAlert(error.id)}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Send Machine Alert
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
-      {/* Historical Errors */}
-      <h3>Historical Error Logs</h3>
-      
-      {loading ? (
-        <div>Loading error history...</div>
-      ) : error ? (
-        <div style={{ color: 'red' }}>Error: {error}</div>
-      ) : errorData.length === 0 ? (
-        <div>No historical errors found</div>
-      ) : (
-        <div style={{
-          maxHeight: '500px',
-          overflowY: 'auto',
-          border: '1px solid #eee',
-          borderRadius: '8px'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f5f5f5' }}>
-                <th style={{ padding: '10px', textAlign: 'left' }}>S.No</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Error Code</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Description</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Priority</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Occurred At</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>Machine Alert</th>
-              </tr>
-            </thead>
-            <tbody>
-              {errorData.map((error, index) => (
-                <tr 
-                  key={index}
-                  style={{ 
-                    borderBottom: '1px solid #eee',
-                    backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9'
-                  }}
-                >
-                  <td style={{ padding: '10px' }}>{index + 1}</td>
-                  <td style={{ padding: '10px' }}>{error.error_code}</td>
-                  <td style={{ padding: '10px' }}>{error.description}</td>
-                  <td style={{ padding: '10px' }}>
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      backgroundColor: getPriorityColor(error.priority),
-                      color: error.priority === 'LOW' ? 'black' : 'white'
-                    }}>
-                      {error.priority}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px' }}>{formatDate(error.timestamp)}</td>
-                  <td style={{ padding: '10px' }}>
-                    <button 
-                      onClick={() => sendMachineAlert(error.id)}
-                      style={{
-                        padding: '5px 10px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      Send Machine Alert
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Footer Navigation */}
+      <NavScreen />
     </div>
   );
 };

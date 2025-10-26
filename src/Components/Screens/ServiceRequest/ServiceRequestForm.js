@@ -1000,6 +1000,7 @@ const ServiceRequestForm = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [existingMedia, setExistingMedia] = useState([]);
   const [deletingMedia, setDeletingMedia] = useState([]);
+  const [problemTypes, setProblemTypes] = useState([]);
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -1008,9 +1009,31 @@ const ServiceRequestForm = () => {
     source_type: 'Customer Request',
     service_item: '',
     customer: userId,
+    problem_type: '',
   });
 
   const [serviceItems, setServiceItems] = useState([]);
+
+  // Fetch problem types
+  useEffect(() => {
+    const fetchProblemTypes = async () => {
+      try {
+        const response = await fetch(`${baseURL}/problem-types/`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.status === "success" && Array.isArray(result.data)) {
+            setProblemTypes(result.data);
+          }
+        } else {
+          console.error('Failed to fetch problem types');
+        }
+      } catch (error) {
+        console.error('Error fetching problem types:', error);
+      }
+    };
+
+    fetchProblemTypes();
+  }, []);
 
   // Fetch existing media when in edit mode
   useEffect(() => {
@@ -1030,6 +1053,7 @@ const ServiceRequestForm = () => {
         source_type: existingRequest.source_type || 'Customer Request',
         service_item: existingRequest.service_item || '',
         customer: existingRequest.customer || userId,
+        problem_type: existingRequest.problem_type || '',
       });
       setSelectedCompany(existingRequest.company || null);
     }
@@ -1417,6 +1441,7 @@ const ServiceRequestForm = () => {
       company: selectedCompany || "unknown",
       service_item: form.service_item,
       customer: user?.customer_id || "unknown",
+      problem_type: form.problem_type || null,
       pm_group: selectedItem?.pm_group || "default-pm",
       assigned_engineer: isEditMode ? existingRequest.assigned_engineer : "",
       reopened_from: isEditMode ? existingRequest.reopened_from : "",
@@ -1471,6 +1496,7 @@ const ServiceRequestForm = () => {
             source_type: 'Customer Request',
             service_item: '',
             customer: user?.customer_id,
+            problem_type: '',
           });
           setSelectedFiles([]);
         }
@@ -1561,7 +1587,7 @@ const ServiceRequestForm = () => {
       <div className="card">
         <div className="card-header">
           <h5 className="mb-1">{isEditMode ? 'Edit Service Request' : 'Service Request Form'}</h5>
-          <h6 className="text" style={{ color: 'white' }}>
+          <h6 className="text" style={{ color: '' }}>
             {isEditMode ? 'Update the service request details' : 'Please fill in the service request details'}
           </h6>
         </div>
@@ -1618,6 +1644,29 @@ const ServiceRequestForm = () => {
                 />
               </div>
 
+              {/* Problem Type Field - Added after Preferred Time */}
+              <div className="col-md-6">
+                <label className="formlabel" style={{ marginLeft: '-145px' }}>Problem Type</label>
+                <select
+                  name="problem_type"
+                  value={form.problem_type}
+                  onChange={handleChange}
+                  className="form-control"
+                >
+                  <option value="">Select Problem Type (Optional)</option>
+                  {problemTypes.length === 0 ? (
+                    <option value="" disabled>Loading problem types...</option>
+                  ) : (
+                    problemTypes.map((problemType) => (
+                      <option key={problemType.problem_type_id} value={problemType.problem_type_id}>
+                        {problemType.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <small className="text-muted">Select the type of problem you're experiencing</small>
+              </div>
+
               <div className="col-12">
                 <label className="formlabel" style={{ marginLeft: '-137px' }}>Request Details</label>
                 <textarea
@@ -1632,7 +1681,7 @@ const ServiceRequestForm = () => {
 
               {/* File Upload Section */}
               <div className="col-12">
-                <label className="formlabel" style={{ marginLeft: '-137px' }}>
+                <label className="formlabel" style={{ marginLeft: '7px' }}>
                   {isEditMode ? 'Manage Images & Videos' : 'Upload Images & Videos (Optional)'}
                 </label>
                 <div className="file-upload-section">
