@@ -13,6 +13,7 @@ import Navbar from './Components/Screens/Navbar/Navbar';
 import AuthProvider from "./Components/AuthContext/AuthContext";
 import DashboardScreen from './Components/Screens/DashboardScreen/Dashboard';
 import MachineScreen from './Components/Screens/MachineScreen/Machine';
+import MachineDataScreen from './Components/Screens/MachineScreen/MachineDataScreen';
 import RequestScreen from './Components/Screens/RequestScreen/Request';
 import ComplaintForm from "./Components/Screens/Complaints/ComplaintsForm"
 import ComplaintDetails from "./Components/Screens/Complaints/ComplaintDetails"
@@ -101,6 +102,7 @@ function App() {
                 <Route path="/dashboard" element={<DashboardScreen />} />
                 <Route path="/connect" element={<Connect />} />
                 <Route path="/machine" element={<MachineScreen />} />
+                <Route path="/machine-data" element={<MachineDataScreen />} />
                 <Route path="/request" element={<RequestScreen />} />
                 <Route path="/complaint-form" element={<ComplaintForm />} />
                 <Route path="/complaint-details" element={<ComplaintDetails />} />

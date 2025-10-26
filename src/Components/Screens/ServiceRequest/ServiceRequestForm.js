@@ -978,6 +978,7 @@ import baseURL from '../../ApiUrl/Apiurl';
 import Notification_Url from '../../ApiUrl/PushNotificanURL';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { FaTimes, FaUpload, FaImage, FaVideo } from 'react-icons/fa';
 
 const ServiceRequestForm = () => {
   const navigate = useNavigate();
@@ -997,6 +998,7 @@ const ServiceRequestForm = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [form, setForm] = useState({
     request_details: '',
     preferred_date: '',
@@ -1070,6 +1072,84 @@ const ServiceRequestForm = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Validate file types and sizes
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/') || file.type.startsWith('video/');
+      const isValidSize = file.size <= 50 * 1024 * 1024; // 50MB limit
+      
+      if (!isValidType) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Invalid File Type',
+          text: `${file.name} is not a valid image or video file.`,
+          confirmButtonColor: '#f8bb86',
+        });
+        return false;
+      }
+      
+      if (!isValidSize) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'File Too Large',
+          text: `${file.name} exceeds 50MB size limit.`,
+          confirmButtonColor: '#f8bb86',
+        });
+        return false;
+      }
+      
+      return true;
+    });
+
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+    e.target.value = ''; // Reset file input
+  };
+
+  // Remove file from selection
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Upload media files to the service request
+  const uploadMediaFiles = async (requestId, serviceItemId) => {
+    if (selectedFiles.length === 0) return true;
+
+    try {
+      const formData = new FormData();
+      formData.append('user_id', userId);
+      formData.append('company_id', company_id);
+      formData.append('service_item_id', serviceItemId);
+
+      // Append all files
+      selectedFiles.forEach(file => {
+        formData.append('file', file);
+      });
+
+      const mediaUrl = `${baseURL}/service-pools/${requestId}/media/`;
+      
+      const response = await fetch(mediaUrl, {
+        method: 'POST',
+        body: formData,
+        // Note: Don't set Content-Type header for FormData, browser will set it automatically with boundary
+      });
+
+      if (response.ok) {
+        console.log('Media files uploaded successfully');
+        return true;
+      } else {
+        const errorData = await response.json();
+        console.error('Media upload failed:', errorData);
+        throw new Error(errorData.message || 'Media upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading media files:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -1138,11 +1218,22 @@ const ServiceRequestForm = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
+        const requestId = data.data?.request_id || existingRequest?.request_id;
+
+        // Upload media files if any (only for new requests or if files are selected in edit mode)
+        if (selectedFiles.length > 0 && requestId) {
+          try {
+            await uploadMediaFiles(requestId, form.service_item);
+          } catch (mediaError) {
+            // Even if media upload fails, we still show success for the main request
+            console.warn('Media upload failed but request was created:', mediaError);
+          }
+        }
+
         await Swal.fire({
           icon: 'success',
           title: 'Success',
-          text: `Service request ${isEditMode ? 'updated' : 'submitted'} successfully!`,
+          text: `Service request ${isEditMode ? 'updated' : 'submitted'} successfully!${selectedFiles.length > 0 ? ' Media files uploaded.' : ''}`,
           confirmButtonColor: '#3085d6',
         });
         
@@ -1159,6 +1250,7 @@ const ServiceRequestForm = () => {
             service_item: '',
             customer: user?.customer_id,
           });
+          setSelectedFiles([]);
         }
 
         // Send notification only for new requests
@@ -1228,6 +1320,15 @@ const ServiceRequestForm = () => {
     navigate('/request');
   };
 
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   return (
     <div className="container service-request-form">
       <div className="card">
@@ -1248,7 +1349,7 @@ const ServiceRequestForm = () => {
                   onChange={handleChange}
                   className="form-control"
                   required
-                  disabled={isEditMode} // Disable service item selection in edit mode
+                  disabled={isEditMode}
                 >
                   <option value="">Select Service Item</option>
                   {serviceItems.length === 0 ? (
@@ -1300,6 +1401,63 @@ const ServiceRequestForm = () => {
                   rows="4"
                   required
                 />
+              </div>
+
+              {/* File Upload Section */}
+              <div className="col-12">
+                <label className="formlabel" style={{ marginLeft: '-137px' }}>
+                  Upload Images & Videos (Optional)
+                </label>
+                <div className="file-upload-section">
+                  <div className="file-upload-area">
+                    <input
+                      type="file"
+                      id="file-upload"
+                      multiple
+                      accept="image/*,video/*"
+                      onChange={handleFileChange}
+                      className="file-input"
+                    />
+                    <label htmlFor="file-upload" className="file-upload-label">
+                      <FaUpload className="me-2" />
+                      Choose Images & Videos
+                    </label>
+                    <small className="text-muted d-block mt-2">
+                      Supported formats: JPG, PNG, GIF, MP4, AVI, MOV. Max file size: 50MB
+                    </small>
+                  </div>
+
+                  {/* Selected Files Preview */}
+                  {selectedFiles.length > 0 && (
+                    <div className="selected-files mt-3">
+                      <h6>Selected Files ({selectedFiles.length}):</h6>
+                      <div className="file-list">
+                        {selectedFiles.map((file, index) => (
+                          <div key={index} className="file-item">
+                            <div className="file-info">
+                              {file.type.startsWith('image/') ? (
+                                <FaImage className="file-icon text-primary" />
+                              ) : (
+                                <FaVideo className="file-icon text-danger" />
+                              )}
+                              <div className="file-details">
+                                <span className="file-name">{file.name}</span>
+                                <span className="file-size">{formatFileSize(file.size)}</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => removeFile(index)}
+                            >
+                              <FaTimes />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="d-flex justify-content-center mt-3 gap-3">
