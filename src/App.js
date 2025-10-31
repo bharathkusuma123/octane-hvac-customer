@@ -51,6 +51,7 @@ import Contact from './Components/LoginSreens/Contact';
 import DelegateScreen1 from './DelegateProfile/DelegateMachineScreen/DelegateScreen1';
 import DelegateScreen2 from './DelegateProfile/DelegateMachineScreen/DelegateScreen2';
 import DelegateAlarmsPage from './DelegateProfile/DelegateMachineScreen/DelegateAlarmPage';
+import MachineRequestForm from './Components/Screens/MachineScreensNew/MachineRequestForm';
 
 // 🔹 Wrapper component to handle auto-login check
 function AppWrapper() {
@@ -86,6 +87,7 @@ function App() {
                 <Route path="/timers" element={<Timers />} />
                 <Route path="/settings" element={<Settings />} />
 
+ <Route path="/machine-service-request-form" element={<MachineRequestForm />} />
                 <Route path="/setpassword" element={<SetPasswordScreen />} />
                 <Route path="/forgotpassword" element={<ForgotPasswordScreen />} />
                 <Route path="/otp" element={<OTPVerificationScreen />} />

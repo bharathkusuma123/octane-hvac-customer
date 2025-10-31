@@ -21,7 +21,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
- const handleLogin = async (e) => {
+const handleLogin = async (e) => {
   e.preventDefault();
   setError('');
 
@@ -58,9 +58,35 @@ export default function Login() {
       );
     }
 
-    // Navigate based on user type
+    // ✅ FIXED: Check if delegate has monitor permissions before navigating
     if (user.delegate_id) {
-      navigate("/delegate-home", { state: { userMobile: user.mobile } });
+      // We need to fetch the service items to check permissions
+      try {
+        const serviceItemsResponse = await axios.get(`${baseURL}/delegate-service-item-tasks/`);
+        const allDelegateItems = serviceItemsResponse.data.data || [];
+        const userServiceItems = allDelegateItems.filter(
+          item => item.delegate === user.delegate_id
+        );
+        
+        // Check if user has any service item with monitor permission
+        const hasMonitorPermission = userServiceItems.some(
+          item => item.can_monitor_equipment === true
+        );
+
+        console.log("User service items:", userServiceItems);
+        console.log("Has monitor permission:", hasMonitorPermission);
+
+        // Navigate based on monitor permission
+        if (hasMonitorPermission) {
+          navigate("/delegate-machinescreen1", { state: { userMobile: user.mobile } });
+        } else {
+          navigate("/delegate-home", { state: { userMobile: user.mobile } });
+        }
+      } catch (serviceError) {
+        console.error("Error fetching service items:", serviceError);
+        // Fallback to delegate-home if service items fetch fails
+        navigate("/delegate-home", { state: { userMobile: user.mobile } });
+      }
     } else {
       navigate("/machinescreen1", { state: { userMobile: user.mobile } });
     }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import axios from "axios";
 import {
   FiArrowLeft,
   FiPower,
@@ -49,6 +50,8 @@ const DelegateScreen1 = () => {
     selectedServiceItem,
     getSelectedServiceDetails,
     serviceItemPermissions,
+    serviceItems, // Get all service items from context
+    updateSelectedServiceItem, // Function to change selected service item
     loading: serviceItemsLoading 
   } = useDelegateServiceItems();
   
@@ -61,6 +64,7 @@ const DelegateScreen1 = () => {
   const [processing, setProcessing] = useState({ status: false, message: "" });
   const [errorCount, setErrorCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [serviceItemsList, setServiceItemsList] = useState([]); // Store service items with names
   
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
@@ -75,6 +79,27 @@ const DelegateScreen1 = () => {
     deviceId: "",
     alarmOccurred: "0",
   });
+
+  // Fetch service items with names from API
+  useEffect(() => {
+    if (user?.company_id && user?.delegate_id) {
+      axios.get(`${baseURL}/service-items/?user_id=${user.delegate_id}&company_id=${user.company_id}`)
+        .then((response) => {
+          try {
+            const data = Array.isArray(response.data) ? response.data : 
+                        (response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
+            setServiceItemsList(data);
+          } catch (error) {
+            console.error('Error processing service items data:', error);
+            setServiceItemsList([]);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching service items:', error);
+          setServiceItemsList([]);
+        });
+    }
+  }, [user?.company_id, user?.delegate_id]);
 
   // Get the complete service details when selectedServiceItem changes
   useEffect(() => {
@@ -98,8 +123,8 @@ const DelegateScreen1 = () => {
         console.log("Fetching data for PCB-serial-number:", pcbSerialNumber);
         
         const [dataResponse, controllerResponse] = await Promise.all([
-          fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`),
-          fetch("https://rahul21.pythonanywhere.com/controllers")
+          fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`)
+          // fetch("https://rahul21.pythonanywhere.com/controllers")
         ]);
 
         if (!dataResponse.ok) throw new Error("Network response was not ok");
@@ -112,17 +137,17 @@ const DelegateScreen1 = () => {
         }
 
         const deviceData = data.data;
-        let latestController = {};
+        // let latestController = {};
 
-        if (controllerResponse.ok) {
-          const controllerData = await controllerResponse.json();
-          if (Array.isArray(controllerData)) {
-            latestController = controllerData.reduce(
-              (prev, current) => (prev.id > current.id ? prev : current),
-              {}
-            );
-          }
-        }
+        // if (controllerResponse.ok) {
+        //   const controllerData = await controllerResponse.json();
+        //   if (Array.isArray(controllerData)) {
+        //     latestController = controllerData.reduce(
+        //       (prev, current) => (prev.id > current.id ? prev : current),
+        //       {}
+        //     );
+        //   }
+        // }
 
         // Update sensor data
         setSensorData(prev => ({
@@ -159,6 +184,14 @@ const DelegateScreen1 = () => {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const handleServiceItemChange = (e) => {
+    const selectedId = e.target.value;
+    updateSelectedServiceItem(selectedId);
+    // Reset loading states when changing service items
+    setLoading(true);
+    setSelectedService(null);
   };
 
   const handlePowerToggle = async () => {
@@ -212,19 +245,32 @@ const DelegateScreen1 = () => {
     }
   };
 
+  // Get service item name for display
+  const getServiceItemName = (serviceItemId) => {
+    if (!serviceItemId) return 'Select Service Item';
+    
+    const itemFromApi = serviceItemsList.find(item => item.service_item_id === serviceItemId);
+    if (itemFromApi) {
+      return itemFromApi.service_item_name || serviceItemId;
+    }
+    
+    const itemFromContext = serviceItems.find(item => item.service_item === serviceItemId);
+    return itemFromContext ? itemFromContext.service_item_name || serviceItemId : serviceItemId;
+  };
+
   // Show loading state
   if (serviceItemsLoading) {
     return <div className="loading">Loading service items...</div>;
   }
 
-  if (!selectedServiceItem) {
+  if (!selectedServiceItem && serviceItems.length > 0) {
     return (
       <div className="mainmain-container" style={{
         backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
       }}>
         <div className="main-container">
           <div className="error-message">
-            No service item selected. Please select a service item first.
+            Please select a service item to continue.
           </div>
           <button 
             className="control-btn" 
@@ -232,6 +278,27 @@ const DelegateScreen1 = () => {
             style={{ marginTop: '20px' }}
           >
             Go Back to Services
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (serviceItems.length === 0) {
+    return (
+      <div className="mainmain-container" style={{
+        backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
+      }}>
+        <div className="main-container">
+          <div className="error-message">
+            No service items available. Please contact administrator.
+          </div>
+          <button 
+            className="control-btn" 
+            onClick={() => navigate("/delegate-home")}
+            style={{ marginTop: '20px' }}
+          >
+            Go Back to Dashboard
           </button>
         </div>
       </div>
@@ -262,21 +329,63 @@ const DelegateScreen1 = () => {
       backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
     }}>
       <div className="main-container">
-        {/* Service Display (No Dropdown) */}
+        {/* Service Display - Now with Dropdown when multiple items exist */}
         <div className="service-display-container">
-          <div className="service-display-header">
-            <span>
-              {selectedService?.service_item_name || "Loading..."}
-            </span>
-            <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-              PCB: {selectedService?.pcb_serial_number || 'Loading...'}
+          {serviceItems.length > 1 ? (
+            // Show dropdown when user has multiple service items
+            <div className="service-dropdown-container">
+              <label htmlFor="service-item-select" className="service-dropdown-label">
+                Select Service Item:
+              </label>
+              <select
+                id="service-item-select"
+                className="service-dropdown-select"
+                value={selectedServiceItem}
+                onChange={handleServiceItemChange}
+              >
+                {serviceItems.map((item) => {
+                  const displayName = getServiceItemName(item.service_item);
+                  return (
+                    <option key={item.service_item} value={item.service_item}>
+                      {displayName}
+                    </option>
+                  );
+                })}
+              </select>
+              
+              {/* Display selected service details */}
+              {/* {selectedService && (
+                <div className="selected-service-details">
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '8px' }}>
+                    {selectedService.service_item_name}
+                  </div>
+                  <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
+                    PCB: {selectedService.pcb_serial_number || 'N/A'}
+                  </div>
+                  {serviceItemPermissions.can_control_equipment && (
+                    <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '2px' }}>
+                      • Control Enabled
+                    </div>
+                  )}
+                </div>
+              )} */}
             </div>
-            {serviceItemPermissions.can_control_equipment && (
-              <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '2px' }}>
-                • Control Enabled
+          ) : (
+            // Show simple display when user has only one service item
+            <div className="service-display-header">
+              <span>
+                {selectedService?.service_item_name || "Loading..."}
+              </span>
+              <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
+                PCB: {selectedService?.pcb_serial_number || 'Loading...'}
               </div>
-            )}
-          </div>
+              {serviceItemPermissions.can_control_equipment && (
+                <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '2px' }}>
+                  • Control Enabled
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Header */}

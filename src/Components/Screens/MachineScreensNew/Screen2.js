@@ -92,8 +92,8 @@ const Screen2 = () => {
     const fetchData = async () => {
       try {
         const [dataResponse, controllerResponse] = await Promise.all([
-          fetch(`${baseURL}/get-latest-data/${deviceId}/?user_id=${userId}&company_id=${company_id}`),
-          fetch("https://rahul21.pythonanywhere.com/controllers")
+          fetch(`${baseURL}/get-latest-data/${deviceId}/?user_id=${userId}&company_id=${company_id}`)
+          // fetch("https://rahul21.pythonanywhere.com/controllers")
         ]);
 
         if (!dataResponse.ok) throw new Error("Network response was not ok");
@@ -104,17 +104,17 @@ const Screen2 = () => {
         }
 
         const deviceData = data.data;
-        let latestController = {};
+        // let latestController = {};
 
-        if (controllerResponse.ok) {
-          const controllerData = await controllerResponse.json();
-          if (Array.isArray(controllerData)) {
-            latestController = controllerData.reduce(
-              (prev, current) => (prev.id > current.id ? prev : current),
-              {}
-            );
-          }
-        }
+        // if (controllerResponse.ok) {
+        //   const controllerData = await controllerResponse.json();
+        //   if (Array.isArray(controllerData)) {
+        //     latestController = controllerData.reduce(
+        //       (prev, current) => (prev.id > current.id ? prev : current),
+        //       {}
+        //     );
+        //   }
+        // }
 
         setSensorData(prev => ({
           outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,

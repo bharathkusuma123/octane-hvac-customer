@@ -242,11 +242,11 @@ const AlarmsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Get alarm data passed from navigation
+  // Get alarm data passed from navigation - now including deviceId from ServiceRequestForm
   const alarmData = location.state?.alarmData || {
     alarmOccurred: '0',
     errorCount: 0,
-    deviceId: ''
+    deviceId: location.state?.deviceId || '' // Get deviceId from navigation state
   };
   
   // Get user and company IDs separately
@@ -300,30 +300,17 @@ const AlarmsPage = () => {
     return date.toLocaleString();
   };
 
-  const sendMachineAlert = async (errorId) => {
-    try {
-      const response = await fetch(`${baseURL}/machine-alert-request/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pcb_serial_number: alarmData.deviceId,
-          error_code_id: errorId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send machine alert');
-      }
-
-      const result = await response.json();
-      alert('Machine alert sent successfully!');
-      return result;
-    } catch (err) {
-      console.error('Error sending machine alert:', err);
-      alert('Failed to send machine alert: ' + err.message);
-    }
+  const sendMachineAlert = (error) => {
+    // Navigate to service request form with error data
+    navigate('/machine-service-request-form', { 
+      state: { 
+        errorData: error,
+        pcb_serial_number: alarmData.deviceId, // Pass deviceId as pcb_serial_number
+        error_code_id: error.id,
+        source: 'customer', // Identify it's from customer panel
+        alarmData: alarmData // Pass existing alarm data
+      } 
+    });
   };
 
   return (
@@ -332,7 +319,7 @@ const AlarmsPage = () => {
       <div className="delegate-card-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/machinescreen1")}
             style={{
               background: 'none',
               border: 'none',
@@ -447,7 +434,7 @@ const AlarmsPage = () => {
                     <td style={{ padding: '10px' }}>{formatDate(error.timestamp)}</td>
                     <td style={{ padding: '10px' }}>
                       <button 
-                        onClick={() => sendMachineAlert(error.id)}
+                        onClick={() => sendMachineAlert(error)}
                         style={{
                           padding: '5px 10px',
                           backgroundColor: '#007bff',
