@@ -342,3 +342,10 @@
     align-self: flex-end;
   }
 }
+
+
+@media (max-width: 480px) {
+  .requestformcard {
+margin-top: 66px;
+        margin-bottom: 50px;  }
+}

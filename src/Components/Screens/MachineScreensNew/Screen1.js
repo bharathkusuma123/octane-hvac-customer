@@ -233,9 +233,9 @@ useEffect(() => {
   }
 };
 
- if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
+//  if (loading) {
+//     return <div className="loading">Loading...</div>;
+//   }
   const handleNavigation = (path) => {
     if (!processing.status) {
       navigate(path);
@@ -267,30 +267,32 @@ useEffect(() => {
     }}>
       <div className="main-container">
         {/* Service Dropdown */}
-        <div className="service-dropdown-container">
+       <div className="service-dropdown-wrapper">
+  <div className="service-dropdown-container">
+    <div
+      className="service-dropdown-header"
+      onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+    >
+      <span>
+        {selectedService ? selectedService.service_item_name : "Select Service"}
+      </span>
+      <FiChevronDown size={18} />
+    </div>
+    {showServiceDropdown && (
+      <div className="service-dropdown-list">
+        {serviceItems.map((item) => (
           <div
-            className="service-dropdown-header"
-            onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+            key={item.service_item_id}
+            className="service-dropdown-item"
+            onClick={() => handleServiceSelect(item)}
           >
-            <span>
-              {selectedService ? selectedService.service_item_name : "Select Service"}
-            </span>
-            <FiChevronDown size={18} />
+            {item.service_item_name}
           </div>
-          {showServiceDropdown && (
-            <div className="service-dropdown-list">
-              {serviceItems.map((item) => (
-                <div
-                  key={item.service_item_id}
-                  className="service-dropdown-item"
-                  onClick={() => handleServiceSelect(item)}
-                >
-                  {item.service_item_name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
 
         {/* Header */}
         <div className="header1">
@@ -299,7 +301,7 @@ useEffect(() => {
               src={AIROlogo}
               alt="AIRO Logo"
               className="logo-image"
-              style={{ marginBottom: "-68px" }}
+              style={{ marginBottom: "-158px" }}
             />
           </div>
 
@@ -473,7 +475,7 @@ useEffect(() => {
         </div>
         
         <div className="footer-logo">
-          <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
+          <img src={greenAire} alt="GreenAire Logo" className="logo-image" style={{marginTop:"-12px"}} />
         </div>
       </div>
     </div>

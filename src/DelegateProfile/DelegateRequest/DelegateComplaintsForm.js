@@ -108,7 +108,7 @@ const ComplaintForm = () => {
 
       <div className="complaint-form-wrapper">
         <Container className="d-flex justify-content-center h-100">
-          <Card className="complaint-form-card shadow-sm w-100">
+          <Card className="complaint-form-card shadow-sm w-100 mt-5">
             
             {/* ✅ Heading */}
             <Card.Header className="bg-white border-0 pb-0">

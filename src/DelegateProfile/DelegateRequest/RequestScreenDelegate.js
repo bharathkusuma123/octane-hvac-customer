@@ -1318,7 +1318,7 @@ const RequestScreenDelegate = () => {
   return (
     <div className="request-screen-wrapper">
       <DelegateNavbar/>
-      <h2 className="text-center mb-4">Request Screen</h2>
+      <h2 className="text-center mb-4 mt-4">Request Screen</h2>
 
       {/* Show selected service item info */}
       {selectedServiceItem && (

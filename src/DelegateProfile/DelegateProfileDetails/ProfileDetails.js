@@ -86,7 +86,7 @@ const ProfileDetails = () => {
 const styles = {
   container: {
     maxWidth: "500px",
-    margin: "50px auto",
+    margin: "80px auto",
     padding: "20px",
     border: "1px solid #ddd",
     borderRadius: "10px",

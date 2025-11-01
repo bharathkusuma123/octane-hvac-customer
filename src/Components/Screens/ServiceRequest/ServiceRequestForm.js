@@ -1584,7 +1584,7 @@ const ServiceRequestForm = () => {
 
   return (
     <div className="container service-request-form">
-      <div className="card">
+      <div className="card requestformcard">
         <div className="card-header">
           <h5 className="mb-1">{isEditMode ? 'Edit Service Request' : 'Service Request Form'}</h5>
           <h6 className="text" style={{ color: '' }}>

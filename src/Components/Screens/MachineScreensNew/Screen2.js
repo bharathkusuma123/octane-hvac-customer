@@ -273,7 +273,7 @@ const Screen2 = () => {
             <FiArrowLeft size={24} color="white" />
           </button>
 
-          <img src={AIROlogo} alt="AIRO Logo" className="logo" />
+          <img src={AIROlogo} alt="AIRO Logo" className="logo logonew" />
 
           <div className="power-button-container">
             <button

@@ -421,7 +421,7 @@ const AddDelegate = () => {
           <form onSubmit={handleSubmit}>
             <div className="row g-3">
               <div className="col-md-6">
-                <label className="formlabel" style={{ marginLeft: '-155px' }}>Delegate Name</label>
+                <label className="formlabel" >Delegate Name</label>
                 <input
                   type="text"
                   name="delegate_name"
@@ -434,7 +434,7 @@ const AddDelegate = () => {
               </div>
 
               <div className="col-md-6">
-                <label className="formlabel" style={{ marginLeft: '-155px' }}>Delegate Email</label>
+                <label className="formlabel" >Delegate Email</label>
                 <input
                   type="email"
                   name="delegate_email"
@@ -447,7 +447,7 @@ const AddDelegate = () => {
               </div>
 
               <div className="col-md-6">
-                <label className="formlabel" style={{ marginLeft: '-155px' }}>Mobile Number</label>
+                <label className="formlabel" >Mobile Number</label>
                 <input
                   type="tel"
                   name="delegate_mobile"

@@ -73,8 +73,8 @@ button[type="requestbackbutton"]:hover {
 @media (max-width: 600px) {
   .form-container {
     padding: 12px;
-    margin-top: 70px;
-  }
+        margin-top: 80px;
+        margin-bottom: 60px;  }
 
   h3 {
     font-size: 1.4rem;
