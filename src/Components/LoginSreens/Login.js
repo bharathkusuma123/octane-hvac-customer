@@ -24,40 +24,46 @@ export default function Login() {
 const handleLogin = async (e) => {
   e.preventDefault();
   setError('');
-
   try {
     let fcmToken = '';
-
     // ✅ Use Expo-provided token
     if (window.ReactNativeWebView && window.fcmToken) {
       fcmToken = window.fcmToken;
       console.log("Using Expo token:", fcmToken);
     }
-
     const response = await axios.post(`${baseURL}/customer-login/`, {
       mobile,
       password,
       fcm_token: fcmToken,
     });
-
-    const user = response.data.data;
-
-    // Store user data in localStorage
+    
+    // ✅ Store the FULL login response structure (matching native expectations)
+    const loginResponse = {
+      status: "success",  // Assuming API returns this; adjust if not
+      message: "Login successful",
+      data: response.data.data  // Full user data object
+    };
+    
+    // Store full response in localStorage for native sync (onLoadEnd will post it back)
+    localStorage.setItem("user", JSON.stringify(loginResponse));
+    
+    // Keep your existing individual stores for web-specific logic
+    const user = loginResponse.data;
     localStorage.setItem("userId", user.customer_id || user.delegate_id);
     localStorage.setItem("userMobile", user.mobile);
     localStorage.setItem("userName", user.full_name || user.delegate_name);
     localStorage.setItem("customerType", user.customer_type || "delegate");
     localStorage.setItem("isLoggedIn", "true");
-
-    login(user);
-
-    // Send login message to Expo
+    
+    login(user);  // Your existing context/action
+    
+    // ✅ Post FULL login response to Expo IMMEDIATELY (before navigation)
+    // This triggers native to store in AsyncStorage and inject redirect JS
     if (window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(
-        JSON.stringify({ type: 'login', userId: user.customer_id || user.delegate_id })
-      );
+      window.ReactNativeWebView.postMessage(JSON.stringify(loginResponse));
+      console.log("Posted full login response to Expo:", loginResponse);
     }
-
+    
     // ✅ FIXED: Check if delegate has monitor permissions before navigating
     if (user.delegate_id) {
       // We need to fetch the service items to check permissions
@@ -67,16 +73,15 @@ const handleLogin = async (e) => {
         const userServiceItems = allDelegateItems.filter(
           item => item.delegate === user.delegate_id
         );
-        
+       
         // Check if user has any service item with monitor permission
         const hasMonitorPermission = userServiceItems.some(
           item => item.can_monitor_equipment === true
         );
-
         console.log("User service items:", userServiceItems);
         console.log("Has monitor permission:", hasMonitorPermission);
-
-        // Navigate based on monitor permission
+        
+        // Navigate based on monitor permission (web-side navigation)
         if (hasMonitorPermission) {
           navigate("/delegate-machinescreen1", { state: { userMobile: user.mobile } });
         } else {
@@ -90,12 +95,12 @@ const handleLogin = async (e) => {
     } else {
       navigate("/machinescreen1", { state: { userMobile: user.mobile } });
     }
-
   } catch (err) {
     console.error("Login error:", err);
     setError("Invalid mobile number or password");
   }
 };
+
 
 
   // Function to generate FCM token
@@ -108,6 +113,84 @@ const handleLogin = async (e) => {
   //     return '';
   //   }
   // };
+
+// 5-11-2025
+
+//   const handleLogin = async (e) => {
+//   e.preventDefault();
+//   setError('');
+
+//   try {
+//     let fcmToken = '';
+
+//     // ✅ Use Expo-provided token
+//     if (window.ReactNativeWebView && window.fcmToken) {
+//       fcmToken = window.fcmToken;
+//       console.log("Using Expo token:", fcmToken);
+//     }
+
+//     const response = await axios.post(`${baseURL}/customer-login/`, {
+//       mobile,
+//       password,
+//       fcm_token: fcmToken,
+//     });
+
+//     const user = response.data.data;
+
+//     // Store user data in localStorage
+//     localStorage.setItem("userId", user.customer_id || user.delegate_id);
+//     localStorage.setItem("userMobile", user.mobile);
+//     localStorage.setItem("userName", user.full_name || user.delegate_name);
+//     localStorage.setItem("customerType", user.customer_type || "delegate");
+//     localStorage.setItem("isLoggedIn", "true");
+
+//     login(user);
+
+//     // Send login message to Expo
+//     if (window.ReactNativeWebView) {
+//       window.ReactNativeWebView.postMessage(
+//         JSON.stringify({ type: 'login', userId: user.customer_id || user.delegate_id })
+//       );
+//     }
+
+//     // ✅ FIXED: Check if delegate has monitor permissions before navigating
+//     if (user.delegate_id) {
+//       // We need to fetch the service items to check permissions
+//       try {
+//         const serviceItemsResponse = await axios.get(`${baseURL}/delegate-service-item-tasks/`);
+//         const allDelegateItems = serviceItemsResponse.data.data || [];
+//         const userServiceItems = allDelegateItems.filter(
+//           item => item.delegate === user.delegate_id
+//         );
+        
+//         // Check if user has any service item with monitor permission
+//         const hasMonitorPermission = userServiceItems.some(
+//           item => item.can_monitor_equipment === true
+//         );
+
+//         console.log("User service items:", userServiceItems);
+//         console.log("Has monitor permission:", hasMonitorPermission);
+
+//         // Navigate based on monitor permission
+//         if (hasMonitorPermission) {
+//           navigate("/delegate-machinescreen1", { state: { userMobile: user.mobile } });
+//         } else {
+//           navigate("/delegate-home", { state: { userMobile: user.mobile } });
+//         }
+//       } catch (serviceError) {
+//         console.error("Error fetching service items:", serviceError);
+//         // Fallback to delegate-home if service items fetch fails
+//         navigate("/delegate-home", { state: { userMobile: user.mobile } });
+//       }
+//     } else {
+//       navigate("/machinescreen1", { state: { userMobile: user.mobile } });
+//     }
+
+//   } catch (err) {
+//     console.error("Login error:", err);
+//     setError("Invalid mobile number or password");
+//   }
+// };
 
   return (
     <div className="container">

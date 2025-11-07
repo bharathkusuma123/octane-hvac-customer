@@ -80,6 +80,9 @@ const DelegateScreen1 = () => {
     alarmOccurred: "0",
   });
 
+  // Check if selected service has PCB serial number - ONLY for restricting modes
+  const hasValidPCBSerial = selectedService && selectedService.pcb_serial_number;
+
   // Fetch service items with names from API
   useEffect(() => {
     if (user?.company_id && user?.delegate_id) {
@@ -114,6 +117,7 @@ const DelegateScreen1 = () => {
   useEffect(() => {
     if (!selectedService || !selectedService.pcb_serial_number) {
       console.log("Waiting for service details with PCB serial number:", selectedService);
+      setLoading(false);
       return;
     }
 
@@ -122,9 +126,8 @@ const DelegateScreen1 = () => {
         const pcbSerialNumber = selectedService.pcb_serial_number;
         console.log("Fetching data for PCB-serial-number:", pcbSerialNumber);
         
-        const [dataResponse, controllerResponse] = await Promise.all([
+        const [dataResponse] = await Promise.all([
           fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`)
-          // fetch("https://rahul21.pythonanywhere.com/controllers")
         ]);
 
         if (!dataResponse.ok) throw new Error("Network response was not ok");
@@ -137,34 +140,21 @@ const DelegateScreen1 = () => {
         }
 
         const deviceData = data.data;
-        // let latestController = {};
 
-        // if (controllerResponse.ok) {
-        //   const controllerData = await controllerResponse.json();
-        //   if (Array.isArray(controllerData)) {
-        //     latestController = controllerData.reduce(
-        //       (prev, current) => (prev.id > current.id ? prev : current),
-        //       {}
-        //     );
-        //   }
-        // }
-
-        // Update sensor data
         setSensorData(prev => ({
-          outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
-          humidity: deviceData.room_humidity?.value || prev.humidity,
-          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
-          temperature: deviceData.set_temperature?.value || prev.temperature,
+          outsideTemp: deviceData.outdoor_temperature?.value,
+          humidity: deviceData.room_humidity?.value,
+          roomTemp: deviceData.room_temperature?.value,
+          fanSpeed: deviceData.fan_speed?.value,
+          temperature: deviceData.set_temperature?.value,
           powerStatus: deviceData.hvac_on?.value == "1" ? "on" : "off",
           mode: deviceData.mode?.value,
-          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-          deviceId: deviceData.pcb_serial_number || prev.deviceId,
-          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+          errorFlag: deviceData.error_flag?.value,
+          hvacBusy: deviceData.hvac_busy?.value,
+          deviceId: deviceData.pcb_serial_number,
+          alarmOccurred: deviceData.alarm_occurred?.value,
         }));
 
-        // Update error count
         const alarmValue = deviceData.alarm_occurred?.value;
         setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
 
@@ -176,7 +166,7 @@ const DelegateScreen1 = () => {
     };
 
     fetchData();
-    const intervalId = setInterval(fetchData, 10000);
+    const intervalId = setInterval(fetchData, 1000);
     return () => clearInterval(intervalId);
   }, [selectedService, userId, company_id]);
 
@@ -212,13 +202,14 @@ const DelegateScreen1 = () => {
 
     setProcessing({ status: true, message: "Sending command, please wait..." });
 
-    const newHvacValue = sensorData.powerStatus == "on" ? 0 : 1;
+    const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
 
+    const isShutdown = sensorData?.fanSpeed === 3 || sensorData?.mode === 0;
     const payload = {
       Header: "0xAA",
       DI: selectedService.pcb_serial_number,
-      MD: sensorData.mode,
-      FS: sensorData.fanSpeed,
+      MD: isShutdown ? "3" : sensorData.mode,
+      FS: isShutdown ? "0" : sensorData.fanSpeed,
       SRT: sensorData.temperature,
       HVAC: newHvacValue,
       Footer: "0xZX",
@@ -227,7 +218,7 @@ const DelegateScreen1 = () => {
     console.log("Sending payload:", payload);
 
     try {
-      const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      const response = await fetch("https://mdata.air2o.net/controllers/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -258,11 +249,140 @@ const DelegateScreen1 = () => {
     return itemFromContext ? itemFromContext.service_item_name || serviceItemId : serviceItemId;
   };
 
-  // Show loading state
-  if (serviceItemsLoading) {
-    return <div className="loading">Loading service items...</div>;
+  // No service items case
+  if (!serviceItemsLoading && serviceItems.length === 0) {
+    return (
+      <div className="mainmain-container" style={{
+        backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "20px",
+        textAlign: "center"
+      }}>
+        <div className="logo">
+          <img
+            src={AIROlogo}
+            alt="AIRO Logo"
+            className="logo-image"
+            style={{ marginBottom: "20px" }}
+          />
+        </div>
+        
+        <div style={{
+          backgroundColor: "rgba(255, 255, 255, 0.1)",
+          padding: "40px",
+          borderRadius: "12px",
+          maxWidth: "500px",
+          width: "100%"
+        }}>
+          <h2 style={{ color: "white", marginBottom: "20px", fontSize: "24px" }}>
+            No Machines Assigned
+          </h2>
+          <p style={{ color: "white", marginBottom: "30px", fontSize: "16px", lineHeight: "1.5" }}>
+            You don't have any machines assigned to your account yet. 
+            Please wait until a machine is assigned to you, or contact your administrator.
+          </p>
+          
+          <div style={{ display: "flex", gap: "15px", justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              <FiLogOut size={18} />
+              Logout
+            </button>
+          </div>
+           <div style={{ marginTop: "10%", display: "flex", gap: "15px", justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={() => navigate("/delegate-home")}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              <FiLogOut size={18} />
+              Go to Home
+            </button>
+          </div>
+        </div>
+        
+        <div className="footer-logo" style={{ marginTop: "40px" }}>
+          <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
+        </div>
+      </div>
+    );
   }
 
+  // Loading state
+  if (serviceItemsLoading) {
+    return (
+      <div
+        className="mainmain-container"
+        style={{
+          backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column",
+          color: "white",
+        }}
+      >
+        <div
+          className="loading"
+          style={{ color: "white", fontSize: "18px", marginBottom: "20px", gap: "10%" }}
+        >
+          Loading...
+          
+        <button
+          onClick={handleLogout}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            color: "white",
+            border: "1px solid white",
+            borderRadius: "8px",
+            padding: "8px 16px",
+            cursor: "pointer",
+            fontSize: "16px",
+            transition: "0.3s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.25)")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)")}
+        >
+          <FiLogOut size={20} />
+          <span>Logout</span>
+        </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle case where no service item is selected but service items exist
   if (!selectedServiceItem && serviceItems.length > 0) {
     return (
       <div className="mainmain-container" style={{
@@ -284,31 +404,6 @@ const DelegateScreen1 = () => {
     );
   }
 
-  if (serviceItems.length === 0) {
-    return (
-      <div className="mainmain-container" style={{
-        backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
-      }}>
-        <div className="main-container">
-          <div className="error-message">
-            No service items available. Please contact administrator.
-          </div>
-          <button 
-            className="control-btn" 
-            onClick={() => navigate("/delegate-home")}
-            style={{ marginTop: '20px' }}
-          >
-            Go Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading && !selectedService?.pcb_serial_number) {
-    return <div className="loading">Initializing device data...</div>;
-  }
-
   const handleNavigation = (path) => {
     if (!processing.status) {
       navigate(path);
@@ -317,7 +412,6 @@ const DelegateScreen1 = () => {
 
   const handleTempChange = (newTemp) => {
     console.log("Temperature changed:", newTemp);
-    // Update backend if needed
   };
 
   // Derived values
@@ -352,23 +446,6 @@ const DelegateScreen1 = () => {
                   );
                 })}
               </select>
-              
-              {/* Display selected service details */}
-              {/* {selectedService && (
-                <div className="selected-service-details">
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '8px' }}>
-                    {selectedService.service_item_name}
-                  </div>
-                  <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-                    PCB: {selectedService.pcb_serial_number || 'N/A'}
-                  </div>
-                  {serviceItemPermissions.can_control_equipment && (
-                    <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '2px' }}>
-                      • Control Enabled
-                    </div>
-                  )}
-                </div>
-              )} */}
             </div>
           ) : (
             // Show simple display when user has only one service item
@@ -387,6 +464,13 @@ const DelegateScreen1 = () => {
             </div>
           )}
         </div>
+
+        {/* PCB Warning Message */}
+        {selectedService && !hasValidPCBSerial && (
+          <h6 style={{ color: "black", marginTop: "10px", textAlign: "center" }}>
+            No PCB serial number captured.
+          </h6>
+        )}
 
         {/* Header */}
         <div className="header1">
@@ -474,7 +558,7 @@ const DelegateScreen1 = () => {
           </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{sensorData.humidity}%</div>
+            <div className="env-value">{formatTemp(sensorData.humidity)}%</div>
             <div className="env-label">Humidity</div>
           </div>
         </div>
@@ -484,11 +568,16 @@ const DelegateScreen1 = () => {
       <div className="footer-container">
         <div className="control-buttons">
           <button
-            className="control-btn"
-            onClick={() => navigate("/delegate-machinescreen2", { 
-              state: { sensorData, selectedService, userId, company_id}
-            })}
-            disabled={!serviceItemPermissions.can_control_equipment}
+            className={`control-btn ${!hasValidPCBSerial ? 'disabled-btn' : ''}`}
+            onClick={() => {
+              if (hasValidPCBSerial) {
+                navigate("/delegate-machinescreen2", { 
+                  state: { sensorData, selectedService, userId, company_id}
+                });
+              }
+            }}
+            disabled={!hasValidPCBSerial || !serviceItemPermissions.can_control_equipment}
+            title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
           >
             <FiWind size={20} />
             <span>Modes</span>

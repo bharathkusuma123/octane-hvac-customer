@@ -2,17 +2,16 @@ import React, { useEffect, useState, useRef } from "react";
 
 const MIN_TEMP = 18;
 const MAX_TEMP = 30;
-const START_ANGLE = -100;  // 18°C
-const DEGREE_RANGE = 102;  // sweep to +45° (30°C)
-const SIZE = 285;          // dial size
-const ARC_RADIUS = 100;    // must match SVG path radius
+const START_ANGLE = -100;
+const DEGREE_RANGE = 102;
+const SIZE = 285;
+const ARC_RADIUS = 100;
 
 const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
   const [angle, setAngle] = useState(START_ANGLE);
   const [temperature, setTemperature] = useState(initialTemperature || MIN_TEMP);
   const dialRef = useRef(null);
 
-  // Sync with prop changes
   useEffect(() => {
     if (initialTemperature !== undefined) {
       const tempValue =
@@ -20,25 +19,24 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
           ? parseFloat(initialTemperature)
           : initialTemperature;
 
-      setTemperature(tempValue);
-      setAngle(temperatureToAngle(tempValue));
+      const roundedTemp = Math.round(tempValue);
+      setTemperature(roundedTemp);
+      setAngle(temperatureToAngle(roundedTemp));
     }
   }, [initialTemperature]);
 
-  // Convert angle to temperature
   const angleToTemperature = (ang) => {
     const relative = Math.min(Math.max(ang - START_ANGLE, 0), DEGREE_RANGE);
     return (relative / DEGREE_RANGE) * (MAX_TEMP - MIN_TEMP) + MIN_TEMP;
   };
 
-  // Convert temp to angle
   const temperatureToAngle = (temp) => {
     const t = typeof temp === "string" ? parseFloat(temp) : temp;
     const clamped = Math.min(Math.max(t, MIN_TEMP), MAX_TEMP);
     return ((clamped - MIN_TEMP) / (MAX_TEMP - MIN_TEMP)) * DEGREE_RANGE + START_ANGLE;
   };
 
-  // Drag logic
+  // 🔧 Updated: round to integer temperature
   const handleDrag = (event) => {
     event.preventDefault();
 
@@ -52,12 +50,12 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
     const dx = clientX - centerX;
     const dy = clientY - centerY;
 
-    let deg = (Math.atan2(dy, dx) * 180) / Math.PI; // -180..+180
+    let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
     const clamped = Math.min(Math.max(deg, START_ANGLE), START_ANGLE + DEGREE_RANGE);
 
     setAngle(clamped);
     const temp = angleToTemperature(clamped);
-    const roundedTemp = Math.round(temp * 10) / 10;
+    const roundedTemp = Math.round(temp); // ✅ only whole numbers now
     setTemperature(roundedTemp);
     onTempChange?.(roundedTemp);
   };
@@ -89,7 +87,6 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
     };
   }, []);
 
-  // Fan speed text
   const getFanSpeedDescription = (speed) => {
     switch (speed) {
       case 0:
@@ -116,7 +113,6 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
         className="temp-circle-control"
         style={{ position: "relative", width: "100%", height: "100%" }}
       >
-        {/* Arc Path */}
         <svg
           className="temp-curve-arc"
           width={SIZE}
@@ -134,7 +130,6 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
           />
         </svg>
 
-        {/* INNER WHITE CIRCLE, perfectly centered */}
         <div
           className="temp-inner-circle"
           style={{
@@ -153,17 +148,11 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
             zIndex: 1,
           }}
         >
-          <div
-            className="temp-temperature"
-            // style={{ fontSize: 32, fontWeight: 700, lineHeight: 1 }}
-          >
-            {typeof temperature === "string"
-              ? parseFloat(temperature).toFixed(1)
-              : temperature.toFixed(1)}
-            °C
-          </div>
-   <div className="temp-fan-container">
-             <div className="temp-fan-icon-container">
+          {/* 🔧 Changed: display without decimal */}
+          <div className="temp-temperature">{Math.round(temperature)}°C</div>
+
+          <div className="temp-fan-container">
+            <div className="temp-fan-icon-container">
               <div className="temp-fan-bar1" />
               <div className="temp-fan-bar2" />
               <div className="temp-fan-bar3" />
@@ -173,7 +162,6 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
           <div className="temp-fan-label">Fan Speed</div>
         </div>
 
-        {/* HANDLE: rides on arc */}
         <div
           className="temp-control-handle"
           style={{
@@ -193,7 +181,6 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
           title="Drag to set temperature"
         />
 
-        {/* Ticks (unchanged) */}
         {[...Array(48)].map((_, i) => (
           <div
             key={i}
