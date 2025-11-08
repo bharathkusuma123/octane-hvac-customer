@@ -111,7 +111,7 @@ const handleSubmit = async (e) => {
             <i className="bi bi-envelope-fill input-icon"></i>
             <input
               type="email"
-              placeholder="Enter Email"
+              placeholder="Enter Email (optional)"
               value={email}
               className="sign-input"
               onChange={(e) => setEmail(e.target.value)}

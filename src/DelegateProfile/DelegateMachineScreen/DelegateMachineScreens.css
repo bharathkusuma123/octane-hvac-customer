@@ -1,0 +1,32 @@
+
+
+@media (max-width: 480px) {
+
+.delegate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 20px;
+}
+
+   
+        .delegate-logo {
+        width: 170px;
+        height: 35px;
+        object-fit: contain;
+        margin-top: 41px;
+    }
+
+    .screen1-power-button2 {
+   margin-top: 20px;
+}
+.warning-message{
+        margin-bottom: 11px;
+        margin-top: 2px;}
+
+        .delegate-service-display{
+       margin-top: -27px;
+        margin-bottom: -38px;       }
+
+}

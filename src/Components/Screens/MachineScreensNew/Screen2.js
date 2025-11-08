@@ -55,10 +55,10 @@ const formatTemp = (temp) => {
 };
 
 const Screen2 = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext); 
   const navigate = useNavigate();
   const location = useLocation();
-    const {userId, company_id } = location.state || {};
+  const {userId, company_id } = location.state || {};
   
   // State management
   const selectedService = getSelectedService(location);
@@ -66,7 +66,9 @@ const Screen2 = () => {
   const [loading, setLoading] = useState(true);
   
   const [processing, setProcessing] = useState({ status: false, message: "" });
-  const [sensorData, setSensorData] = useState({
+  
+  // Separate state for API data and display data
+  const [apiData, setApiData] = useState({
     outsideTemp: 0,
     humidity: 0,
     roomTemp: 0,
@@ -80,20 +82,30 @@ const Screen2 = () => {
     alarmOccurred: "0",
   });
 
+  // Display data that can be modified locally when power is off
+  const [displayData, setDisplayData] = useState({
+    fanSpeed: "0",
+    temperature: 25,
+    mode: "3",
+    powerStatus: "off"
+  });
+
+  // Track if we have local changes that haven't been sent to API
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+
   // Derived values
-  const currentModeDescription = MODE_MAP[sensorData.mode] || "Fan";
-  const fanPosition = FAN_SPEEDS.indexOf(sensorData.fanSpeed);
+  const currentModeDescription = MODE_MAP[displayData.mode] || "Fan";
+  const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
   const fanPercentage = fanPosition * 50;
 
-  // Fetch data
+  // Fetch data but don't override local changes when power is off
   useEffect(() => {
     if (!deviceId) return;
 
     const fetchData = async () => {
       try {
-        const [dataResponse, controllerResponse] = await Promise.all([
+        const [dataResponse] = await Promise.all([
           fetch(`${baseURL}/get-latest-data/${deviceId}/?user_id=${userId}&company_id=${company_id}`)
-          // fetch("https://rahul21.pythonanywhere.com/controllers")
         ]);
 
         if (!dataResponse.ok) throw new Error("Network response was not ok");
@@ -104,34 +116,48 @@ const Screen2 = () => {
         }
 
         const deviceData = data.data;
-        // let latestController = {};
 
-        // if (controllerResponse.ok) {
-        //   const controllerData = await controllerResponse.json();
-        //   if (Array.isArray(controllerData)) {
-        //     latestController = controllerData.reduce(
-        //       (prev, current) => (prev.id > current.id ? prev : current),
-        //       {}
-        //     );
-        //   }
-        // }
-
-        setSensorData(prev => ({
-          outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
-          humidity: deviceData.room_humidity?.value || prev.humidity,
-          roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-          // fanSpeed: latestController.FS?.toString() || deviceData.fan_speed?.value || prev.fanSpeed,
-          // temperature: latestController.SRT?.toString() || deviceData.set_temperature?.value || prev.temperature,
-          // mode: latestController.MD?.toString() || deviceData.mode?.value || prev.mode,
+        setApiData(prev => {
+          const newApiData = {
+            outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
+            humidity: deviceData.room_humidity?.value || prev.humidity,
+            roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
             fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
-          temperature: deviceData.set_temperature?.value || prev.temperature,
+            temperature: deviceData.set_temperature?.value || prev.temperature,
             mode: deviceData.mode?.value || prev.mode,
-          powerStatus: deviceData.hvac_on?.value === "1" ? "on" : "off", // Always update from API
-          errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-          hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-          deviceId: deviceData.pcb_serial_number || prev.deviceId,
-          alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-        }));
+            powerStatus: deviceData.hvac_on?.value === "1" ? "on" : "off",
+            errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+            hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+            deviceId: deviceData.pcb_serial_number || prev.deviceId,
+            alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+          };
+
+          // Only update display data from API if:
+          // 1. Power is ON, OR
+          // 2. Power is OFF but we don't have local changes
+          if (newApiData.powerStatus === "on" || !hasLocalChanges) {
+            setDisplayData(prevDisplay => ({
+              ...prevDisplay,
+              fanSpeed: newApiData.fanSpeed,
+              temperature: newApiData.temperature,
+              mode: newApiData.mode,
+              powerStatus: newApiData.powerStatus
+            }));
+            
+            if (newApiData.powerStatus === "on") {
+              setHasLocalChanges(false);
+            }
+          } else {
+            // Keep local changes but update power status
+            setDisplayData(prevDisplay => ({
+              ...prevDisplay,
+              powerStatus: newApiData.powerStatus
+            }));
+          }
+
+          return newApiData;
+        });
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -142,14 +168,14 @@ const Screen2 = () => {
     fetchData();
     const intervalId = setInterval(fetchData, 1000);
     return () => clearInterval(intervalId);
-  }, [deviceId]); // Removed processing.status from dependencies
+  }, [deviceId, hasLocalChanges]);
 
   // API call handler
   const sendCommand = async (updates = {}, commandType = "general") => {
-    if (processing.status || sensorData.hvacBusy === "1") {
+    if (processing.status || apiData.hvacBusy === "1") {
       setProcessing({ 
         status: true, 
-        message: sensorData.hvacBusy === "1" 
+        message: apiData.hvacBusy === "1" 
           ? "System is busy, please wait..." 
           : "Please wait..." 
       });
@@ -158,29 +184,44 @@ const Screen2 = () => {
 
     setProcessing({ status: true, message: "Sending command, please wait..." });
 
+    // When turning power on, include all current display data
+    const finalUpdates = updates.powerStatus === "on" ? {
+      ...updates,
+      mode: displayData.mode,
+      fanSpeed: displayData.fanSpeed,
+      temperature: displayData.temperature
+    } : updates;
+
     const payload = {
       Header: "0xAA",
       DI: deviceId,
-      MD: parseInt(updates.mode || sensorData.mode) || 1,
-      FS: parseInt(updates.fanSpeed || sensorData.fanSpeed) || 0,
-      SRT: parseInt(updates.temperature || sensorData.temperature) || 25,
-      HVAC: updates.powerStatus === "off" ? 0 : 1,
+      MD: parseInt(finalUpdates.mode || displayData.mode) || 1,
+      FS: parseInt(finalUpdates.fanSpeed || displayData.fanSpeed) || 0,
+      SRT: parseInt(finalUpdates.temperature || displayData.temperature) || 25,
+      HVAC: finalUpdates.powerStatus === "off" ? "0" : "1",
       Footer: "0xZX",
     };
 
+    console.log("Sending payload:", payload);
+
     try {
-      const response = await fetch("https://rahul21.pythonanywhere.com/controllers", {
+      const response = await fetch("https://mdata.air2o.net/controllers/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
+      }); 
 
       if (!response.ok) throw new Error("Failed to send command");
       
+      // Clear local changes when power is turned on
+      if (updates.powerStatus === "on") {
+        setHasLocalChanges(false);
+      }
+
       // Disable all interactive elements for 25 seconds
       setTimeout(() => {
         setProcessing({ status: false, message: "" });
-      }, 25000); // 25 seconds
+      }, 22000);
       
       return true;
     } catch (error) {
@@ -192,35 +233,45 @@ const Screen2 = () => {
 
   // Event handlers
   const handlePowerToggle = async () => {
-    const newPowerStatus = sensorData.powerStatus === "on" ? "off" : "on";
-    const updates = { powerStatus: newPowerStatus };
+    const newPowerStatus = displayData.powerStatus === "on" ? "off" : "on";
     
-    await sendCommand(updates, "power");
+    // Update display immediately for better UX
+    setDisplayData(prev => ({ ...prev, powerStatus: newPowerStatus }));
+    
+    await sendCommand({ powerStatus: newPowerStatus }, "power");
   };
 
   const handleModeChange = async (newMode) => {
     const newModeCode = MODE_CODE_MAP[newMode] || 1;
-    const updates = { mode: newModeCode.toString() };
 
-    // If power is off, just update local state (no API call needed)
-    if (sensorData.powerStatus === "off") {
-      setSensorData(prev => ({ ...prev, ...updates }));
+    // Update display immediately
+    setDisplayData(prev => ({ ...prev, mode: newModeCode.toString() }));
+
+    // If power is off, mark as local change and don't call API
+    if (displayData.powerStatus === "off") {
+      setHasLocalChanges(true);
       return;
     }
 
+    // If power is on, call API immediately
+    const updates = { mode: newModeCode.toString() };
     await sendCommand(updates, "mode");
   };
 
   const handleFanSpeedChange = async (newPosition) => {
     const newSpeed = FAN_SPEEDS[newPosition];
-    const updates = { fanSpeed: newSpeed };
 
-    // If power is off, just update local state (no API call needed)
-    if (sensorData.powerStatus === "off") {
-      setSensorData(prev => ({ ...prev, ...updates }));
+    // Update display immediately
+    setDisplayData(prev => ({ ...prev, fanSpeed: newSpeed }));
+
+    // If power is off, mark as local change and don't call API
+    if (displayData.powerStatus === "off") {
+      setHasLocalChanges(true);
       return;
     }
 
+    // If power is on, call API immediately
+    const updates = { fanSpeed: newSpeed };
     await sendCommand(updates, "fan");
   };
 
@@ -235,8 +286,18 @@ const Screen2 = () => {
   };
 
   const handleTempChange = (newTemp) => {
-    // Temperature changes are local only for now
-    setSensorData(prev => ({ ...prev, temperature: newTemp.toString() }));
+    // Update display immediately
+    setDisplayData(prev => ({ ...prev, temperature: newTemp.toString() }));
+
+    // If power is off, mark as local change and don't call API
+    if (displayData.powerStatus === "off") {
+      setHasLocalChanges(true);
+      return;
+    }
+
+    // If power is on, you can optionally call API here or wait for user to confirm
+    // For now, we'll just update locally when power is on too
+    // This prevents too many API calls while dragging the temperature dial
   };
 
   const handleBackClick = () => {
@@ -277,7 +338,7 @@ const Screen2 = () => {
 
           <div className="power-button-container">
             <button
-              className={`power-button ${sensorData.powerStatus === 'on' ? 'on' : 'off'} ${processing.status ? "processing" : ""}`}
+              className={`power-button ${displayData.powerStatus === 'on' ? 'on' : 'off'} ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
               disabled={processing.status}
               style={{
@@ -288,7 +349,7 @@ const Screen2 = () => {
               {processing.status && <span className="processing-indicator"></span>}
             </button>
 
-            {sensorData.errorFlag === "1" && (
+            {apiData.errorFlag === "1" && (
               <div className="error-indicator" />
             )}
           </div>
@@ -299,42 +360,49 @@ const Screen2 = () => {
           <div className="processing-message">{processing.message}</div>
         )}
 
-        {sensorData.errorFlag === "1" && (
+        {apiData.errorFlag === "1" && (
           <div className="error-message">
             ⚠️ System Error Detected
           </div>
         )}
 
-        {sensorData.hvacBusy === "1" && !processing.status && (
+        {apiData.hvacBusy === "1" && !processing.status && (
           <div className="busy-message">
             ⏳ System is currently busy
           </div>
         )}
 
+        {/* Show local changes indicator when power is off */}
+        {/* {displayData.powerStatus === "off" && hasLocalChanges && (
+          <div className="pending-changes-message">
+            ⚡ Changes will be applied when turned on
+          </div>
+        )} */}
+
         {/* Temperature Dial */}
         <TemperatureDial
-          sensorData={sensorData}
+          sensorData={displayData}
           onTempChange={handleTempChange}
           fanSpeed={fanPosition}
-          initialTemperature={sensorData.temperature ?? 25}
-          disabled={processing.status} // Pass disabled prop to TemperatureDial if needed
+          initialTemperature={displayData.temperature ?? 25}
+          disabled={processing.status}
         />
 
         {/* Environment Info */}
         <div className="env-info">
           <div className="env-item">
             <FiSun className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.outsideTemp)}°C</div>
+            <div className="env-value">{formatTemp(apiData.outsideTemp)}°C</div>
             <div className="env-label">Outside Temp</div>
           </div>
           <div className="env-item">
             <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.roomTemp)}°C</div>
+            <div className="env-value">{formatTemp(apiData.roomTemp)}°C</div>
             <div className="env-label">Room Temp</div>
           </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{sensorData.humidity}%</div>
+            <div className="env-value">{formatTemp(apiData.humidity)}%</div>
             <div className="env-label">Humidity</div>
           </div>
         </div>
