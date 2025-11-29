@@ -3,6 +3,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import baseURL from '../../ApiUrl/Apiurl';
 import { AuthContext } from '../../AuthContext/AuthContext';
+import NavScreen from '../../../Components/Screens/Navbar/Navbar';
+import './Newstyles.css'
+
+
 
 const MachineRequestForm = () => {
   const navigate = useNavigate();
@@ -220,7 +224,7 @@ const MachineRequestForm = () => {
   }
 
   return (
-    <div className="container service-request-form mt-4">
+    <div className="container service-request-form new-styles">
       <div className="card">
         <div className="card-header bg-primary text-white">
           <h5 className="mb-1">
@@ -330,6 +334,8 @@ const MachineRequestForm = () => {
           </form>
         </div>
       </div>
+            <NavScreen />
+
     </div>
   );
 };
