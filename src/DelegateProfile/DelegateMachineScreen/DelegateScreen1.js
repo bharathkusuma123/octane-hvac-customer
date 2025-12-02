@@ -228,7 +228,7 @@ const DelegateScreen1 = () => {
 
       setTimeout(() => {
         setProcessing({ status: false, message: "" });
-      }, 22000);
+      }, 15000);
 
     } catch (error) {
       console.error("Error sending command:", error);
@@ -537,12 +537,14 @@ const DelegateScreen1 = () => {
         )}
 
         {/* Temperature Dial */}
+        <div style={{ pointerEvents: 'none', opacity: 0.7 }}>
         <TemperatureDial
           sensorData={sensorData}
           onTempChange={handleTempChange}
           fanSpeed={fanPosition}
           initialTemperature={sensorData.temperature ?? 25}
         />
+        </div>
 
         {/* Environment Info */}
         <div className="env-info">

@@ -62,10 +62,24 @@ const DelegateAlarmsPage = () => {
     }
   };
 
-  const formatDate = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString();
-  };
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+
+  const date = new Date(dateString);
+
+  // Use UTC values (because backend timestamp ends with Z = UTC)
+  let day = date.getUTCDate().toString().padStart(2, '0');
+  let month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+  let year = date.getUTCFullYear();
+
+  let hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12; // Convert 0 → 12
+
+  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+};
 
   const sendMachineAlert = async (errorId) => {
     try {
@@ -199,7 +213,7 @@ const DelegateAlarmsPage = () => {
                       {error.priority}
                     </span>
                   </td>
-                  <td style={{ padding: '10px' }}>{formatDate(error.timestamp)}</td>
+                  <td style={{ padding: '10px' }}>{formatDate(error.original_timestamp)}</td>
                   <td style={{ padding: '10px' }}>
                     <button 
                       onClick={() => sendMachineAlert(error.id)}

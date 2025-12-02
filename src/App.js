@@ -52,15 +52,19 @@ import DelegateScreen1 from './DelegateProfile/DelegateMachineScreen/DelegateScr
 import DelegateScreen2 from './DelegateProfile/DelegateMachineScreen/DelegateScreen2';
 import DelegateAlarmsPage from './DelegateProfile/DelegateMachineScreen/DelegateAlarmPage';
 import MachineRequestForm from './Components/Screens/MachineScreensNew/MachineRequestForm';
+import MachineLayout from './Components/Screens/MachineScreensNew/MachineLayout';
 
-// 🔹 Wrapper component to handle auto-login check
+
+// 🔹 Wrapper component to auto-login (Option B FIX APPLIED)
 function AppWrapper() {
   const navigate = useNavigate();
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn");
-    if (isLoggedIn === "true") {
-      navigate("/machinescreen1");  // ✅ Redirect to dashboard
+
+    // ⭐ FIXED: Only redirect when URL = "/"
+    if (isLoggedIn === "true" && window.location.pathname === "/") {
+      navigate("/machinescreen1");
     }
   }, [navigate]);
 
@@ -80,14 +84,26 @@ function App() {
           <Router>
             <div className="App">
               <Routes>
-                <Route path="/" element={<AppWrapper />} />
-                <Route path="/machinescreen1" element={<Screen1 />} />
-                <Route path="/machinescreen2" element={<Screen2 />} />
-                <Route path="/alarms" element={<AlarmsPage />} />
-                <Route path="/timers" element={<Timers />} />
-                <Route path="/settings" element={<Settings />} />
 
- <Route path="/machine-service-request-form" element={<MachineRequestForm />} />
+                {/* LOGIN ROUTE */}
+                <Route path="/" element={<AppWrapper />} />
+
+                {/* 🚀 MACHINE LAYOUT (Persistent Screen1 - NO REMOUNT) */}
+                <Route element={<MachineLayout />}>
+                  <Route path="/machinescreen1" element={<Screen1 />} />
+                  <Route path="/machinescreen2" element={<Screen2 />} />
+                  <Route path="/alarms" element={<AlarmsPage />} />
+                  <Route path="/timers" element={<Timers />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/machine-service-request-form" element={<MachineRequestForm />} />
+                  <Route path="/machine" element={<MachineScreen />} />
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/request" element={<RequestScreen />} />
+                  <Route path="/view-delegates" element={<ViewDelegates />} />
+                  <Route path="/service-form" element={<ServiceRequestForm />} />
+                </Route>
+
+                {/* OTHER ROUTES */}
                 <Route path="/setpassword" element={<SetPasswordScreen />} />
                 <Route path="/forgotpassword" element={<ForgotPasswordScreen />} />
                 <Route path="/otp" element={<OTPVerificationScreen />} />
@@ -97,15 +113,15 @@ function App() {
                 <Route path="/set-delegate-sign-password" element={<DelegateSignup />} />
                 <Route path="/customer-data" element={<CustomerData />} />
                 <Route path="/delegate-data" element={<DelegateData />} />
-                <Route path="/customer-dashboard" element={<Dashboard />} />
 
+                <Route path="/customer-dashboard" element={<Dashboard />} />
                 <Route path="/navbar" element={<Navbar />} />
-                <Route path="/contact" element={<Contact/>} />
+                <Route path="/contact" element={<Contact />} />
                 <Route path="/dashboard" element={<DashboardScreen />} />
                 <Route path="/connect" element={<Connect />} />
-                <Route path="/machine" element={<MachineScreen />} />
+               
                 <Route path="/machine-data" element={<MachineDataScreen />} />
-                <Route path="/request" element={<RequestScreen />} />
+
                 <Route path="/complaint-form" element={<ComplaintForm />} />
                 <Route path="/complaint-details" element={<ComplaintDetails />} />
 
@@ -114,24 +130,24 @@ function App() {
                 <Route path="/delegate-feedback/:requestId" element={<DelegateFeedback />} />
 
                 <Route path="/display-feedback" element={<DisplayFeedback />} />
-                <Route path="/service-form" element={<ServiceRequestForm />} />
-                <Route path="/view-delegates" element={<ViewDelegates />} />
+  
                 <Route path="/add-delegates" element={<AddDelegates />} />
-                <Route path="/home" element={<Home />} />
                 <Route path="/edit-customer/:customer_id" element={<EditCustomer />} />
+
                 <Route path="/machines/:serviceItemId" element={<MachineDetails />} />
                 <Route path="/delegate-service-items/:delegateId" element={<DelegateSetviceItems />} />
+
+                {/* Delegate Sections */}
                 <Route path="/delegate-home" element={<DelegateHome />} />
-                 <Route path="/delegate-machinescreen1" element={<DelegateScreen1 />} />
-                  <Route path="/delegate-machinescreen2" element={<DelegateScreen2 />} />
-                  <Route path="/delegate-alarms" element={<DelegateAlarmsPage />} />
+                <Route path="/delegate-machinescreen1" element={<DelegateScreen1 />} />
+                <Route path="/delegate-machinescreen2" element={<DelegateScreen2 />} />
+                <Route path="/delegate-alarms" element={<DelegateAlarmsPage />} />
+
                 <Route path="/delegate-request" element={<DelegateRequestForm />} />
                 <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />
                 <Route path="/delegate-survey" element={<DelegateSurveyForm />} />
-            
-               <Route path="/delegate-profile-details" element={<DelegateProfileDetails />} />
+                <Route path="/delegate-profile-details" element={<DelegateProfileDetails />} />
                 <Route path="/delegate-complaint-form" element={<DelegateComplaintsForm />} />
-
 
               </Routes>
             </div>

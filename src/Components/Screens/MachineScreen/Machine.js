@@ -121,15 +121,15 @@ const MachineScreen = () => {
     <div className="machine-screen-wrapper">
       <div className="machine-screen-header">
         <div className="machine-header-content">
-          <h2 className="machine-screen-title">Machine Screen</h2>
-          <button 
+          <h2 className="machine-screen-title">Your Machines</h2>
+          {/* <button 
               className="btn btn-primary machine-monitor-btn"
               onClick={() => navigate('/machine-data')}  // Changed from '/machinescreen1'
               title="View Complete Machine Data"
             >
               <FaTachometerAlt className="me-2" />
               Show Complete Machine Data
-            </button>
+            </button> */}
         </div>
       </div>
 

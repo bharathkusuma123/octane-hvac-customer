@@ -6,14 +6,14 @@ import {
   FiDroplet,
   FiThermometer,
 } from "react-icons/fi";
-import "./Screen1.css";
-import "./Screen2.css";
-import AIROlogo from "./Images/AIRO.png";
-import greenAire from "./Images/greenAire.png";
-import { useNavigate, useLocation } from "react-router-dom";
-import { AuthContext } from "../../AuthContext/AuthContext";
-import TemperatureDial from "./TemperatureDial";
-// Removed: import baseURL from "../../ApiUrl/Apiurl";
+// import "./Screen1.css";
+// import "./Screen2.css";
+import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png";
+import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
+import { useNavigate, useLocation } from "react-router-dom"; 
+import { AuthContext } from "../../Components/AuthContext/AuthContext";
+import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial";
+import baseURL from "../../Components/ApiUrl/Apiurl";
 
 // Constants
 const MODE_MAP = {
@@ -54,60 +54,124 @@ const formatTemp = (temp) => {
   return isNaN(num) ? "0.0" : num.toFixed(1);
 };
 
-const Screen2 = () => {
-  const { user } = useContext(AuthContext); 
+const DelegateScreen2 = () => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const { userId, company_id, sensorData } = location.state || {};
-
-  const [isDraggingTemp, setIsDraggingTemp] = useState(false);
+  const {userId, company_id } = location.state || {};
   
   // State management
   const selectedService = getSelectedService(location);
-  const deviceId = selectedService?.pcb_serial_number || sensorData?.deviceId || "2411GM-0102";
-
-  const [loading, setLoading] = useState(false); // No API → no loading
-
+  const deviceId = selectedService?.pcb_serial_number || "2411GM-0102";
+  const [loading, setLoading] = useState(true);
+  
   const [processing, setProcessing] = useState({ status: false, message: "" });
   
-  // Use passed sensorData as the base data
-  const initialApiData = {
-    outsideTemp: sensorData?.outsideTemp || "0",
-    humidity: sensorData?.humidity || "0",
-    roomTemp: sensorData?.roomTemp || "0",
-    fanSpeed: sensorData?.fanSpeed || "0",
-    temperature: sensorData?.temperature || "25",
-    powerStatus: sensorData?.powerStatus || "off",
-    mode: sensorData?.mode || "3",
-    errorFlag: sensorData?.errorFlag || "0",
-    hvacBusy: sensorData?.hvacBusy || "0",
-    deviceId: deviceId,
-    alarmOccurred: sensorData?.alarmOccurred || "0",
-  };
-
   // Separate state for API data and display data
-  const [apiData, setApiData] = useState(initialApiData);
+  const [apiData, setApiData] = useState({
+    outsideTemp: 0,
+    humidity: 0,
+    roomTemp: 0,
+    fanSpeed: "0",
+    temperature: 25,
+    powerStatus: "off",
+    mode: "3",
+    errorFlag: "0",
+    hvacBusy: "0",
+    deviceId: deviceId,
+    alarmOccurred: "0",
+  });
 
   // Display data that can be modified locally when power is off
   const [displayData, setDisplayData] = useState({
-    fanSpeed: initialApiData.fanSpeed,
-    temperature: initialApiData.temperature,
-    mode: initialApiData.mode,
-    powerStatus: initialApiData.powerStatus
+    fanSpeed: "0",
+    temperature: 25,
+    mode: "3",
+    powerStatus: "off"
   });
 
   // Track if we have local changes that haven't been sent to API
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
+    const [isDraggingTemp, setIsDraggingTemp] = useState(false);
 
   // Derived values
   const currentModeDescription = MODE_MAP[displayData.mode] || "Fan";
   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
   const fanPercentage = fanPosition * 50;
 
-  // Removed entire useEffect that was calling get-latest-data
+  // Fetch data but don't override local changes when power is off
+  useEffect(() => {
+    if (!deviceId) return;
 
-  // API call handler (unchanged)
+    const fetchData = async () => {
+      try {
+        const [dataResponse] = await Promise.all([
+          fetch(`${baseURL}/get-latest-data/${deviceId}/?user_id=${userId}&company_id=${company_id}`)
+        ]);
+
+        if (!dataResponse.ok) throw new Error("Network response was not ok");
+        
+        const data = await dataResponse.json();
+        if (data.status !== "success" || !data.data) {
+          throw new Error("Invalid data format from API");
+        }
+
+        const deviceData = data.data;
+
+        setApiData(prev => {
+          const newApiData = {
+            outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
+            humidity: deviceData.room_humidity?.value || prev.humidity,
+            roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
+            fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
+            temperature: deviceData.set_temperature?.value || prev.temperature,
+            mode: deviceData.mode?.value || prev.mode,
+            powerStatus: deviceData.hvac_on?.value === "1" ? "on" : "off",
+            errorFlag: deviceData.error_flag?.value || prev.errorFlag,
+            hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
+            deviceId: deviceData.pcb_serial_number || prev.deviceId,
+            alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
+          };
+
+          // Only update display data from API if:
+          // 1. Power is ON, OR
+          // 2. Power is OFF but we don't have local changes
+          if ((newApiData.powerStatus === "on" || !hasLocalChanges) && !isDraggingTemp) {
+            setDisplayData(prevDisplay => ({
+              ...prevDisplay,
+              fanSpeed: newApiData.fanSpeed,
+              temperature: newApiData.temperature,
+              mode: newApiData.mode,
+              powerStatus: newApiData.powerStatus
+            }));
+            
+            if (newApiData.powerStatus === "on") {
+              setHasLocalChanges(false);
+            }
+          } else {
+            // Keep local changes but update power status
+            setDisplayData(prevDisplay => ({
+              ...prevDisplay,
+              powerStatus: newApiData.powerStatus
+            }));
+          }
+
+          return newApiData;
+        });
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    const intervalId = setInterval(fetchData, 1000);
+    return () => clearInterval(intervalId);
+  }, [deviceId, hasLocalChanges, isDraggingTemp]);
+
+  // API call handler
   const sendCommand = async (updates = {}, commandType = "general") => {
     if (processing.status || apiData.hvacBusy === "1") {
       setProcessing({ 
@@ -121,6 +185,7 @@ const Screen2 = () => {
 
     setProcessing({ status: true, message: "Sending command, please wait..." });
 
+    // When turning power on, include all current display data
     const finalUpdates = updates.powerStatus === "on" ? {
       ...updates,
       mode: displayData.mode,
@@ -138,24 +203,24 @@ const Screen2 = () => {
       Footer: "0xZX",
     };
 
-    console.log("Sending payload:", payload);
-
     try {
       const response = await fetch("https://mdata.air2o.net/controllers/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      }); 
+      });
 
       if (!response.ok) throw new Error("Failed to send command");
       
+      // Clear local changes when power is turned on
       if (updates.powerStatus === "on") {
         setHasLocalChanges(false);
       }
 
+      // Disable all interactive elements for 25 seconds
       setTimeout(() => {
         setProcessing({ status: false, message: "" });
-      }, 15000);
+      }, 15000); // 15 seconds
       
       return true;
     } catch (error) {
@@ -165,37 +230,53 @@ const Screen2 = () => {
     }
   };
 
-  // All event handlers remain exactly the same
+  // Event handlers
   const handlePowerToggle = async () => {
     const newPowerStatus = displayData.powerStatus === "on" ? "off" : "on";
+    
+    // Update display immediately for better UX
     setDisplayData(prev => ({ ...prev, powerStatus: newPowerStatus }));
+    
     await sendCommand({ powerStatus: newPowerStatus }, "power");
   };
 
   const handleModeChange = async (newMode) => {
     const newModeCode = MODE_CODE_MAP[newMode] || 1;
+
+    // Update display immediately
     setDisplayData(prev => ({ ...prev, mode: newModeCode.toString() }));
 
+    // If power is off, mark as local change and don't call API
     if (displayData.powerStatus === "off") {
       setHasLocalChanges(true);
       return;
     }
-    await sendCommand({ mode: newModeCode.toString() }, "mode");
+
+    // If power is on, call API immediately
+    const updates = { mode: newModeCode.toString() };
+    await sendCommand(updates, "mode");
   };
 
   const handleFanSpeedChange = async (newPosition) => {
     const newSpeed = FAN_SPEEDS[newPosition];
+
+    // Update display immediately
     setDisplayData(prev => ({ ...prev, fanSpeed: newSpeed }));
 
+    // If power is off, mark as local change and don't call API
     if (displayData.powerStatus === "off") {
       setHasLocalChanges(true);
       return;
     }
-    await sendCommand({ fanSpeed: newSpeed }, "fan");
+
+    // If power is on, call API immediately
+    const updates = { fanSpeed: newSpeed };
+    await sendCommand(updates, "fan");
   };
 
   const handleFanClick = (e) => {
     if (processing.status) return;
+    
     const containerWidth = e.currentTarget.offsetWidth;
     const clickPosition = e.nativeEvent.offsetX;
     const segmentWidth = containerWidth / 3;
@@ -203,30 +284,43 @@ const Screen2 = () => {
     handleFanSpeedChange(newPosition);
   };
 
-  const handleTempChange = (newTemp) => {
-    setDisplayData(prev => ({ ...prev, temperature: newTemp.toString() }));
-    setIsDraggingTemp(true);
-    if (displayData.powerStatus === "off") {
-      setHasLocalChanges(true);
-    }
-  };
+ const handleTempChange = (newTemp) => {
+  // Update displayed value immediately
+  setDisplayData(prev => ({ ...prev, temperature: newTemp.toString() }));
 
-  const handleTempChangeEnd = async (newTemp) => {
-    setIsDraggingTemp(false);
-    if (displayData.powerStatus === "on") {
-      await sendCommand({ temperature: newTemp.toString() }, "temperature");
-    }
-  };
+  // Mark as dragging
+  setIsDraggingTemp(true);
+
+  // If machine is OFF, mark local changes
+  if (displayData.powerStatus === "off") {
+    setHasLocalChanges(true);
+  }
+};
+
+// Handle drag end or click event
+const handleTempChangeEnd = async (newTemp) => {
+  setIsDraggingTemp(false);
+
+  // ✅ Only send API command when power is ON
+  if (displayData.powerStatus === "on") {
+    const updates = { temperature: newTemp.toString() };
+    await sendCommand(updates, "temperature");
+  }
+};
 
   const handleBackClick = () => {
     if (!processing.status) {
-      navigate("/machinescreen1");
+      navigate("/delegate-machinescreen1");
     }
   };
 
-  // No loading spinner needed anymore
-  if (!selectedService || !sensorData) {
-    return <div className="loading">No data available</div>;
+  // Loading state
+  if (!selectedService) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
   }
 
   return (
@@ -248,14 +342,16 @@ const Screen2 = () => {
             <FiArrowLeft size={24} color="white" />
           </button>
 
-          <img src={AIROlogo} alt="AIRO Logo" className="logo logonew" />
+          <img src={AIROlogo} alt="AIRO Logo" className="logo" />
 
           <div className="power-button-container">
             <button
               className={`power-button ${displayData.powerStatus === 'on' ? 'on' : 'off'} ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
               disabled={processing.status}
-              style={{ opacity: processing.status ? 0.6 : 1 }}
+              style={{
+                opacity: processing.status ? 0.6 : 1,
+              }}
             >
               <FiPower size={24} color="white" />
               {processing.status && <span className="processing-indicator"></span>}
@@ -283,7 +379,8 @@ const Screen2 = () => {
             ⏳ System is currently busy
           </div>
         )}
-         {/* Show local changes indicator when power is off */}
+
+        {/* Show local changes indicator when power is off */}
         {/* {displayData.powerStatus === "off" && hasLocalChanges && (
           <div className="pending-changes-message">
             ⚡ Changes will be applied when turned on
@@ -292,6 +389,7 @@ const Screen2 = () => {
 
         {/* Temperature Dial */}
         <TemperatureDial
+          // sensorData={displayData}
           onTempChange={handleTempChange}
           onTempChangeEnd={handleTempChangeEnd}
           fanSpeed={fanPosition}
@@ -313,7 +411,7 @@ const Screen2 = () => {
           </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(apiData.humidity)}%</div>
+            <div className="env-value">{apiData.humidity}%</div>
             <div className="env-label">Humidity</div>
           </div>
         </div>
@@ -395,4 +493,4 @@ const Screen2 = () => {
   );
 };
 
-export default Screen2;
+export default DelegateScreen2;

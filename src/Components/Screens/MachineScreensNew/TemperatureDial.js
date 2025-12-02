@@ -7,7 +7,7 @@ const DEGREE_RANGE = 102;
 const SIZE = 285;
 const ARC_RADIUS = 100;
 
-const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
+const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTemperature }) => {
   const [angle, setAngle] = useState(START_ANGLE);
   const [temperature, setTemperature] = useState(initialTemperature || MIN_TEMP);
   const dialRef = useRef(null);
@@ -149,7 +149,12 @@ const TemperatureDial = ({ onTempChange, fanSpeed, initialTemperature }) => {
           }}
         >
           {/* 🔧 Changed: display without decimal */}
-          <div className="temp-temperature">{Math.round(temperature)}°C</div>
+          <div className="temp-display">
+  <div className="temp-temperature">{Math.round(temperature)}°C</div>
+  <button className="apply-temp-btn" onClick={() => onTempChangeEnd(temperature)}>
+    ➡️
+  </button>
+</div>
 
           <div className="temp-fan-container">
             <div className="temp-fan-icon-container">

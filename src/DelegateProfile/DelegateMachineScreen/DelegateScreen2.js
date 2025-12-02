@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useContext } from "react";
 import {
   FiArrowLeft,
   FiPower,
@@ -6,14 +6,12 @@ import {
   FiDroplet,
   FiThermometer,
 } from "react-icons/fi";
-// import "./Screen1.css";
-// import "./Screen2.css";
 import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png";
 import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
-import { useNavigate, useLocation } from "react-router-dom"; 
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial";
-import baseURL from "../../Components/ApiUrl/Apiurl";
+// Removed: baseURL import
 
 // Constants
 const MODE_MAP = {
@@ -58,138 +56,72 @@ const DelegateScreen2 = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
-  const {userId, company_id } = location.state || {};
-  
-  // State management
-  const selectedService = getSelectedService(location);
-  const deviceId = selectedService?.pcb_serial_number || "2411GM-0102";
-  const [loading, setLoading] = useState(true);
-  
+
+  // Extract from navigation state
+  const { userId, company_id, sensorData } = location.state || {};
+
+  const [isDraggingTemp, setIsDraggingTemp] = useState(false);
   const [processing, setProcessing] = useState({ status: false, message: "" });
-  
-  // Separate state for API data and display data
-  const [apiData, setApiData] = useState({
-    outsideTemp: 0,
-    humidity: 0,
-    roomTemp: 0,
-    fanSpeed: "0",
-    temperature: 25,
-    powerStatus: "off",
-    mode: "3",
-    errorFlag: "0",
-    hvacBusy: "0",
+
+  // Get selected service for device ID fallback
+  const selectedService = getSelectedService(location);
+  const deviceId = selectedService?.pcb_serial_number || sensorData?.deviceId || "2411GM-0102";
+
+ 
+
+  // Initialize data directly from passed sensorData
+  const initialApiData = {
+    outsideTemp: sensorData.outsideTemp || "0",
+    humidity: sensorData.humidity || "0",
+    roomTemp: sensorData.roomTemp || "0",
+    fanSpeed: sensorData.fanSpeed || "0",
+    temperature: sensorData.temperature || "25",
+    powerStatus: sensorData.powerStatus || "off",
+    mode: sensorData.mode || "3",
+    errorFlag: sensorData.errorFlag || "0",
+    hvacBusy: sensorData.hvacBusy || "0",
     deviceId: deviceId,
-    alarmOccurred: "0",
-  });
+    alarmOccurred: sensorData.alarmOccurred || "0",
+  };
 
-  // Display data that can be modified locally when power is off
+  const [apiData] = useState(initialApiData); // Static from navigation
+
   const [displayData, setDisplayData] = useState({
-    fanSpeed: "0",
-    temperature: 25,
-    mode: "3",
-    powerStatus: "off"
+    fanSpeed: initialApiData.fanSpeed,
+    temperature: initialApiData.temperature,
+    mode: initialApiData.mode,
+    powerStatus: initialApiData.powerStatus,
   });
 
-  // Track if we have local changes that haven't been sent to API
-  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+    const [hasLocalChanges, setHasLocalChanges] = useState(false);
+    
+   // If no sensorData passed → show fallback
+  if (!sensorData) {
+    return <div className="loading">No sensor data available</div>;
+  }
 
   // Derived values
   const currentModeDescription = MODE_MAP[displayData.mode] || "Fan";
   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
   const fanPercentage = fanPosition * 50;
 
-  // Fetch data but don't override local changes when power is off
-  useEffect(() => {
-    if (!deviceId) return;
-
-    const fetchData = async () => {
-      try {
-        const [dataResponse] = await Promise.all([
-          fetch(`${baseURL}/get-latest-data/${deviceId}/?user_id=${userId}&company_id=${company_id}`)
-        ]);
-
-        if (!dataResponse.ok) throw new Error("Network response was not ok");
-        
-        const data = await dataResponse.json();
-        if (data.status !== "success" || !data.data) {
-          throw new Error("Invalid data format from API");
-        }
-
-        const deviceData = data.data;
-
-        setApiData(prev => {
-          const newApiData = {
-            outsideTemp: deviceData.outdoor_temperature?.value || prev.outsideTemp,
-            humidity: deviceData.room_humidity?.value || prev.humidity,
-            roomTemp: deviceData.room_temperature?.value || prev.roomTemp,
-            fanSpeed: deviceData.fan_speed?.value || prev.fanSpeed,
-            temperature: deviceData.set_temperature?.value || prev.temperature,
-            mode: deviceData.mode?.value || prev.mode,
-            powerStatus: deviceData.hvac_on?.value === "1" ? "on" : "off",
-            errorFlag: deviceData.error_flag?.value || prev.errorFlag,
-            hvacBusy: deviceData.hvac_busy?.value || prev.hvacBusy,
-            deviceId: deviceData.pcb_serial_number || prev.deviceId,
-            alarmOccurred: deviceData.alarm_occurred?.value || prev.alarmOccurred,
-          };
-
-          // Only update display data from API if:
-          // 1. Power is ON, OR
-          // 2. Power is OFF but we don't have local changes
-          if (newApiData.powerStatus === "on" || !hasLocalChanges) {
-            setDisplayData(prevDisplay => ({
-              ...prevDisplay,
-              fanSpeed: newApiData.fanSpeed,
-              temperature: newApiData.temperature,
-              mode: newApiData.mode,
-              powerStatus: newApiData.powerStatus
-            }));
-            
-            if (newApiData.powerStatus === "on") {
-              setHasLocalChanges(false);
-            }
-          } else {
-            // Keep local changes but update power status
-            setDisplayData(prevDisplay => ({
-              ...prevDisplay,
-              powerStatus: newApiData.powerStatus
-            }));
-          }
-
-          return newApiData;
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-    const intervalId = setInterval(fetchData, 1000);
-    return () => clearInterval(intervalId);
-  }, [deviceId, hasLocalChanges]);
-
-  // API call handler
-  const sendCommand = async (updates = {}, commandType = "general") => {
+  // Send command to controller (unchanged logic)
+  const sendCommand = async (updates = {}) => {
     if (processing.status || apiData.hvacBusy === "1") {
-      setProcessing({ 
-        status: true, 
-        message: apiData.hvacBusy === "1" 
-          ? "System is busy, please wait..." 
-          : "Please wait..." 
+      setProcessing({
+        status: true,
+        message: apiData.hvacBusy === "1" ? "System is busy, please wait..." : "Please wait...",
       });
       return false;
     }
 
     setProcessing({ status: true, message: "Sending command, please wait..." });
 
-    // When turning power on, include all current display data
     const finalUpdates = updates.powerStatus === "on" ? {
       ...updates,
       mode: displayData.mode,
       fanSpeed: displayData.fanSpeed,
-      temperature: displayData.temperature
+      temperature: displayData.temperature,
     } : updates;
 
     const payload = {
@@ -210,17 +142,12 @@ const DelegateScreen2 = () => {
       });
 
       if (!response.ok) throw new Error("Failed to send command");
-      
-      // Clear local changes when power is turned on
+
       if (updates.powerStatus === "on") {
         setHasLocalChanges(false);
       }
 
-      // Disable all interactive elements for 25 seconds
-      setTimeout(() => {
-        setProcessing({ status: false, message: "" });
-      }, 25000); // 25 seconds
-      
+      setTimeout(() => setProcessing({ status: false, message: "" }), 15000);
       return true;
     } catch (error) {
       console.error("Error sending command:", error);
@@ -229,73 +156,55 @@ const DelegateScreen2 = () => {
     }
   };
 
-  // Event handlers
+  // Event Handlers (same behavior as before)
   const handlePowerToggle = async () => {
-    const newPowerStatus = displayData.powerStatus === "on" ? "off" : "on";
-    
-    // Update display immediately for better UX
-    setDisplayData(prev => ({ ...prev, powerStatus: newPowerStatus }));
-    
-    await sendCommand({ powerStatus: newPowerStatus }, "power");
+    const newStatus = displayData.powerStatus === "on" ? "off" : "on";
+    setDisplayData(prev => ({ ...prev, powerStatus: newStatus }));
+    await sendCommand({ powerStatus: newStatus });
   };
 
   const handleModeChange = async (newMode) => {
-    const newModeCode = MODE_CODE_MAP[newMode] || 1;
+    const newModeCode = MODE_CODE_MAP[newMode].toString();
+    setDisplayData(prev => ({ ...prev, mode: newModeCode }));
 
-    // Update display immediately
-    setDisplayData(prev => ({ ...prev, mode: newModeCode.toString() }));
-
-    // If power is off, mark as local change and don't call API
     if (displayData.powerStatus === "off") {
       setHasLocalChanges(true);
       return;
     }
-
-    // If power is on, call API immediately
-    const updates = { mode: newModeCode.toString() };
-    await sendCommand(updates, "mode");
+    await sendCommand({ mode: newModeCode });
   };
 
   const handleFanSpeedChange = async (newPosition) => {
     const newSpeed = FAN_SPEEDS[newPosition];
-
-    // Update display immediately
     setDisplayData(prev => ({ ...prev, fanSpeed: newSpeed }));
 
-    // If power is off, mark as local change and don't call API
     if (displayData.powerStatus === "off") {
       setHasLocalChanges(true);
       return;
     }
-
-    // If power is on, call API immediately
-    const updates = { fanSpeed: newSpeed };
-    await sendCommand(updates, "fan");
+    await sendCommand({ fanSpeed: newSpeed });
   };
 
   const handleFanClick = (e) => {
     if (processing.status) return;
-    
-    const containerWidth = e.currentTarget.offsetWidth;
-    const clickPosition = e.nativeEvent.offsetX;
-    const segmentWidth = containerWidth / 3;
-    const newPosition = Math.min(2, Math.floor(clickPosition / segmentWidth));
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const segment = rect.width / 3;
+    const newPosition = Math.min(2, Math.floor(clickX / segment));
     handleFanSpeedChange(newPosition);
   };
 
   const handleTempChange = (newTemp) => {
-    // Update display immediately
     setDisplayData(prev => ({ ...prev, temperature: newTemp.toString() }));
+    setIsDraggingTemp(true);
+    if (displayData.powerStatus === "off") setHasLocalChanges(true);
+  };
 
-    // If power is off, mark as local change and don't call API
-    if (displayData.powerStatus === "off") {
-      setHasLocalChanges(true);
-      return;
+  const handleTempChangeEnd = async (newTemp) => {
+    setIsDraggingTemp(false);
+    if (displayData.powerStatus === "on") {
+      await sendCommand({ temperature: newTemp.toString() });
     }
-
-    // If power is on, you can optionally call API here or wait for user to confirm
-    // For now, we'll just update locally when power is on too
-    // This prevents too many API calls while dragging the temperature dial
   };
 
   const handleBackClick = () => {
@@ -304,85 +213,41 @@ const DelegateScreen2 = () => {
     }
   };
 
-  // Loading state
-  if (!selectedService) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-
   return (
     <div className="mainmain-container" style={{
       backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)"
     }}>
       <div className="main-container">
-        {/* Header Section */}
+        {/* Header */}
         <div className="header">
-          <button 
-            className="icon-button" 
-            onClick={handleBackClick}
-            disabled={processing.status}
-            style={{
-              opacity: processing.status ? 0.6 : 1,
-              cursor: processing.status ? "not-allowed" : "pointer"
-            }}
-          >
+          <button className="icon-button" onClick={handleBackClick} disabled={processing.status}>
             <FiArrowLeft size={24} color="white" />
           </button>
-
           <img src={AIROlogo} alt="AIRO Logo" className="logo" />
-
           <div className="power-button-container">
             <button
               className={`power-button ${displayData.powerStatus === 'on' ? 'on' : 'off'} ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
               disabled={processing.status}
-              style={{
-                opacity: processing.status ? 0.6 : 1,
-              }}
             >
               <FiPower size={24} color="white" />
               {processing.status && <span className="processing-indicator"></span>}
             </button>
-
-            {apiData.errorFlag === "1" && (
-              <div className="error-indicator" />
-            )}
+            {apiData.errorFlag === "1" && <div className="error-indicator" />}
           </div>
         </div>
 
-        {/* Status Messages */}
-        {processing.status && (
-          <div className="processing-message">{processing.message}</div>
-        )}
-
-        {apiData.errorFlag === "1" && (
-          <div className="error-message">
-            ⚠️ System Error Detected
-          </div>
-        )}
-
-        {apiData.hvacBusy === "1" && !processing.status && (
-          <div className="busy-message">
-            ⏳ System is currently busy
-          </div>
-        )}
-
-        {/* Show local changes indicator when power is off */}
-        {/* {displayData.powerStatus === "off" && hasLocalChanges && (
-          <div className="pending-changes-message">
-            ⚡ Changes will be applied when turned on
-          </div>
-        )} */}
+        {/* Messages */}
+        {processing.status && <div className="processing-message">{processing.message}</div>}
+        {apiData.errorFlag === "1" && <div className="error-message">Warning: System Error Detected</div>}
+        {apiData.hvacBusy === "1" && !processing.status && <div className="busy-message">Hourglass: System is busy</div>}
 
         {/* Temperature Dial */}
         <TemperatureDial
-          sensorData={displayData}
           onTempChange={handleTempChange}
+          onTempChangeEnd={handleTempChangeEnd}
           fanSpeed={fanPosition}
-          initialTemperature={displayData.temperature ?? 25}
+          initialTemperature={parseFloat(displayData.temperature) || 25}
           disabled={processing.status}
         />
 
@@ -400,16 +265,16 @@ const DelegateScreen2 = () => {
           </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{apiData.humidity}%</div>
+            <div className="env-value">{formatTemp(apiData.humidity)}%</div>
             <div className="env-label">Humidity</div>
           </div>
         </div>
 
-        {/* Control Section */}
+        {/* Controls */}
         <div className="control-buttons-container">
           <div className="handle" />
 
-          {/* Modes Section */}
+          {/* Modes */}
           <div className="section">
             <h3 className="heading">Modes</h3>
             <div className="mode-row">
@@ -417,18 +282,10 @@ const DelegateScreen2 = () => {
                 <button
                   key={mode}
                   onClick={() => handleModeChange(mode)}
-                  className={`mode-button ${
-                    currentModeDescription === mode ? "mode-button-selected" : ""
-                  }`}
+                  className={`mode-button ${currentModeDescription === mode ? "mode-button-selected" : ""}`}
                   disabled={processing.status}
-                  style={{
-                    opacity: processing.status ? 0.6 : 1,
-                    cursor: processing.status ? "not-allowed" : "pointer"
-                  }}
                 >
-                  <span className={`mode-text ${
-                    currentModeDescription === mode ? "mode-text-selected" : ""
-                  }`}>
+                  <span className={`mode-text ${currentModeDescription === mode ? "mode-text-selected" : ""}`}>
                     {mode}
                   </span>
                 </button>
@@ -436,43 +293,27 @@ const DelegateScreen2 = () => {
             </div>
           </div>
 
-          {/* Fan Speed Section */}
+          {/* Fan Speed */}
           <div className="section">
             <h3 className="heading">Fan Speed</h3>
             <div
               className="line-with-dot-container"
               onClick={processing.status ? undefined : handleFanClick}
-              style={{ 
-                cursor: processing.status ? "not-allowed" : "pointer",
-                opacity: processing.status ? 0.6 : 1,
-              }}
+              style={{ cursor: processing.status ? "not-allowed" : "pointer", opacity: processing.status ? 0.6 : 1 }}
             >
               <div className="line" />
-              {FAN_LABELS.map((_, index) => (
-                <div 
-                  key={index}
-                  className="vertical-marker" 
-                  style={{ left: `${index * 50}%` }} 
-                />
+              {FAN_LABELS.map((_, i) => (
+                <div key={i} className="vertical-marker" style={{ left: `${i * 50}%` }} />
               ))}
-              <div
-                className="dot"
-                style={{
-                  left: `${fanPercentage}%`,
-                  cursor: processing.status ? "not-allowed" : "pointer",
-                }}
-              />
+              <div className="dot" style={{ left: `${fanPercentage}%` }} />
               <div className="fan-speed-labels">
-                {FAN_LABELS.map((label, index) => (
-                  <span key={index} style={{ left: `${index * 50}%` }}>
-                    {label}
-                  </span>
+                {FAN_LABELS.map((label, i) => (
+                  <span key={i} style={{ left: `${i * 50}%` }}>{label}</span>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Footer Logo */}
           <div className="logo-container">
             <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
           </div>
