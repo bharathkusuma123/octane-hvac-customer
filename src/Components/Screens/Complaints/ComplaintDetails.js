@@ -22,7 +22,26 @@ const ComplaintDetails = () => {
     );
   }
 
-  const formatToIndianDate = (dateString) => {
+  // Function to format date to dd/mm/yyyy format
+  const formatToDDMMYYYY = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  // Function to format datetime to dd/mm/yyyy HH:MM format
+  const formatToDDMMYYYYDateTime = (dateString) => {
     if (!dateString) return 'N/A';
     
     try {
@@ -35,7 +54,7 @@ const ComplaintDetails = () => {
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       
-      return `${day}-${month}-${year} ${hours}:${minutes}`;
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
     } catch (error) {
       return 'Invalid Date';
     }
@@ -75,11 +94,11 @@ const ComplaintDetails = () => {
             </Col>
             <Col md={6}>
               <h5 className="text-primary">Timeline</h5>
-              <p><strong>Complaint Date:</strong> {formatToIndianDate(complaintData.complaint_date)}</p>
-              <p><strong>Created At:</strong> {formatToIndianDate(complaintData.created_at)}</p>
-              <p><strong>Updated At:</strong> {formatToIndianDate(complaintData.updated_at)}</p>
+              <p><strong>Complaint Date:</strong> {formatToDDMMYYYYDateTime(complaintData.complaint_date)}</p>
+              <p><strong>Created At:</strong> {formatToDDMMYYYYDateTime(complaintData.created_at)}</p>
+              <p><strong>Updated At:</strong> {formatToDDMMYYYYDateTime(complaintData.updated_at)}</p>
               {complaintData.resolved_at && (
-                <p><strong>Resolved At:</strong> {formatToIndianDate(complaintData.resolved_at)}</p>
+                <p><strong>Resolved At:</strong> {formatToDDMMYYYYDateTime(complaintData.resolved_at)}</p>
               )}
             </Col>
           </Row>
