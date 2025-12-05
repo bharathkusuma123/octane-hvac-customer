@@ -81,31 +81,26 @@ const formatDate = (dateString) => {
   return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
 };
 
-  const sendMachineAlert = async (errorId) => {
-    try {
-      const response = await fetch(`${baseURL}/machine-alert-request/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pcb_serial_number: alarmData.deviceId,
-          error_code_id: errorId
-        })
-      });
+const sendMachineAlert = async (errorItem) => {
+  try {
+    // Navigate directly to Delegate Machine Request Page
+    navigate("/delegate-Machine-request", {
+      state: {
+        pcb_serial_number: alarmData.deviceId,
+        autoErrorCode: errorItem.error_code,  
+        autoDescription: errorItem.description,
+        alarmData: alarmData,
+        userId: userId,
+        company_id: companyId
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to send machine alert');
-      }
+  } catch (err) {
+    console.error("Navigation error:", err);
+    alert("Unable to process machine alert: " + err.message);
+  }
+};
 
-      const result = await response.json();
-      alert('Machine alert sent successfully!');
-      return result;
-    } catch (err) {
-      console.error('Error sending machine alert:', err);
-      alert('Failed to send machine alert: ' + err.message);
-    }
-  };
 
   return (
     <div style={{
@@ -216,7 +211,7 @@ const formatDate = (dateString) => {
                   <td style={{ padding: '10px' }}>{formatDate(error.original_timestamp)}</td>
                   <td style={{ padding: '10px' }}>
                     <button 
-                      onClick={() => sendMachineAlert(error.id)}
+                      onClick={() => sendMachineAlert(error)}
                       style={{
                         padding: '5px 10px',
                         backgroundColor: '#007bff',

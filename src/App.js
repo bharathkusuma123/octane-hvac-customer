@@ -53,6 +53,7 @@ import DelegateScreen2 from './DelegateProfile/DelegateMachineScreen/DelegateScr
 import DelegateAlarmsPage from './DelegateProfile/DelegateMachineScreen/DelegateAlarmPage';
 import MachineRequestForm from './Components/Screens/MachineScreensNew/MachineRequestForm';
 import MachineLayout from './Components/Screens/MachineScreensNew/MachineLayout';
+import DelegateMachineAlert from './DelegateProfile/DelegateMachineScreen/DelegateMachineAlert';
 
 
 // 🔹 Wrapper component to auto-login (Option B FIX APPLIED)
@@ -142,6 +143,7 @@ function App() {
                 <Route path="/delegate-machinescreen1" element={<DelegateScreen1 />} />
                 <Route path="/delegate-machinescreen2" element={<DelegateScreen2 />} />
                 <Route path="/delegate-alarms" element={<DelegateAlarmsPage />} />
+                 <Route path="/delegate-Machine-request" element={<DelegateMachineAlert />} />
 
                 <Route path="/delegate-request" element={<DelegateRequestForm />} />
                 <Route path="/delegate-display-request" element={<RequestScreenDelegate />} />

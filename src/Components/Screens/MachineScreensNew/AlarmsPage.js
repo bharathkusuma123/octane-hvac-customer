@@ -6,7 +6,7 @@ import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import FullScreenLoader from '../../../Common/FullScreenLoader';
 
 
-const AlarmsPage = () => {
+const AlarmsPage = () => { 
   const navigate = useNavigate();
   const location = useLocation();
   const [errorData, setErrorData] = useState([]);
@@ -91,7 +91,9 @@ const AlarmsPage = () => {
         pcb_serial_number: alarmData.deviceId,
         error_code_id: error.id,
         source: 'customer',
-        alarmData: alarmData
+        alarmData: alarmData,
+        autoDescription: error.description,          // explanation
+        autoErrorCode: error.error_code  
       }
     });
   };
