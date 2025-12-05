@@ -197,6 +197,9 @@ const AlarmsPage = () => {
                   <th style={{ padding: '10px', textAlign: 'left' }}>Machine Alert</th>
                 </tr>
               </thead>
+
+
+              
               <tbody>
                 {errorData.map((error, index) => (
                   <tr

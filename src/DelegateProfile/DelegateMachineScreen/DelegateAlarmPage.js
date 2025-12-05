@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiClock } from 'react-icons/fi';
 import baseURL from '../../Components/ApiUrl/Apiurl';
+import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 
 const DelegateAlarmsPage = () => {
   const navigate = useNavigate();
@@ -231,6 +232,9 @@ const sendMachineAlert = async (errorItem) => {
           </table>
         </div>
       )}
+
+            <DelegateNavbar />
+      
     </div>
   );
 };
