@@ -813,7 +813,632 @@
 
 // export default RequestScreen;
 
-import React, { useEffect, useState, useContext } from 'react';
+// import React, { useEffect, useState, useContext } from 'react';
+// import NavScreen from '../../Screens/Navbar/Navbar';
+// import axios from 'axios';
+// import './Request.css';
+// import { AuthContext } from "../../AuthContext/AuthContext";
+// import baseURL from '../../ApiUrl/Apiurl';
+// import { useNavigate } from 'react-router-dom';
+// import { Card, Button, Form, Row, Col } from 'react-bootstrap';
+// import DatePicker from 'react-datepicker';
+// import 'react-datepicker/dist/react-datepicker.css';
+
+// const RequestScreen = () => {
+//   const [requests, setRequests] = useState([]);
+//   const [filteredRequests, setFilteredRequests] = useState([]);
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [rowsPerPage, setRowsPerPage] = useState(5);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [submittedFeedbackRequests, setSubmittedFeedbackRequests] = useState([]);
+//   const [closedRequestIds, setClosedRequestIds] = useState([]);
+//   const [submittedComplaintRequests, setSubmittedComplaintRequests] = useState([]);
+//   const [complaintsData, setComplaintsData] = useState([]);
+//   const [feedbackData, setFeedbackData] = useState([]);
+
+//   // New state variables for filters
+//   const [statusFilter, setStatusFilter] = useState('');
+//   const [dateFilter, setDateFilter] = useState(null);
+//   const [serviceItemFilter, setServiceItemFilter] = useState('');
+//   const [availableStatuses, setAvailableStatuses] = useState([]);
+//   const [availableServiceItems, setAvailableServiceItems] = useState([]);
+
+//   const { user } = useContext(AuthContext);
+//   const userId = user?.customer_id;
+//   const company_id = user?.company_id;
+//   const navigate = useNavigate();
+
+//   const [serviceItems, setServiceItems] = useState([]);
+
+//   // Function to format date to Indian format (dd/mm/yyyy)
+//   const formatToIndianDate = (dateString) => {
+//     if (!dateString) return 'N/A';
+    
+//     try {
+//       const date = new Date(dateString);
+//       if (isNaN(date.getTime())) return 'Invalid Date';
+      
+//       const day = String(date.getDate()).padStart(2, '0');
+//       const month = String(date.getMonth() + 1).padStart(2, '0');
+//       const year = date.getFullYear();
+      
+//       return `${day}/${month}/${year}`;
+//     } catch (error) {
+//       console.error('Error formatting date:', error);
+//       return 'Invalid Date';
+//     }
+//   };
+
+//   // Function to format datetime to Indian format with time
+//   const formatToIndianDateTime = (dateString) => {
+//     if (!dateString) return 'N/A';
+    
+//     try {
+//       const date = new Date(dateString);
+//       if (isNaN(date.getTime())) return 'Invalid Date';
+      
+//       const day = String(date.getDate()).padStart(2, '0');
+//       const month = String(date.getMonth() + 1).padStart(2, '0');
+//       const year = date.getFullYear();
+//       const hours = String(date.getHours()).padStart(2, '0');
+//       const minutes = String(date.getMinutes()).padStart(2, '0');
+//       const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+//       return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+//     } catch (error) {
+//       console.error('Error formatting date:', error);
+//       return 'Invalid Date';
+//     }
+//   };
+
+//   // Function to format date to dd/mm/yyyy string
+//   const formatDateToDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = date.getFullYear();
+//     return `${day}/${month}/${year}`;
+//   };
+
+//   // Custom input component for DatePicker with calendar icon
+//   const CustomDateInput = React.forwardRef(({ value, onClick }, ref) => (
+//     <div className="position-relative">
+//       <Form.Control
+//         type="text"
+//         value={value}
+//         onClick={onClick}
+//         ref={ref}
+//         readOnly
+//         placeholder="Select date (dd/mm/yyyy)"
+//         className="pe-5" // Add padding for the icon
+//       />
+//       <div 
+//         className="position-absolute end-0 top-50 translate-middle-y me-3"
+//         style={{ cursor: 'pointer', zIndex: 5 }}
+//         onClick={onClick}
+//       >
+//         <i className="bi bi-calendar text-secondary"></i>
+//       </div>
+//     </div>
+//   ));
+
+//   useEffect(() => {
+//     if (user?.customer_id) {
+//       axios
+//         .get(`${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`)
+//         .then((response) => {
+//           if (Array.isArray(response.data?.data)) {
+//             const items = response.data.data;
+//             setServiceItems(items);
+            
+//             // Extract service item names for filter buttons
+//             const uniqueServiceItems = [...new Set(items.map(item => item.service_item_name))].sort();
+//             setAvailableServiceItems(uniqueServiceItems);
+//           }
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching service items:', error);
+//         });
+//     }
+//   }, [user?.customer_id]);
+
+//   useEffect(() => {
+//     if (user?.customer_id) {
+//       axios
+//         .get(`${baseURL}/service-pools/?user_id=${userId}&company_id=${company_id}`)
+//         .then((response) => {
+//           if (response.data?.status === 'success') {
+//             const customerRequests = response.data.data
+//               .filter((req) => req.customer === user.customer_id)
+//               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+//             setRequests(customerRequests);
+//             setFilteredRequests(customerRequests);
+
+//             const closedIds = customerRequests
+//               .filter(req => (req.status || req.request_status || req.state || req.ServiceStatus)?.toLowerCase() === 'closed')
+//               .map(req => req.request_id);
+
+//             setClosedRequestIds(closedIds);
+
+//             // Extract unique statuses for filter buttons
+//             const uniqueStatuses = [...new Set(customerRequests
+//               .map(req => req.status)
+//               .filter(status => status && status.trim() !== '')
+//             )].sort();
+//             setAvailableStatuses(uniqueStatuses);
+//           }
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching service requests:', error);
+//         });
+//     }
+//   }, [user?.customer_id]);
+
+//   // Fetch feedback/survey data
+//   useEffect(() => {
+//     if (user?.customer_id) {
+//       axios
+//         .get(`${baseURL}/customer-surveys/?user_id=${userId}&company_id=${company_id}`)
+//         .then((response) => {
+//           const data = response.data?.data || response.data;
+//           if (Array.isArray(data)) {
+//             const feedbackSubmittedRequests = data.map(survey => survey.service_request);
+//             setSubmittedFeedbackRequests(feedbackSubmittedRequests);
+//             setFeedbackData(data);
+//           }
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching survey data:', error);
+//         });
+//     }
+//   }, [user?.customer_id]);
+
+//   // Fetch complaints data
+//   useEffect(() => {
+//     if (user?.customer_id) {
+//       axios
+//         .get(`${baseURL}/customer-complaints/?user_id=${userId}&company_id=${company_id}`)
+//         .then((response) => {
+//           if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
+//             setComplaintsData(response.data.data);
+            
+//             // Extract service_request IDs from complaints to track which requests have complaints submitted
+//             const complaintRequestIds = response.data.data.map(complaint => complaint.service_request);
+//             setSubmittedComplaintRequests(complaintRequestIds);
+//           }
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching complaints data:', error);
+//         });
+//     }
+//   }, [user?.customer_id]);
+
+//   // Apply filters whenever search term, status filter, date filter, service item filter, or requests change
+//   useEffect(() => {
+//     let filtered = requests;
+
+//     // Apply search term filter
+//     if (searchTerm) {
+//       filtered = filtered.filter(request =>
+//         request.request_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//         request.service_item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//         formatToIndianDate(request.preferred_date).includes(searchTerm.toLowerCase()) ||
+//         request.preferred_time.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//         (request.request_details && request.request_details.toLowerCase().includes(searchTerm.toLowerCase()))
+//       );
+//     }
+
+//     // Apply status filter
+//     if (statusFilter) {
+//       filtered = filtered.filter(request => 
+//         request.status === statusFilter
+//       );
+//     }
+
+//     // Apply service item filter
+//     if (serviceItemFilter) {
+//       filtered = filtered.filter(request => {
+//         const serviceItemName = serviceItems.find(item => item.service_item_id === request.service_item)?.service_item_name;
+//         return serviceItemName === serviceItemFilter;
+//       });
+//     }
+
+//     // Apply date filter
+//     if (dateFilter) {
+//       const filterDateStr = formatDateToDDMMYYYY(dateFilter);
+//       filtered = filtered.filter(request => {
+//         const requestDateStr = formatToIndianDate(request.preferred_date);
+//         return requestDateStr === filterDateStr;
+//       });
+//     }
+
+//     setFilteredRequests(filtered);
+//     setCurrentPage(1);
+//   }, [searchTerm, statusFilter, dateFilter, serviceItemFilter, requests, serviceItems]);
+
+//   // Clear all filters
+//   const clearFilters = () => {
+//     setSearchTerm('');
+//     setStatusFilter('');
+//     setServiceItemFilter('');
+//     setDateFilter(null);
+//   };
+
+//   const handleComplaintClick = (requestId, requestStatus) => {
+//     navigate('/complaint-form', { 
+//       state: { 
+//         service_request: requestId,
+//         company: user?.company_id,
+//         customer: user?.customer_id,
+//         request_status: requestStatus
+//       } 
+//     });
+//   };
+
+//   const handleEditClick = (request) => {
+//     navigate('/service-form', { 
+//       state: { 
+//         editMode: true,
+//         requestData: request 
+//       } 
+//     });
+//   };
+
+//   const handleViewComplaint = (requestId) => {
+//     // Find the complaint for this service request
+//     const complaint = complaintsData.find(comp => comp.service_request === requestId);
+//     if (complaint) {
+//       navigate('/complaint-details', { 
+//         state: { 
+//           complaintData: complaint 
+//         } 
+//       });
+//     }
+//   };
+
+//   const handleViewFeedback = (requestId) => {
+//     // Find the feedback for this service request
+//     const feedback = feedbackData.find(fb => fb.service_request === requestId);
+//     if (feedback) {
+//       navigate('/feedback-details', { 
+//         state: { 
+//           feedbackData: feedback 
+//         } 
+//       });
+//     }
+//   };
+
+//   const totalPages = Math.ceil(filteredRequests.length / rowsPerPage);
+//   const paginatedData = filteredRequests.slice(
+//     (currentPage - 1) * rowsPerPage,
+//     currentPage * rowsPerPage
+//   );
+
+//   // Check if request is editable (only allow editing for certain statuses)
+//   const isEditable = (request) => {
+//     const nonEditableStatuses = ['closed', 'completed', 'in progress'];
+//     return !nonEditableStatuses.includes(request.status?.toLowerCase());
+//   };
+
+//   // Check if complaint is submitted for a request
+//   const isComplaintSubmitted = (requestId) => {
+//     return submittedComplaintRequests.includes(requestId);
+//   };
+
+//   // Check if feedback is submitted for a request
+//   const isFeedbackSubmitted = (requestId) => {
+//     return submittedFeedbackRequests.includes(requestId);
+//   };
+
+//   // Check if complaint button should be enabled (only for closed status)
+//   const isComplaintEnabled = (request) => {
+//     return request.status?.toLowerCase() === 'closed';
+//   };
+
+//   return (
+//     <div className="request-screen-wrapper">
+//       <h2 className="text-center mb-4 mt-4">Request Screen</h2>
+
+//       <Card className="toolbar-card shadow-sm p-3 mb-4">
+//         <Row className="align-items-center g-3">
+//           <Col xs="auto">
+//             <Form.Label className="mb-0 fw-semibold">Show:</Form.Label>
+//           </Col>
+//           <Col xs="auto">
+//             <Form.Select
+//               value={rowsPerPage}
+//               onChange={(e) => {
+//                 setRowsPerPage(Number(e.target.value));
+//                 setCurrentPage(1);
+//               }}
+//               className="rows-select"
+//             >
+//               <option value={5}>5</option>
+//               <option value={10}>10</option>
+//               <option value={25}>25</option>
+//             </Form.Select>
+//           </Col>
+
+//           {/* 🔘 Add Request Button */}
+//           <Col xs="auto">
+//             <Button variant="primary" onClick={() => navigate('/service-form')}>
+//               Add Request
+//             </Button>
+//           </Col>
+
+//           <Col className="ms-auto">
+//             <Form.Control
+//               type="text"
+//               placeholder="Search by ID, Service, Date (dd/mm/yyyy)..."
+//               value={searchTerm}
+//               onChange={(e) => setSearchTerm(e.target.value)}
+//               className="search-input"
+//             />
+//           </Col>
+//         </Row>
+
+//         {/* Filter Section - Full Width */}
+//         <Row className="g-3 mt-3">
+//           {/* Status Filter Buttons */}
+//           <Col xs={12}>
+//             <Form.Label className="fw-semibold mb-2">Filter by Status</Form.Label>
+//             <div className="d-flex flex-wrap gap-2 mb-3">
+//               <Button
+//                 variant={statusFilter === '' ? "primary" : "outline-primary"}
+//                 size="sm"
+//                 onClick={() => setStatusFilter('')}
+//               >
+//                 All
+//               </Button>
+//               {availableStatuses.map(status => (
+//                 <Button
+//                   key={status}
+//                   variant={statusFilter === status ? "primary" : "outline-primary"}
+//                   size="sm"
+//                   onClick={() => setStatusFilter(status)}
+//                 >
+//                   {status}
+//                 </Button>
+//               ))}
+//             </div>
+//           </Col>
+
+//           {/* Service Item Filter Buttons */}
+//           <Col xs={12}>
+//             <Form.Label className="fw-semibold mb-2">Filter by Service Item</Form.Label>
+//             <div className="d-flex flex-wrap gap-2 mb-3">
+//               <Button
+//                 variant={serviceItemFilter === '' ? "primary" : "outline-primary"}
+//                 size="sm"
+//                 onClick={() => setServiceItemFilter('')}
+//               >
+//                 All Services
+//               </Button>
+//               {availableServiceItems.map(serviceItem => (
+//                 <Button
+//                   key={serviceItem}
+//                   variant={serviceItemFilter === serviceItem ? "primary" : "outline-primary"}
+//                   size="sm"
+//                   onClick={() => setServiceItemFilter(serviceItem)}
+//                 >
+//                   {serviceItem}
+//                 </Button>
+//               ))}
+//             </div>
+//           </Col>
+
+//           {/* Date Filter */}
+//           <Col lg={4} md={6}>
+//             <Form.Group>
+//               <Form.Label className="fw-semibold">Filter by Preferred Date</Form.Label>
+//               <DatePicker
+//                 selected={dateFilter}
+//                 onChange={(date) => setDateFilter(date)}
+//                 dateFormat="dd/MM/yyyy"
+//                 placeholderText="Select date (dd/mm/yyyy)"
+//                 customInput={<CustomDateInput />}
+//                 isClearable
+//                 className="w-100"
+//                 wrapperClassName="w-100"
+//                 popperClassName="react-datepicker-custom"
+//                 popperPlacement="bottom-start"
+//               />
+//             </Form.Group>
+//           </Col>
+
+//           <Col lg={3} md={6} className="d-flex align-items-end">
+//             <Button 
+//               variant="outline-secondary" 
+//               onClick={clearFilters}
+//               className="w-100"
+//             >
+//               Clear Filters
+//             </Button>
+//           </Col>
+
+//           <Col lg={2} md={6} className="d-flex align-items-end">
+//             <div className="text-muted small w-100 text-center">
+//               <div>Showing {filteredRequests.length} of {requests.length} requests</div>
+//             </div>
+//           </Col>
+//         </Row>
+
+//         {/* Active Filters Display */}
+//         {(statusFilter || serviceItemFilter || dateFilter) && (
+//           <Row className="mt-3">
+//             <Col>
+//               <div className="active-filters d-flex align-items-center flex-wrap gap-2">
+//                 <small className="text-muted">Active Filters:</small>
+//                 {statusFilter && (
+//                   <span className="badge bg-primary d-flex align-items-center">
+//                     Status: {statusFilter} 
+//                     <button 
+//                       className="btn-close btn-close-white ms-1" 
+//                       style={{fontSize: '0.6rem'}}
+//                       onClick={() => setStatusFilter('')}
+//                       aria-label="Remove status filter"
+//                     ></button>
+//                   </span>
+//                 )}
+//                 {serviceItemFilter && (
+//                   <span className="badge bg-success d-flex align-items-center">
+//                     Service: {serviceItemFilter} 
+//                     <button 
+//                       className="btn-close btn-close-white ms-1" 
+//                       style={{fontSize: '0.6rem'}}
+//                       onClick={() => setServiceItemFilter('')}
+//                       aria-label="Remove service item filter"
+//                     ></button>
+//                   </span>
+//                 )}
+//                 {dateFilter && (
+//                   <span className="badge bg-info text-dark d-flex align-items-center">
+//                     Date: {formatDateToDDMMYYYY(dateFilter)} 
+//                     <button 
+//                       className="btn-close ms-1" 
+//                       style={{fontSize: '0.6rem'}}
+//                       onClick={() => setDateFilter(null)}
+//                       aria-label="Remove date filter"
+//                     ></button>
+//                   </span>
+//                 )}
+//               </div>
+//             </Col>
+//           </Row>
+//         )}
+//       </Card>
+
+//       <Row className="g-4">
+//         {paginatedData.length === 0 ? (
+//           <p className="text-center">No {searchTerm || statusFilter || serviceItemFilter || dateFilter ? 'matching' : ''} requests found.</p>
+//         ) : (
+//           paginatedData.map((req, index) => (
+//             <Col xs={12} sm={6} md={4} key={index}>
+//               <Card className="request-card h-100 shadow-sm">
+//                 <Card.Body>
+//                   <Card.Title className="mb-3 text-primary fw-bold">
+//                     Request ID: {req.request_id}
+//                   </Card.Title>
+//                   <Card.Text>
+//                     <strong>Status:</strong> <span className={`status-badge ${req.status?.toLowerCase()}`}>{req.status}</span><br />
+//                     <strong>Service Item:</strong>{" "}
+//                     {
+//                       serviceItems.find(item => item.service_item_id === req.service_item)?.service_item_name
+//                       || req.service_item
+//                     }
+//                     <br />
+//                     <strong>Preferred Service Date:</strong> {formatToIndianDate(req.preferred_date)}<br />
+//                     <strong>Preferred Service Time:</strong> {req.preferred_time}<br />
+//                     <strong>Requested At:</strong>{" "}
+//                     {formatToIndianDateTime(req.created_at)}
+//                     <br />
+//                     <strong>Details:</strong> {req.request_details || 'N/A'}
+//                   </Card.Text>
+//                 </Card.Body>
+//                 <Card.Footer className="bg-white border-top-0 d-flex flex-column gap-2">
+//                   {/* Edit Button - Only show for editable requests */}
+//                   {isEditable(req) && (
+//                     <Button
+//                       variant="warning"
+//                       size="sm"
+//                       className="w-100"
+//                       onClick={() => handleEditClick(req)}
+//                     >
+//                       Edit Request
+//                     </Button>
+//                   )}
+                  
+//                   {/* Complaint Buttons - Only show for closed status requests */}
+//                   {isComplaintEnabled(req) && (
+//                     <div className="d-flex gap-2">
+//                       <Button
+//                         variant="secondary"
+//                         size="sm"
+//                         className="flex-fill"
+//                         onClick={() => handleComplaintClick(req.request_id, req.status)}
+//                         disabled={isComplaintSubmitted(req.request_id)}
+//                       >
+//                         {isComplaintSubmitted(req.request_id) ? 'Complaint Submitted' : 'Raise Complaint'}
+//                       </Button>
+                      
+//                       {isComplaintSubmitted(req.request_id) && (
+//                         <Button
+//                           variant="info"
+//                           size="sm"
+//                           className="flex-fill"
+//                           onClick={() => handleViewComplaint(req.request_id)}
+//                         >
+//                           View Complaint
+//                         </Button>
+//                       )}
+//                     </div>
+//                   )}
+                  
+//                   {/* Feedback Buttons - Show only for closed requests */}
+//                   {closedRequestIds.includes(req.request_id) && (
+//                     <div className="d-flex gap-2">
+//                       <Button
+//                         variant={isFeedbackSubmitted(req.request_id) ? "success" : "primary"}
+//                         size="sm"
+//                         className="flex-fill"
+//                         onClick={() => !isFeedbackSubmitted(req.request_id) && navigate(`/feedback/${req.request_id}`)}
+//                         disabled={isFeedbackSubmitted(req.request_id)}
+//                       >
+//                         {isFeedbackSubmitted(req.request_id) ? 'Feedback Submitted' : 'Give Feedback'}
+//                       </Button>
+                      
+//                       {isFeedbackSubmitted(req.request_id) && (
+//                         <Button
+//                           variant="info"
+//                           size="sm"
+//                           className="flex-fill"
+//                           onClick={() => handleViewFeedback(req.request_id)}
+//                         >
+//                           View Feedback
+//                         </Button>
+//                       )}
+//                     </div>
+//                   )}
+//                 </Card.Footer>
+//               </Card>
+//             </Col>
+//           ))
+//         )}
+//       </Row>
+
+//       <div className="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
+//         <Button
+//           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+//           disabled={currentPage === 1}
+//         >
+//           Previous
+//         </Button>
+//         <span className="fw-semibold">Page {currentPage} of {totalPages}</span>
+//         <Button
+//           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+//           disabled={currentPage === totalPages}
+//         >
+//           Next
+//         </Button>
+//       </div>
+
+//       <NavScreen />
+//     </div>
+//   );
+// };
+
+// export default RequestScreen;
+
+
+
+//==========================================================================
+
+// After fixing filter -Global search issue 
+
+
+
+import React, { useEffect, useState, useContext, useMemo } from 'react';
 import NavScreen from '../../Screens/Navbar/Navbar';
 import axios from 'axios';
 import './Request.css';
@@ -835,6 +1460,14 @@ const RequestScreen = () => {
   const [submittedComplaintRequests, setSubmittedComplaintRequests] = useState([]);
   const [complaintsData, setComplaintsData] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
+  
+  // Additional data for global search
+  const [serviceItems, setServiceItems] = useState([]);
+  const [customersData, setCustomersData] = useState([]);
+  const [companiesData, setCompaniesData] = useState([]);
+  const [productsData, setProductsData] = useState([]);
+  const [usersData, setUsersData] = useState([]);
+  const [resourcesData, setResourcesData] = useState([]);
 
   // New state variables for filters
   const [statusFilter, setStatusFilter] = useState('');
@@ -848,7 +1481,130 @@ const RequestScreen = () => {
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
-  const [serviceItems, setServiceItems] = useState([]);
+  // Fetch additional data for global search
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        // Fetch users data
+        const usersRes = await axios.get(`${baseURL}/users/`);
+        if (usersRes.data && Array.isArray(usersRes.data)) {
+          setUsersData(usersRes.data);
+        }
+
+        // Fetch customers data
+        const customersRes = await axios.get(`${baseURL}/customers/`);
+        if (customersRes.data?.status === "success") {
+          setCustomersData(customersRes.data.data || []);
+        }
+
+        // Fetch companies data
+        const companiesRes = await axios.get(`${baseURL}/companies/`);
+        if (companiesRes.data?.status === "success") {
+          setCompaniesData(companiesRes.data.data || []);
+        }
+
+        // Fetch products data
+        const productsRes = await axios.get(`${baseURL}/products/`);
+        if (productsRes.data?.status === "success") {
+          setProductsData(productsRes.data.data || []);
+        }
+
+        // Fetch resources data
+        const resourcesRes = await axios.get(`${baseURL}/resources/`);
+        if (resourcesRes.data?.status === "success") {
+          setResourcesData(resourcesRes.data.data || []);
+        }
+
+      } catch (error) {
+        console.error("Error fetching data for global search:", error);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
+  // Function to get username from user ID
+  const getUsernameById = (userId) => {
+    if (!userId || usersData.length === 0) return userId;
+    
+    const user = usersData.find(user => user.user_id === userId);
+    return user ? user.username : userId;
+  };
+
+  // Function to get user search data (both ID and username)
+  const getUserSearchData = (userId) => {
+    if (!userId) return '';
+    const user = usersData.find(user => user.user_id === userId);
+    return user ? `${userId} ${user.username} ${user.email || ''}` : userId;
+  };
+
+  // Function to get customer name by customer ID
+  const getCustomerName = (customerId) => {
+    if (!customerId || customersData.length === 0) return customerId;
+    
+    const customer = customersData.find(cust => cust.customer_id === customerId);
+    return customer ? `${customer.full_name} (${customer.username})` : customerId;
+  };
+
+  // Function to get customer search data
+  const getCustomerSearchData = (customerId) => {
+    if (!customerId) return '';
+    const customer = customersData.find(cust => cust.customer_id === customerId);
+    return customer ? `${customerId} ${customer.username} ${customer.full_name} ${customer.email}` : customerId;
+  };
+
+  // Function to get resource name by resource ID
+  const getResourceName = (resourceId) => {
+    if (!resourceId || resourcesData.length === 0) return resourceId;
+    
+    const resource = resourcesData.find(res => res.resource_id === resourceId);
+    return resource ? `${resource.first_name} ${resource.last_name}` : resourceId;
+  };
+
+  // Function to get resource search data
+  const getResourceSearchData = (resourceId) => {
+    if (!resourceId) return '';
+    const resource = resourcesData.find(res => res.resource_id === resourceId);
+    return resource ? `${resourceId} ${resource.first_name} ${resource.last_name} ${resource.email}` : resourceId;
+  };
+
+  // Function to get company name by company ID
+  const getCompanyName = (companyId) => {
+    if (!companyId || companiesData.length === 0) return companyId;
+    
+    const company = companiesData.find(comp => comp.company_id === companyId);
+    return company ? company.company_name : companyId;
+  };
+
+  // Function to get product name by product ID
+  const getProductName = (productId) => {
+    if (!productId || productsData.length === 0) return productId;
+    
+    const product = productsData.find(prod => prod.product_id === productId);
+    return product ? product.product_name : productId;
+  };
+
+  // Function to get service item display name
+  const getServiceItemDisplay = (serviceItemId) => {
+    const serviceItem = serviceItems.find(item => item.service_item_id === serviceItemId);
+    return serviceItem ? serviceItem.service_item_name : serviceItemId;
+  };
+
+  // Function to get service item search data
+  const getServiceItemSearchData = (serviceItemId) => {
+    if (!serviceItemId) return '';
+    const serviceItem = serviceItems.find(item => item.service_item_id === serviceItemId);
+    if (!serviceItem) return serviceItemId;
+    
+    return [
+      serviceItemId,
+      serviceItem.service_item_name || '',
+      serviceItem.serial_number || '',
+      serviceItem.pcb_serial_number || '',
+      serviceItem.location || '',
+      serviceItem.product_description || '',
+    ].filter(Boolean).join(' ');
+  };
 
   // Function to format date to Indian format (dd/mm/yyyy)
   const formatToIndianDate = (dateString) => {
@@ -898,6 +1654,34 @@ const RequestScreen = () => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  // Function to format date in multiple formats for search
+  const formatDateForSearch = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) return '';
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const monthName = date.toLocaleString('en-IN', { month: 'long' });
+    const monthShort = date.toLocaleString('en-IN', { month: 'short' });
+    
+    return [
+      `${day}/${month}/${year}`,                    // DD/MM/YYYY
+      `${month}/${day}/${year}`,                    // MM/DD/YYYY
+      `${year}-${month}-${day}`,                    // YYYY-MM-DD
+      `${year}${month}${day}`,                      // YYYYMMDD
+      `${day}-${month}-${year}`,                    // DD-MM-YYYY
+      monthName,                                    // January, February
+      monthShort,                                   // Jan, Feb
+      `${year}`,                                    // 2024
+      `${month}/${year}`,                           // MM/YYYY
+      `${day} ${monthName} ${year}`,               // 15 January 2024
+      `${day} ${monthShort} ${year}`,              // 15 Jan 2024
+    ].join(' ');
   };
 
   // Custom input component for DatePicker with calendar icon
@@ -953,7 +1737,6 @@ const RequestScreen = () => {
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             setRequests(customerRequests);
-            setFilteredRequests(customerRequests);
 
             const closedIds = customerRequests
               .filter(req => (req.status || req.request_status || req.state || req.ServiceStatus)?.toLowerCase() === 'closed')
@@ -1014,20 +1797,9 @@ const RequestScreen = () => {
     }
   }, [user?.customer_id]);
 
-  // Apply filters whenever search term, status filter, date filter, service item filter, or requests change
-  useEffect(() => {
+  // Enhanced global search functionality
+  const enhancedFilteredRequests = useMemo(() => {
     let filtered = requests;
-
-    // Apply search term filter
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.request_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.service_item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        formatToIndianDate(request.preferred_date).includes(searchTerm.toLowerCase()) ||
-        request.preferred_time.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.request_details && request.request_details.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
 
     // Apply status filter
     if (statusFilter) {
@@ -1053,9 +1825,166 @@ const RequestScreen = () => {
       });
     }
 
-    setFilteredRequests(filtered);
+    // Apply search filter if search term exists
+    if (!searchTerm.trim()) {
+      return filtered;
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    return filtered.filter((request) => {
+      // Get user data for search
+      const createdBySearch = getUserSearchData(request.created_by);
+      const updatedBySearch = getUserSearchData(request.updated_by);
+      
+      // Get other relational data for search
+      const customerSearch = getCustomerSearchData(request.customer);
+      const assignedEngineerSearch = getResourceSearchData(request.assigned_engineer);
+      const companySearch = getCompanyName(request.company);
+      const productSearch = getProductName(request.product);
+      const serviceItemSearch = getServiceItemSearchData(request.service_item);
+      
+      // Get dates in multiple formats for search
+      const requestedDateFormats = formatDateForSearch(request.request_date);
+      const preferredDateFormats = formatDateForSearch(request.preferred_date);
+      const closedDateFormats = formatDateForSearch(request.closed_date);
+      const createdDateFormats = formatDateForSearch(request.created_at);
+      const updatedDateFormats = formatDateForSearch(request.updated_at);
+      
+      // Create a comprehensive search string
+      const searchableText = [
+        // Raw request data
+        request.request_id || '',
+        request.service_name || '',
+        request.status || '',
+        request.priority || '',
+        request.description || '',
+        request.request_details || '',
+        request.resolution_notes || '',
+        request.feedback || '',
+        request.rating || '',
+        request.category || '',
+        request.subcategory || '',
+        request.location || '',
+        request.city || '',
+        request.state || '',
+        request.country || '',
+        request.zip_code || '',
+        request.phone || '',
+        request.email || '',
+        request.preferred_time || '',
+        request.customer || '',
+        request.assigned_engineer || '',
+        request.company || '',
+        request.product || '',
+        request.service_item || '',
+        request.request_date || '',
+        request.preferred_date || '',
+        request.closed_date || '',
+        request.created_at || '',
+        request.updated_at || '',
+        
+        // Formatted relational data
+        createdBySearch,
+        updatedBySearch,
+        customerSearch,
+        assignedEngineerSearch,
+        companySearch,
+        productSearch,
+        serviceItemSearch,
+        
+        // Dates in multiple formats
+        requestedDateFormats,
+        preferredDateFormats,
+        closedDateFormats,
+        createdDateFormats,
+        updatedDateFormats,
+        
+        // Display values (exactly as shown in table)
+        formatToIndianDate(request.preferred_date),
+        formatToIndianDateTime(request.created_at),
+        formatToIndianDateTime(request.updated_at),
+        getUsernameById(request.created_by),
+        getUsernameById(request.updated_by),
+        getCustomerName(request.customer),
+        getResourceName(request.assigned_engineer),
+        getCompanyName(request.company),
+        getProductName(request.product),
+        getServiceItemDisplay(request.service_item),
+        
+        // Status variations for search
+        request.status === 'Under Process' ? 'under process processing in progress ongoing' : '',
+        request.status === 'Waiting for Spares' ? 'waiting for spares parts waiting pending spares' : '',
+        request.status === 'Waiting for Quote' ? 'waiting for quote quotation price estimate' : '',
+        request.status === 'Waiting for Client Approval' ? 'waiting for client approval customer approval pending approval' : '',
+        request.status === 'Closed' ? 'closed completed finished done resolved' : '',
+        request.status === 'Reopened' ? 'reopened reopened restarted again' : '',
+        request.status === 'Assigned' ? 'assigned allocated given' : '',
+        request.status === 'Pending' ? 'pending waiting queued' : '',
+        request.status === 'Open' ? 'open new created' : '',
+        request.status === 'In Progress' ? 'in progress working ongoing' : '',
+        
+        // Priority variations
+        request.priority === 'High' ? 'high urgent critical emergency' : '',
+        request.priority === 'Medium' ? 'medium normal regular standard' : '',
+        request.priority === 'Low' ? 'low minor trivial' : '',
+        
+        // Category variations
+        request.category === 'Installation' ? 'installation install setup' : '',
+        request.category === 'Repair' ? 'repair fix maintenance service' : '',
+        request.category === 'Preventive Maintenance' ? 'preventive maintenance pm checkup' : '',
+        request.category === 'Emergency' ? 'emergency urgent critical' : '',
+        request.category === 'Complaint' ? 'complaint issue problem' : '',
+        request.category === 'Feedback' ? 'feedback review rating' : '',
+        
+        // Time variations for preferred_time
+        request.preferred_time === 'Morning' ? 'morning am' : '',
+        request.preferred_time === 'Afternoon' ? 'afternoon pm' : '',
+        request.preferred_time === 'Evening' ? 'evening night' : '',
+        request.preferred_time === 'Anytime' ? 'anytime flexible' : '',
+        
+        // Complaint check variations
+        submittedComplaintRequests.includes(request.request_id) ? 'complaint submitted raised issue' : '',
+        
+        // Feedback check variations
+        submittedFeedbackRequests.includes(request.request_id) ? 'feedback submitted given survey' : '',
+        closedRequestIds.includes(request.request_id) ? 'closed completed finished' : '',
+        
+        // Add any other properties that might exist
+        ...Object.values(request).filter(val => 
+          val !== null && val !== undefined
+        ).map(val => {
+          if (typeof val === 'string' || typeof val === 'number') {
+            return String(val);
+          }
+          if (typeof val === 'boolean') {
+            return val ? 'true yes active' : 'false no inactive';
+          }
+          if (Array.isArray(val)) {
+            return val.join(' ');
+          }
+          if (typeof val === 'object' && val !== null) {
+            return JSON.stringify(val);
+          }
+          return '';
+        })
+      ]
+      .join(' ')                    // Combine into one string
+      .toLowerCase()                // Make case-insensitive
+      .replace(/\s+/g, ' ')         // Normalize spaces
+      .trim();
+      
+      return searchableText.includes(searchLower);
+    });
+  }, [searchTerm, requests, statusFilter, serviceItemFilter, dateFilter, serviceItems, 
+      usersData, customersData, resourcesData, companiesData, productsData,
+      submittedComplaintRequests, submittedFeedbackRequests, closedRequestIds]);
+
+  // Update filteredRequests when enhancedFilteredRequests changes
+  useEffect(() => {
+    setFilteredRequests(enhancedFilteredRequests);
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, dateFilter, serviceItemFilter, requests, serviceItems]);
+  }, [enhancedFilteredRequests]);
 
   // Clear all filters
   const clearFilters = () => {
@@ -1168,15 +2097,33 @@ const RequestScreen = () => {
           </Col>
 
           <Col className="ms-auto">
-            <Form.Control
-              type="text"
-              placeholder="Search by ID, Service, Date (dd/mm/yyyy)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
+            <div className="d-flex gap-2">
+              <Form.Control
+                type="text"
+                placeholder="Search in all columns..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+              {searchTerm && (
+                <Button 
+                  variant="outline-secondary"
+                  onClick={() => setSearchTerm('')}
+                  size="sm"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
           </Col>
         </Row>
+
+        {/* Search Results Info */}
+        {searchTerm && (
+          <div className="alert alert-info mt-3 py-2 mb-0">
+            <strong>Search Results:</strong> Found {filteredRequests.length} request(s) matching "{searchTerm}"
+          </div>
+        )}
 
         {/* Filter Section - Full Width */}
         <Row className="g-3 mt-3">
@@ -1253,7 +2200,7 @@ const RequestScreen = () => {
               onClick={clearFilters}
               className="w-100"
             >
-              Clear Filters
+              Clear All Filters
             </Button>
           </Col>
 
@@ -1311,7 +2258,11 @@ const RequestScreen = () => {
 
       <Row className="g-4">
         {paginatedData.length === 0 ? (
-          <p className="text-center">No {searchTerm || statusFilter || serviceItemFilter || dateFilter ? 'matching' : ''} requests found.</p>
+          <p className="text-center">
+            {searchTerm || statusFilter || serviceItemFilter || dateFilter 
+              ? `No requests found matching your search${searchTerm ? ` "${searchTerm}"` : ''}`
+              : 'No requests found.'}
+          </p>
         ) : (
           paginatedData.map((req, index) => (
             <Col xs={12} sm={6} md={4} key={index}>
