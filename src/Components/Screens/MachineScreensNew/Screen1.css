@@ -645,3 +645,221 @@ border-top-right-radius: 50px; */
   height: 12px;
   border: 2px solid white;
 }
+
+
+
+
+/* Added below styles Dated on 12-12-2025 */
+
+
+
+/* Screen1.css - Add these pull-to-refresh styles */
+
+/* Pull-to-refresh indicator */
+.screen1-pull-refresh {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  overflow: hidden;
+}
+
+.screen1-refresh-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+  color: #2B7ED6;
+  font-weight: 500;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.screen1-refresh-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2B7ED6;
+  border-radius: 50%;
+  animation: screen1-spin 1s linear infinite;
+}
+
+@keyframes screen1-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Manual refresh button */
+.screen1-refresh-button-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+
+.screen1-refresh-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.screen1-refresh-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.screen1-refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.screen1-refresh-spinning {
+  animation: screen1-spin 1s linear infinite;
+}
+
+/* Status message containers */
+.screen1-processing-message {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  margin: 10px auto;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+@keyframes screen1-fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.screen1-error-message {
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  margin: 10px auto;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+.screen1-busy-message {
+  background: rgba(255, 193, 7, 0.9);
+  color: #333;
+  padding: 10px 20px;
+  border-radius: 25px;
+  margin: 10px auto;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+/* Power button processing indicator */
+.screen1-processing-indicator {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: white;
+  animation: screen1-spin 1s linear infinite;
+  pointer-events: none;
+}
+
+/* Disabled button style */
+.screen1-disabled-btn {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Responsive adjustments for pull-to-refresh */
+@media (max-width: 768px) {
+  .screen1-pull-refresh {
+    height: 60px !important;
+  }
+  
+  .screen1-refresh-content {
+    font-size: 12px;
+  }
+  
+  .screen1-refresh-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .screen1-pull-refresh {
+    height: 50px !important;
+  }
+  
+  .screen1-refresh-content {
+    font-size: 11px;
+    gap: 5px;
+  }
+  
+  .screen1-refresh-spinner {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+  }
+  
+  .screen1-refresh-button {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .screen1-refresh-button svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Smooth transitions */
+.service-dropdown-list,
+.screen1-pull-refresh,
+.screen1-refresh-button {
+  transition: all 0.3s ease;
+}
+
+/* Update existing class if needed for proper positioning */
+.mainmain-container {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure service dropdown is above refresh indicator */
+.service-dropdown-wrapper {
+  position: relative;
+  z-index: 999;
+}
