@@ -212,58 +212,106 @@ const SecurityQuestionsScreen = () => {
   const a2InputRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (q1 === q2) {
+  console.log("🔐 Forgot Password Submit Triggered");
+
+  // ✅ Basic validation
+  if (!mobile || !q1 || !q2 || !a1 || !a2 || !newPassword) {
+    console.warn("⚠️ Missing required fields");
+
+    Swal.fire({
+      icon: "warning",
+      title: "Incomplete Form",
+      text: "Please fill in all fields.",
+    });
+    return;
+  }
+
+  if (q1 === q2) {
+    console.warn("⚠️ Same security questions selected", { q1, q2 });
+
+    Swal.fire({
+      icon: "error",
+      title: "Invalid Questions",
+      text: "Please select two different security questions.",
+    });
+    return;
+  }
+
+  const payload = {
+    mobile,
+    security_question1: q1,
+    answer1: a1,
+    security_question2: q2,
+    answer2: a2,
+    new_password: newPassword,
+  };
+
+  console.log("📤 Forgot password request payload", {
+    ...payload,
+    new_password: "******",
+  });
+
+  try {
+    const response = await fetch(`${baseURL}/customer-forgot-password/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log("📡 Response Status:", response.status);
+
+    const result = await response.json();
+    console.log("📥 Response Body:", result);
+
+    // ❌ HANDLE BACKEND ERRORS PROPERLY
+    if (!response.ok) {
+      let errorMessage = "Please check your details and try again.";
+
+      if (result?.error) {
+        // Security answers mismatch
+        errorMessage = result.error;
+      } 
+      else if (result?.new_password && Array.isArray(result.new_password)) {
+        // Password validation error
+        errorMessage = result.new_password[0];
+      }
+
+      console.error("❌ Password reset failed:", result);
+
       Swal.fire({
         icon: "error",
-        title: "Invalid Questions",
-        text: "Please select two different security questions.",
+        title: "Reset Failed",
+        text: errorMessage,
       });
+
       return;
     }
 
-    try {
-      const response = await fetch(`${baseURL}/customer-forgot-password/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          mobile,
-          security_question1: q1,
-          answer1: a1,
-          security_question2: q2,
-          answer2: a2,
-          new_password: newPassword,
-        }),
-      });
+    // ✅ SUCCESS
+    console.log("✅ Password reset successful for mobile:", mobile);
 
-      const result = await response.json();
+    Swal.fire({
+      icon: "success",
+      title: "Success",
+      text: "Password reset successfully!",
+    }).then(() => navigate("/"));
 
-      if (response.ok) {
-        Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: "Password reset successfully!",
-        }).then(() => navigate("/"));
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Failed",
-          text: result.message || "Please check your details and try again.",
-        });
-      }
-    } catch (err) {
-      console.error("Forgot password error:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Something went wrong. Please try again later.",
-      });
-    }
-  };
+  } catch (err) {
+    console.error("🚨 Forgot password request crashed", err);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Something went wrong. Please try again later.",
+    });
+  }
+};
+
 
   return (
     <div className="security-container">

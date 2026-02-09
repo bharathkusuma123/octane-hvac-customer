@@ -151,7 +151,7 @@ const Screen1 = () => {
       return { success: false, message: "No device selected" };
     }
 
-    setRefreshStatus({ sending: true, success: false, message: "Sending refresh command..." });
+    // setRefreshStatus({ sending: true, success: false, message: "Sending refresh command..." });
 
     try {
       const result = await sendRefreshCommand(selectedService.pcb_serial_number, sensorData);
@@ -376,22 +376,32 @@ const Screen1 = () => {
     navigate("/");
   };
 
-  const handlePowerToggle = async () => {
+ const handlePowerToggle = async () => {
+  try {
+    // 🚫 Prevent action if already processing or HVAC busy
     if (processing.status || sensorData.hvacBusy == "1") {
-      setProcessing({ 
-        status: true, 
-        message: sensorData.hvacBusy == "1" 
-          ? "System is busy, please wait..." 
-          : "Please wait..." 
+      const msg =
+        sensorData.hvacBusy == "1"
+          ? "System is busy, please wait..."
+          : "Please wait...";
+
+      console.warn("Power toggle blocked:", {
+        processing: processing.status,
+        hvacBusy: sensorData.hvacBusy,
       });
+
+      setProcessing({ status: true, message: msg });
       return;
     }
 
-    setProcessing({ status: true, message: "Sending command, please wait..." });
+    setProcessing({
+      status: true,
+      message: "Sending command, please wait...",
+    });
 
     const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-
-    const isShutdown = sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
+    const isShutdown =
+      sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
 
     const payload = {
       Header: "0xAA",
@@ -403,25 +413,47 @@ const Screen1 = () => {
       Footer: "0xZX",
     };
 
-    console.log("Sending power toggle payload:", payload);
+    console.log("✅ Sending power toggle payload:", JSON.stringify(payload, null, 2));
 
-    try {
-      const response = await fetch("https://mdata.air2o.net/controllers/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    const response = await fetch("https://mdata.air2o.net/controllers/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error("❌ API responded with error:", {
+        status: response.status,
+        statusText: response.statusText,
       });
-
-      if (!response.ok) throw new Error("Failed to send command");
-
-      setTimeout(() => {
-        setProcessing({ status: false, message: "" });
-      }, 15000);
-    } catch (error) {
-      console.error("Error sending command:", error);
-      setProcessing({ status: false, message: "Failed to send command" });
+      throw new Error("Failed to send command");
     }
-  };
+
+    const result = await response.text();
+    console.log("✅ Command sent successfully. API response:", result);
+
+    // ⏳ Reset processing after 15 seconds
+    setTimeout(() => {
+      console.log("ℹ️ Resetting processing state after timeout");
+      setProcessing({ status: false, message: "" });
+    }, 15000);
+  } catch (error) {
+    console.error("🔥 Error sending power toggle command:", {
+      message: error.message,
+      stack: error.stack,
+      sensorData,
+      selectedService,
+    });
+
+    setProcessing({
+      status: false,
+      message: "Failed to send command",
+    });
+  }
+};
+
 
   const handleNavigation = (path) => {
     if (!processing.status) {
@@ -503,8 +535,8 @@ const Screen1 = () => {
         <div className="screen1-refresh-content">
           {pullToRefresh.isRefreshing ? (
             <>
-              <div className="screen1-refresh-spinner"></div>
-              <span>Sending refresh command...</span>
+              {/* <div className="screen1-refresh-spinner"></div>
+              <span>Sending refresh command...</span> */}
             </>
           ) : (
             <>

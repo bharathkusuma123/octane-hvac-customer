@@ -4,7 +4,7 @@
   flex-direction: column;
   min-height: 100vh;
   background-color: #f8f9fa;
-  margin-top: 50px;
+  /* margin-top: 50px; */
 }
 
 .connect-content {
@@ -13,6 +13,7 @@
   max-width: 100%;
   margin: 0 auto;
   width: 100%;
+  margin-top: 20%;
   box-sizing: border-box;
 }
 
