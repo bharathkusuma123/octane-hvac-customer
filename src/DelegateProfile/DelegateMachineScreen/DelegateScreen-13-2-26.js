@@ -1,3 +1,5 @@
+// // with out showing service item offline wjile refreshing
+
 // DelegateScreen1.js (Complete with Pull-to-Refresh)
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
@@ -52,68 +54,35 @@ const formatTemp = (temp) => {
 
 // Function to send HVAC=3 command
 const sendRefreshCommand = async (pcbSerialNumber, sensorData) => {
-  const payload = {
-    Header: "0xAA",
-    DI: pcbSerialNumber || "2411GM-0102",
-    MD: sensorData.mode || "3",
-    FS: sensorData.fanSpeed || "0",
-    SRT: sensorData.temperature || 25,
-    HVAC: "3", // Always send 3 on refresh
-    Footer: "0xZX",
-  };
-
-  console.group("🔁 REFRESH COMMAND");
-  console.log("📦 Payload:", payload);
-  console.groupEnd();
-
   try {
+    const payload = {
+      Header: "0xAA",
+      DI: pcbSerialNumber || "2411GM-0102",
+      MD: sensorData.mode || "3",
+      FS: sensorData.fanSpeed || "0",
+      SRT: sensorData.temperature || 25,
+      HVAC: "3", // Always send 3 on refresh
+      Footer: "0xZX",
+    };
+
+    console.log("Sending refresh command with HVAC=3:", payload);
+
     const response = await fetch("https://mdata.air2o.net/controllers/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    let responseBody;
-
-    // 👇 IMPORTANT: parse response even on 400
-    try {
-      responseBody = await response.json();
-    } catch {
-      responseBody = await response.text();
-    }
-
-    // ❌ Backend rejected command (device offline, etc.)
     if (!response.ok) {
-      console.group("❌ BACKEND REJECTED COMMAND");
-      console.error("Status:", response.status);
-      console.error("Response:", responseBody);
-      console.groupEnd();
-
-      return {
-        success: false,
-        error:
-          responseBody?.error ||
-          responseBody?.message ||
-          "Command rejected by server",
-        status: response.status,
-      };
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    // ✅ Success
-    console.group("✅ REFRESH SUCCESS");
-    console.log("Response:", responseBody);
-    console.groupEnd();
-
-    return { success: true, data: responseBody };
+    const result = await response.json();
+    console.log("Refresh command response:", result);
+    return { success: true, data: result };
   } catch (error) {
-    console.group("🚨 NETWORK ERROR");
-    console.error(error);
-    console.groupEnd();
-
-    return {
-      success: false,
-      error: "Network error or server unreachable",
-    };
+    console.error("Error sending refresh command:", error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -131,8 +100,6 @@ const DelegateScreen1 = () => {
   const userId = user?.delegate_id;
   const company_id = user?.company_id;
   const navigate = useNavigate();
-
-   const fetchIntervalRef = useRef(null);
 
   // Pull-to-refresh state
   const [pullToRefresh, setPullToRefresh] = useState({
@@ -170,7 +137,6 @@ const DelegateScreen1 = () => {
     hvacBusy: "0",
     deviceId: "",
     alarmOccurred: "0",
-     isOnline: true, // ✅ ADD THIS
   });
 
   // Check if selected service has PCB serial number - ONLY for restricting modes
@@ -207,104 +173,65 @@ const DelegateScreen1 = () => {
   }, [selectedServiceItem, serviceItemsLoading, getSelectedServiceDetails]);
 
   // Fetch sensor data when selectedService changes
-useEffect(() => {
-  if (!selectedService?.pcb_serial_number) {
-    console.log("⏳ Waiting for PCB serial number...", selectedService);
-    setLoading(false);
-    return;
-  }
-
-  const pcbSerialNumber = selectedService.pcb_serial_number;
-  console.log("🟢 Selected PCB:", pcbSerialNumber);
-
-  const fetchData = async () => {
-    try {
-      console.log("📡 Fetching data for PCB:", pcbSerialNumber);
-
-      const response = await fetch(
-        `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
-      );
-
-      if (!response.ok) {
-        console.error("❌ API Response Error:", {
-          status: response.status,
-          statusText: response.statusText,
-        });
-        throw new Error("Network response was not ok");
-      }
-
-      const data = await response.json();
-      console.log("✅ API Response:", data);
-
-      if (data?.status !== "success" || !data?.data) {
-        console.warn("⚠️ Invalid API data format:", data);
-        return;
-      }
-
-      const deviceData = data.data;
-
-      setSensorData({
-        outsideTemp: deviceData?.outdoor_temperature?.value,
-        humidity: deviceData?.room_humidity?.value,
-        roomTemp: deviceData?.room_temperature?.value,
-        fanSpeed: deviceData?.fan_speed?.value,
-        temperature: deviceData?.set_temperature?.value,
-        powerStatus:
-          deviceData?.hvac_on?.value === "1" ? "on" : "off",
-        mode: deviceData?.mode?.value,
-        errorFlag: deviceData?.error_flag?.value,
-        hvacBusy: deviceData?.hvac_busy?.value,
-        deviceId: pcbSerialNumber,
-        alarmOccurred: deviceData?.alarm_occurred?.value,
-         isOnline: deviceData.is_online, // ✅ ADD THIS
-      });
-
-      const alarmValue = deviceData?.alarm_occurred?.value;
-      setErrorCount(
-        alarmValue && alarmValue !== "0"
-          ? Number(alarmValue)
-          : 0
-      );
-
+  useEffect(() => {
+    if (!selectedService || !selectedService.pcb_serial_number) {
+      console.log("Waiting for service details with PCB serial number:", selectedService);
       setLoading(false);
-      setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
-      setManualRefresh(false);
-
-    } catch (error) {
-      console.error("🔥 Fetch Error:", error);
-
-      setLoading(false);
-      setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
-      setManualRefresh(false);
+      return;
     }
-  };
 
-  /* ===============================
-     🔥 CLEAR OLD INTERVAL FIRST
-  ================================ */
-  if (fetchIntervalRef.current) {
-    clearInterval(fetchIntervalRef.current);
-    fetchIntervalRef.current = null;
-    console.log("🧹 Old interval cleared");
-  }
+    const fetchData = async () => {
+      try {
+        const pcbSerialNumber = selectedService.pcb_serial_number;
+        console.log("Fetching data for PCB-serial-number:", pcbSerialNumber);
+        
+        const [dataResponse] = await Promise.all([
+          fetch(`${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`)
+        ]);
 
-  // ⏱️ Run immediately
-  fetchData();
+        if (!dataResponse.ok) throw new Error("Network response was not ok");
+        
+        const data = await dataResponse.json();
+        console.log("API response data:", data);
+        
+        if (data.status !== "success" || !data.data) {
+          throw new Error("Invalid data format from API");
+        }
 
-  // ⏱️ Start polling
-  fetchIntervalRef.current = setInterval(fetchData, 1000);
+        const deviceData = data.data;
 
-  // 🧹 Cleanup
-  return () => {
-    if (fetchIntervalRef.current) {
-      clearInterval(fetchIntervalRef.current);
-      fetchIntervalRef.current = null;
-      console.log("🛑 Interval cleaned up");
-    }
-  };
+        setSensorData(prev => ({
+          outsideTemp: deviceData.outdoor_temperature?.value,
+          humidity: deviceData.room_humidity?.value,
+          roomTemp: deviceData.room_temperature?.value,
+          fanSpeed: deviceData.fan_speed?.value,
+          temperature: deviceData.set_temperature?.value,
+          powerStatus: deviceData.hvac_on?.value == "1" ? "on" : "off",
+          mode: deviceData.mode?.value,
+          errorFlag: deviceData.error_flag?.value,
+          hvacBusy: deviceData.hvac_busy?.value,
+          deviceId: deviceData.pcb_serial_number,
+          alarmOccurred: deviceData.alarm_occurred?.value,
+        }));
 
-}, [selectedService?.pcb_serial_number, userId, company_id]);
+        const alarmValue = deviceData.alarm_occurred?.value;
+        setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
 
+        setLoading(false);
+        setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+        setManualRefresh(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+        setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+        setManualRefresh(false);
+      }
+    };
+
+    fetchData();
+    const intervalId = setInterval(fetchData, 1000);
+    return () => clearInterval(intervalId);
+  }, [selectedService, userId, company_id, manualRefresh]);
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e) => {
@@ -409,103 +336,62 @@ useEffect(() => {
   };
 
   // Function to send refresh command with HVAC=3
-const sendRefreshToController = async () => {
-  if (!selectedService || !selectedService.pcb_serial_number) {
-    console.warn("No PCB serial number available for refresh command");
-
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: "No device selected",
-    });
-
-    return { success: false, message: "No device selected" };
-  }
-
-  if (!serviceItemPermissions?.can_control_equipment) {
-    console.warn("No control permissions for refresh command");
-
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: "Control permissions not available",
-    });
-
-    return { success: false, message: "Control permissions not available" };
-  }
-
-  // setRefreshStatus({
-  //   sending: true,
-  //   success: false,
-  //   message: "Sending refresh command...",
-  // });
-
-  try {
-    const result = await sendRefreshCommand(
-      selectedService.pcb_serial_number,
-      sensorData
-    );
-
-    if (result?.success) {
-      setRefreshStatus({
-        sending: false,
-        success: true,
-        message: "Refresh command sent successfully",
+  const sendRefreshToController = async () => {
+    if (!selectedService || !selectedService.pcb_serial_number) {
+      console.warn("No PCB serial number available for refresh command");
+      setRefreshStatus({ 
+        sending: false, 
+        success: false, 
+        message: "No device selected" 
       });
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setRefreshStatus({ sending: false, success: false, message: "" });
-      }, 3000);
-
-      return result;
+      return { success: false, message: "No device selected" };
     }
 
-    /* ===============================
-       HANDLE BACKEND ERROR MESSAGE
-    ================================ */
+    if (!serviceItemPermissions.can_control_equipment) {
+      console.warn("No control permissions for refresh command");
+      setRefreshStatus({ 
+        sending: false, 
+        success: false, 
+        message: "Control permissions not available" 
+      });
+      return { success: false, message: "Control permissions not available" };
+    }
 
-    const backendMessage =
-      result?.error ||
-      result?.message ||
-      "Failed to send refresh command";
+    setRefreshStatus({ sending: true, success: false, message: "Sending refresh command..." });
 
-    console.error("❌ Refresh Command Failed:", backendMessage);
-
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: backendMessage, // 👈 REAL BACKEND MESSAGE
-    });
-
-    // Clear error after 3 seconds
-    setTimeout(() => {
-      setRefreshStatus({ sending: false, success: false, message: "" });
-    }, 3000);
-
-    return result;
-
-  } catch (error) {
-    console.error("🔥 Refresh Command Exception:", error);
-
-    const errorMessage =
-      error?.message || "Unexpected error occurred";
-
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: errorMessage,
-    });
-
-    // Clear error after 3 seconds
-    setTimeout(() => {
-      setRefreshStatus({ sending: false, success: false, message: "" });
-    }, 3000);
-
-    return { success: false, error: errorMessage };
-  }
-};
-
+    try {
+      const result = await sendRefreshCommand(selectedService.pcb_serial_number, sensorData);
+      
+      if (result.success) {
+        setRefreshStatus({ 
+          sending: false, 
+          success: true, 
+          message: "Refresh command sent successfully" 
+        });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setRefreshStatus({ sending: false, success: false, message: "" });
+        }, 3000);
+        
+        return result;
+      } else {
+        setRefreshStatus({ 
+          sending: false, 
+          success: false, 
+          message: "Failed to send refresh command" 
+        });
+        return result;
+      }
+    } catch (error) {
+      setRefreshStatus({ 
+        sending: false, 
+        success: false, 
+        message: "Error sending refresh command" 
+      });
+      return { success: false, error: error.message };
+    }
+  };
 
   // Event handlers
   const handleLogout = () => {
@@ -571,7 +457,7 @@ const sendRefreshToController = async () => {
 
       setTimeout(() => {
         setProcessing({ status: false, message: "" });
-      }, 25000);
+      }, 15000);
 
     } catch (error) {
       console.error("Error sending command:", error);
@@ -915,14 +801,9 @@ const sendRefreshToController = async () => {
             <button
               className={`screen1-power-button screen1-power-button2 ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
-              disabled={processing.status || !sensorData.isOnline || !selectedService?.pcb_serial_number || !serviceItemPermissions.can_control_equipment}
+              disabled={processing.status || !selectedService?.pcb_serial_number || !serviceItemPermissions.can_control_equipment}
               style={{
-               backgroundColor:
-  !sensorData.isOnline
-    ? "#808080" // grey when offline
-    : sensorData.powerStatus == "on"
-    ? "#5adb5eff"
-    : "#c80000f5",
+                backgroundColor: sensorData.powerStatus == "on" ? "#5adb5eff" : "#c80000f5",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -931,9 +812,9 @@ const sendRefreshToController = async () => {
                 width: "48px",
                 borderRadius: "4px",
                 padding: "8px",
-                cursor: (processing.status || !sensorData.isOnline || !serviceItemPermissions.can_control_equipment) ? "not-allowed" : "pointer",
+                cursor: (processing.status || !serviceItemPermissions.can_control_equipment) ? "not-allowed" : "pointer",
                 fontWeight: "bold",
-                opacity: (processing.status || !sensorData.isOnline || !serviceItemPermissions.can_control_equipment) ? 0.6 : 1,
+                opacity: (processing.status || !serviceItemPermissions.can_control_equipment) ? 0.6 : 1,
               }}
             >
               <FiPower size={24} color="#fff" />
@@ -1102,4 +983,4 @@ const sendRefreshToController = async () => {
   );
 };
 
-export default DelegateScreen1; 
+export default DelegateScreen1;
