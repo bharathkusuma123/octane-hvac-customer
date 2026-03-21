@@ -2128,7 +2128,7 @@ const RequestScreen = () => {
         {/* Filter Section - Full Width */}
         <Row className="g-3 mt-3">
           {/* Status Filter Buttons */}
-          <Col xs={12}>
+          {/* <Col xs={12}>
             <Form.Label className="fw-semibold mb-2">Filter by Status</Form.Label>
             <div className="d-flex flex-wrap gap-2 mb-3">
               <Button
@@ -2149,10 +2149,10 @@ const RequestScreen = () => {
                 </Button>
               ))}
             </div>
-          </Col>
+          </Col> */}
 
           {/* Service Item Filter Buttons */}
-          <Col xs={12}>
+          {/* <Col xs={12}>
             <Form.Label className="fw-semibold mb-2">Filter by Service Item</Form.Label>
             <div className="d-flex flex-wrap gap-2 mb-3">
               <Button
@@ -2173,7 +2173,67 @@ const RequestScreen = () => {
                 </Button>
               ))}
             </div>
-          </Col>
+          </Col> */}
+
+          {/* Status Filter Dropdown */}
+<Col xs={12} md={6}>
+  <Form.Label className="fw-semibold mb-2">Filter by Status</Form.Label>
+  <div className="d-flex gap-2 mb-3">
+    <Form.Select
+      value={statusFilter}
+      onChange={(e) => setStatusFilter(e.target.value)}
+      className="status-select"
+      style={{ maxWidth: '300px' }}
+    >
+      <option value="">All Statuses</option>
+      {availableStatuses.map(status => (
+        <option key={status} value={status}>
+          {status}
+        </option>
+      ))}
+    </Form.Select>
+    
+    {statusFilter && (
+      <Button 
+        variant="outline-secondary" 
+        size="sm"
+        onClick={() => setStatusFilter('')}
+      >
+        Clear
+      </Button>
+    )}
+  </div>
+</Col>
+
+{/* Service Item Filter Dropdown */}
+<Col xs={12} md={6}>
+  <Form.Label className="fw-semibold mb-2">Filter by Service Item</Form.Label>
+  <div className="d-flex gap-2 mb-3">
+    <Form.Select
+      value={serviceItemFilter}
+      onChange={(e) => setServiceItemFilter(e.target.value)}
+      className="service-item-select"
+      style={{ maxWidth: '300px' }}
+    >
+      <option value="">All Services</option>
+      {availableServiceItems.map(serviceItem => (
+        <option key={serviceItem} value={serviceItem}>
+          {serviceItem}
+        </option>
+      ))}
+    </Form.Select>
+    
+    {serviceItemFilter && (
+      <Button 
+        variant="outline-secondary" 
+        size="sm"
+        onClick={() => setServiceItemFilter('')}
+      >
+        Clear
+      </Button>
+    )}
+  </div>
+</Col>
 
           {/* Date Filter */}
           <Col lg={4} md={6}>

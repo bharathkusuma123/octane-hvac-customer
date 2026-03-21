@@ -153,7 +153,10 @@ const MachineScreen = () => {
                       navigate(`/machines/${item.service_item_id}`);
                     }}
                   >
-                    {item.service_item_id}
+                    {/* {item.service_item_id} */}
+                     {/* instead of displaying service item id - we are displaying service item name  */}
+                     {item.service_item_name}  
+
                   </h3>
                   <div className="machine-card-toggle">
                     {expandedCards[index] ? <FaChevronUp /> : <FaChevronDown />}

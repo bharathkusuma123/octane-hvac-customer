@@ -65,13 +65,13 @@ const Dashboard = () => {
       <div className="dashboard-content">
         <h2>
           Customer Dashboard
-          {userDetails && (
+          {/* {userDetails && (
             <FaEdit
               className="edit-icon"
               onClick={handleEditClick}
               style={{ marginLeft: "10px", cursor: "pointer", color: "blue" }}
             />
-          )}
+          )} */}
         </h2>
         
         {userDetails ? (
