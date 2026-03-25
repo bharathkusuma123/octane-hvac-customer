@@ -25,7 +25,7 @@ import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png
 import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
 import { useNavigate } from "react-router-dom"; 
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
-import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial";
+import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial_delegate_screen";
 import baseURL from "../../Components/ApiUrl/Apiurl";
 import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
 import './DelegateMachineScreens.css'
@@ -855,13 +855,13 @@ const sendRefreshToController = async () => {
         <div className="service-display-container delegate-service-display">
           {serviceItems.length > 1 ? (
             // Show dropdown when user has multiple service items
-            <div className="service-dropdown-container">
+            <div className="service-dropdown-container  del-service-dropdown-container"  >
               <label htmlFor="service-item-select" className="service-dropdown-label">
                 Select Service Item:
               </label>
               <select
                 id="service-item-select"
-                className="service-dropdown-select"
+                className="service-dropdown-select del-service-dropdown-select"
                 value={selectedServiceItem}
                 onChange={handleServiceItemChange}
               >
@@ -913,7 +913,7 @@ const sendRefreshToController = async () => {
 
           <div style={{ position: "relative" }}>
             <button
-              className={`screen1-power-button screen1-power-button2 ${processing.status ? "processing" : ""}`}
+              className={`screen1-power-button screen1-power-button2 del-screen1-power-button ${processing.status ? "processing" : ""}`}
               onClick={handlePowerToggle}
               disabled={processing.status || !sensorData.isOnline || !selectedService?.pcb_serial_number || !serviceItemPermissions.can_control_equipment}
               style={{
@@ -948,23 +948,23 @@ const sendRefreshToController = async () => {
 
         {/* Status Messages */}
         {processing.status && (
-          <div className="screen1-processing-message">{processing.message}</div>
+          <div className="screen1-processing-message  del-screen1-processing-message">{processing.message}</div>
         )}
 
         {sensorData.errorFlag == "1" && (
-          <div className="screen1-error-message">
+          <div className="screen1-error-message del-screen1-error-message">
             ⚠️ System Error Detected
           </div>
         )}
 
         {sensorData.hvacBusy == "1" && !processing.status && (
-          <div className="screen1-busy-message">
+          <div className="screen1-busy-message del-screen1-busy-message">
             ⏳ System is currently busy
           </div>
         )}
 
         {!serviceItemPermissions.can_control_equipment && (
-          <div className="warning-message">
+          <div className="warning-message  del-warning-message">
             ⚠️ Control permissions not available
           </div>
         )}
@@ -980,7 +980,7 @@ const sendRefreshToController = async () => {
         </div>
 
         {/* Environment Info */}
-        <div className="env-info">
+        <div className="env-info del-env-info">
           <div className="env-item">
             <FiSun className="env-icon" size={20} color="#FFFFFF" />
             <div className="env-value">{formatTemp(sensorData.outsideTemp)}°C</div>

@@ -863,3 +863,139 @@ border-top-right-radius: 50px; */
   position: relative;
   z-index: 999;
 }
+
+
+@media (max-width: 430px) {
+  .main-container
+.header1{
+  height: 60px;
+}
+
+    .logo {
+        width: 170px;
+        height: 144px;
+        object-fit: contain;
+    }
+
+    .screen1-power-button{
+  margin-bottom: 20px;
+}
+}
+
+
+
+@media (max-width: 360px) {
+  .service-dropdown-container {
+    width: 90%;
+    /* margin: 10px auto 0; */
+            margin-top: 50px;
+  }
+
+      .main-container {
+        margin-top: -15px;
+    }
+
+        .footer-container {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        max-width: 450px;
+        margin: 0 auto;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top-left-radius: 50px;
+        border-top-right-radius: 50px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        padding: 15px 0 10px;
+        height: 225px;
+    }
+
+    .control-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  /* width: 90%; */
+  /* background: white;
+  border-top-left-radius: 50px;
+border-top-right-radius: 50px; */
+
+  padding: 12px;
+  margin-top: auto;
+  /* margin-bottom: 20px; */
+}
+
+.control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff; /* light card background */
+  border: none;
+  border-radius: 15px; /* rounded corners for card look */
+  padding: 7px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* subtle shadow */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.footer-logo .logo-image
+{
+  margin-top: -5px !important;
+}
+
+   .env-info {
+    display: flex
+;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 30px;
+    margin-top: -48%;
+}
+
+
+
+    .screen1-power-button  {
+    background-color: rgb(128, 128, 128);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    height: 36px !important;
+    width: 46px !important;
+    border-radius: 4px;
+    padding: 8px;
+    cursor: not-allowed;
+    font-weight: bold;
+    opacity: 0.6;
+}
+
+    .logo-image {
+        width: 170px;
+        height: 35px;
+        object-fit: contain;
+        margin-top: -43px !important;
+    }
+
+
+    .screen1-busy-message {
+    background: rgba(255, 193, 7, 0.9);
+    color: #333;
+    padding: 10px 20px;
+    border-radius: 25px;
+    margin: 0px auto !important;
+    text-align: center;
+    max-width: 90%;
+    font-size: 14px;
+    z-index: 100;
+    position: relative;
+    animation: screen1-fadeIn 0.3s ease;
+}
+
+
+    .temp-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 1px;
+    }
+}

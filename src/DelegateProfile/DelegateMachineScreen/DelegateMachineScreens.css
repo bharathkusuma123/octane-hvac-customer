@@ -15,11 +15,11 @@
         width: 170px;
         height: 35px;
         object-fit: contain;
-        margin-top: 41px;
+        margin-top: 94px;
     }
 
     .screen1-power-button2 {
-   margin-top: 20px;
+   margin-top: 103px;
 }
 .warning-message{
         margin-bottom: 11px;
@@ -265,4 +265,200 @@
 .mainmain-container {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+
+@media (max-width: 480px) {
+
+
+/* .del-env-info {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 30px;
+  margin-top: -46%;
+} */
+
+.del-temp-container{
+       margin-top: 42px ;
+        margin-bottom: 13px;
+
+}
+
+    /* .service-dropdown-container {
+        width: 90%;
+       
+        margin-top: 60px;
+    } */
+/* Status message containers */
+.del-screen1-processing-message {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  /* margin: 10px auto; */
+    margin-top: 48px;
+  margin-bottom: 40px;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+.del-screen1-error-message {
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  /* margin: 10px auto; */
+    margin-top: 48px;
+  margin-bottom: 40px;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+.del-screen1-busy-message {
+  background: rgba(255, 193, 7, 0.9);
+  color: #333;
+  padding: 10px 20px;
+  border-radius: 25px;
+  /* margin: 10px auto; */
+  margin-top: 51px;
+  margin-bottom: -46px;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+.del-warning-message{
+        /* margin-bottom: 11px;
+        margin-top: 2px; */
+          margin-top: 48px;
+  margin-bottom: 40px;
+      }
+
+}
+
+
+
+@media (max-width: 430px) {
+
+
+   
+}
+
+
+
+@media (max-width: 360px) {
+      .del-temp-container {
+        margin-top: 19px;
+        margin-bottom: 22px;
+    }
+
+  .del-env-info {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 30px;
+    margin-top: -52%;
+}
+
+  .del-screen1-power-button {
+    background-color: rgb(128, 128, 128);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    height: 31px !important;
+    width: 41px !important;
+    border-radius: 4px;
+    padding: 8px;
+    cursor: not-allowed;
+    font-weight: bold;
+    opacity: 0.6;
+    margin-top: 86px  !important;
+}
+
+    /* .logo-image {
+        width: 170px;
+        height: 35px;
+        object-fit: contain;
+        margin-top: 86px !important;
+    } */
+     /* .service-dropdown-container
+    .del-service-dropdown-select{
+      
+      margin-top: -10px;
+    } */
+
+
+    .del-screen1-processing-message {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 20px;
+  border-radius: 25px;
+    margin-top: 22px !important;
+  margin-bottom: -15px !important;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+.del-screen1-error-message {
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 4px 20px;
+  border-radius: 25px;
+    margin-top: 22px !important;
+  margin-bottom: -15px !important;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+
+.del-screen1-busy-message {
+  background: rgba(255, 193, 7, 0.9);
+  color: #333;
+  padding: 4px 20px;
+  border-radius: 25px;
+  margin-top: 22px !important;
+  margin-bottom: -15px !important;
+  text-align: center;
+  max-width: 90%;
+  font-size: 14px;
+  z-index: 100;
+  position: relative;
+  animation: screen1-fadeIn 0.3s ease;
+}
+.del-warning-message{
+        /* margin-bottom: 11px;
+        margin-top: 2px; */
+          margin-top: 22px !important;
+  margin-bottom: -15px !important;
+      }
+     .delegate-logo {
+        width: 170px;
+        height: 35px;
+        object-fit: contain;
+        margin-top: 75px !important;
+    }
+
+    .del-logo-screen2{
+          margin-top: 32px;
+        margin-bottom: -8px;
+    }
 }

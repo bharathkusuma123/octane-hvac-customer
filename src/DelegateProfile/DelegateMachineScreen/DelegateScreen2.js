@@ -223,7 +223,7 @@ const DelegateScreen2 = () => {
           <button className="icon-button" onClick={handleBackClick} disabled={processing.status}>
             <FiArrowLeft size={24} color="white" />
           </button>
-          <img src={AIROlogo} alt="AIRO Logo" className="logo" />
+          <img src={AIROlogo} alt="AIRO Logo" className="logo del-logo-screen2" />
           <div className="power-button-container">
             <button
               className={`power-button ${displayData.powerStatus === 'on' ? 'on' : 'off'} ${processing.status ? "processing" : ""}`}

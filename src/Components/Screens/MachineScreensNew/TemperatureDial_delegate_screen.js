@@ -105,7 +105,7 @@ const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTempe
 
   return (
     <div
-      className="temp-container "
+      className="temp-container del-temp-container"
       ref={dialRef}
       style={{ position: "relative", width: SIZE, height: SIZE }}
     >
