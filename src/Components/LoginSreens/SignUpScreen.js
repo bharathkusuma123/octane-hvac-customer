@@ -12,20 +12,11 @@ const SignUpScreen = () => {
   const navigate = useNavigate();
 
   const handleMobileChange = (e) => {
-    const value = e.target.value;
-    // Allow only digits and max 10 characters
-    if (/^\d{0,10}$/.test(value)) {
-      setMobile(value);
-    }
-  };
+  setMobile(e.target.value);
+};
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-
-  if (mobile.length !== 10) {
-    alert("Mobile number must be exactly 10 digits.");
-    return;
-  }
 
   setLoading(true);
   try {

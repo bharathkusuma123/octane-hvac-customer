@@ -219,7 +219,9 @@ const SecurityQuestionsScreen = () => {
 
   // ✅ Basic validation
   if (!mobile || !q1 || !q2 || !a1 || !a2 || !newPassword) {
-    console.warn("⚠️ Missing required fields");
+    console.warn("⚠️ Missing required fields", {
+      mobile, q1, q2, a1, a2, newPassword
+    });
 
     Swal.fire({
       icon: "warning",
@@ -229,6 +231,7 @@ const SecurityQuestionsScreen = () => {
     return;
   }
 
+  // ✅ Prevent same question selection
   if (q1 === q2) {
     console.warn("⚠️ Same security questions selected", { q1, q2 });
 
@@ -249,10 +252,7 @@ const SecurityQuestionsScreen = () => {
     new_password: newPassword,
   };
 
-  console.log("📤 Forgot password request payload", {
-    ...payload,
-    new_password: "******",
-  });
+  console.log("📤 Request Payload:", payload);
 
   try {
     const response = await fetch(`${baseURL}/customer-forgot-password/`, {
@@ -265,23 +265,43 @@ const SecurityQuestionsScreen = () => {
 
     console.log("📡 Response Status:", response.status);
 
-    const result = await response.json();
-    console.log("📥 Response Body:", result);
+    // ✅ Get raw response first (important)
+    const rawText = await response.text();
+    console.log("📥 Raw Response:", rawText);
 
-    // ❌ HANDLE BACKEND ERRORS PROPERLY
+    let result;
+
+    // ✅ Try parsing JSON safely
+    try {
+      result = JSON.parse(rawText);
+    } catch (parseError) {
+      console.error("❌ Failed to parse JSON:", parseError);
+
+      Swal.fire({
+        icon: "error",
+        title: "Server Error",
+        text: "Server returned invalid response (not JSON).",
+      });
+
+      return;
+    }
+
+    console.log("📥 Parsed Response:", result);
+
+    // ❌ Handle backend errors
     if (!response.ok) {
       let errorMessage = "Please check your details and try again.";
 
       if (result?.error) {
-        // Security answers mismatch
         errorMessage = result.error;
-      } 
-      else if (result?.new_password && Array.isArray(result.new_password)) {
-        // Password validation error
+      } else if (result?.new_password && Array.isArray(result.new_password)) {
         errorMessage = result.new_password[0];
       }
 
-      console.error("❌ Password reset failed:", result);
+      console.error("❌ Password reset failed:", {
+        status: response.status,
+        error: result,
+      });
 
       Swal.fire({
         icon: "error",
@@ -293,7 +313,7 @@ const SecurityQuestionsScreen = () => {
     }
 
     // ✅ SUCCESS
-    console.log("✅ Password reset successful for mobile:", mobile);
+    console.log("✅ Password reset successful:", result);
 
     Swal.fire({
       icon: "success",
@@ -302,12 +322,12 @@ const SecurityQuestionsScreen = () => {
     }).then(() => navigate("/"));
 
   } catch (err) {
-    console.error("🚨 Forgot password request crashed", err);
+    console.error("🚨 Network / Fetch Error:", err);
 
     Swal.fire({
       icon: "error",
       title: "Error",
-      text: "Something went wrong. Please try again later.",
+      text: "Unable to connect to server. Please try again later.",
     });
   }
 };

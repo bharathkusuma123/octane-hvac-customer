@@ -7,8 +7,9 @@ import Notification_Url from '../../ApiUrl/PushNotificanURL';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaTimes, FaUpload, FaImage, FaVideo, FaEye, FaTrash } from 'react-icons/fa';
+import Select from "react-select";
 
-const ServiceRequestForm = () => {
+const ServiceRequestForm = () => { 
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useContext(AuthContext);
@@ -551,31 +552,53 @@ const deleteMediaFile = async (mediaId) => {
         <div className="card-body">
           <form onSubmit={handleSubmit}>
             <div className="row g-3">
-              <div className="col-md-6">
-                <label className="formlabel" style={{ marginLeft: '-155px' }}>Service Item ID</label>
-                <select
-                  name="service_item"
-                  value={form.service_item}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                  disabled={isEditMode}
-                >
-                  <option value="">Select Service Item</option>
-                  {serviceItems.length === 0 ? (
-                    <option value="" disabled>No service items found</option>
-                  ) : (
-                    serviceItems.map((item) => (
-                      <option key={item.service_item_id} value={item.service_item_id}>
-                        {item.service_item_name} - {item.service_item_id}
-                      </option>
-                    ))
-                  )}
-                </select>
-                {isEditMode && (
-                  <small className="text-muted">Service item cannot be changed</small>
-                )}
-              </div>
+            <div className="col-md-6">
+  <label
+    className="formlabel"
+    style={{ marginLeft: "-155px" }}
+  >
+    Service Item ID
+  </label>
+
+  <Select
+    name="service_item"
+    value={
+      serviceItems
+        .map((item) => ({
+          value: item.service_item_id,
+          label: `${item.service_item_name} - ${item.service_item_id}`,
+        }))
+        .find((option) => option.value === form.service_item)
+    }
+    onChange={(selectedOption) =>
+      handleChange({
+        target: {
+          name: "service_item",
+          value: selectedOption ? selectedOption.value : "",
+        },
+      })
+    }
+    options={serviceItems.map((item) => ({
+      value: item.service_item_id,
+      label: `${item.service_item_name} - ${item.service_item_id}`,
+    }))}
+    placeholder="Search Service Item..."
+    isDisabled={isEditMode}
+    isClearable
+  />
+
+  {isEditMode && (
+    <small className="text-muted">
+      Service item cannot be changed
+    </small>
+  )}
+
+  {/* {serviceItems.length === 0 && (
+    <small className="text-danger">
+      No service items found
+    </small>
+  )} */}
+</div>
 
               <div className="col-md-6">
                 <label className="formlabel" style={{ marginLeft: '-85px' }}>Preferred Service Date</label>

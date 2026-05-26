@@ -22,11 +22,10 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);  // Start loader
+    setIsLoading(true);
 
     try {
       let fcmToken = '';
-
       if (window.ReactNativeWebView && window.fcmToken) {
         fcmToken = window.fcmToken;
       }
@@ -46,11 +45,14 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(loginResponse));
 
       const user = loginResponse.data;
+      const sessionId = user.session_id; // ✅
+
       localStorage.setItem("userId", user.customer_id || user.delegate_id);
       localStorage.setItem("userMobile", user.mobile);
       localStorage.setItem("userName", user.full_name || user.delegate_name);
       localStorage.setItem("customerType", user.customer_type || "delegate");
       localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("session_id", sessionId); // ✅
 
       login(user);
 
@@ -58,133 +60,50 @@ export default function Login() {
         window.ReactNativeWebView.postMessage(JSON.stringify(loginResponse));
       }
 
+      // Determine the original destination path
+      let destinationPath = "/machinescreen1";
+      let destinationState = { userMobile: user.mobile };
+
       if (user.delegate_id) {
         try {
           const serviceItemsResponse = await axios.get(`${baseURL}/delegate-service-item-tasks/`);
           const allDelegateItems = serviceItemsResponse.data.data || [];
-
           const userServiceItems = allDelegateItems.filter(
             item => item.delegate === user.delegate_id
           );
-
           const hasMonitorPermission = userServiceItems.some(
             item => item.can_monitor_equipment === true
           );
 
-          if (hasMonitorPermission) {
-            navigate("/delegate-machinescreen1", { state: { userMobile: user.mobile } });
-          } else {
-            navigate("/delegate-home", { state: { userMobile: user.mobile } });
-          }
+          destinationPath = hasMonitorPermission
+            ? "/delegate-machinescreen1"
+            : "/delegate-home";
 
         } catch (serviceError) {
           console.error("Error fetching service items:", serviceError);
-          navigate("/delegate-home", { state: { userMobile: user.mobile } });
+          destinationPath = "/delegate-home";
         }
-
-      } else {
-        navigate("/machinescreen1", { state: { userMobile: user.mobile } });
       }
+
+      // Always navigate to /staticscreen, passing the resolved destination
+      navigate("/staticscreen", {
+        state: {
+          userMobile: user.mobile,
+          destinationPath,
+          destinationState,
+        }
+      });
 
     } catch (err) {
       console.error("Login error:", err);
       setError("Invalid mobile number or password");
     }
 
-    setIsLoading(false); // Stop loader
+    setIsLoading(false);
   };
-   // Function to generate FCM token
-  // const generateToken = async () => {
-  //   try {
-  //     const token = await messaging().getToken(); // Get Firebase FCM token
-  //     return token;
-  //   } catch (error) {
-  //     console.error('Error getting Firebase FCM token:', error);
-  //     return '';
-  //   }
-  // };
-
-// 5-11-2025
-
-//   const handleLogin = async (e) => {
-//   e.preventDefault();
-//   setError('');
-
-//   try {
-//     let fcmToken = '';
-
-//     // ✅ Use Expo-provided token
-//     if (window.ReactNativeWebView && window.fcmToken) {
-//       fcmToken = window.fcmToken;
-//       console.log("Using Expo token:", fcmToken);
-//     }
-
-//     const response = await axios.post(`${baseURL}/customer-login/`, {
-//       mobile,
-//       password,
-//       fcm_token: fcmToken,
-//     });
-
-//     const user = response.data.data;
-
-//     // Store user data in localStorage
-//     localStorage.setItem("userId", user.customer_id || user.delegate_id);
-//     localStorage.setItem("userMobile", user.mobile);
-//     localStorage.setItem("userName", user.full_name || user.delegate_name);
-//     localStorage.setItem("customerType", user.customer_type || "delegate");
-//     localStorage.setItem("isLoggedIn", "true");
-
-//     login(user);
-
-//     // Send login message to Expo
-//     if (window.ReactNativeWebView) {
-//       window.ReactNativeWebView.postMessage(
-//         JSON.stringify({ type: 'login', userId: user.customer_id || user.delegate_id })
-//       );
-//     }
-
-//     // ✅ FIXED: Check if delegate has monitor permissions before navigating
-//     if (user.delegate_id) {
-//       // We need to fetch the service items to check permissions
-//       try {
-//         const serviceItemsResponse = await axios.get(`${baseURL}/delegate-service-item-tasks/`);
-//         const allDelegateItems = serviceItemsResponse.data.data || [];
-//         const userServiceItems = allDelegateItems.filter(
-//           item => item.delegate === user.delegate_id
-//         );
-        
-//         // Check if user has any service item with monitor permission
-//         const hasMonitorPermission = userServiceItems.some(
-//           item => item.can_monitor_equipment === true
-//         );
-
-//         console.log("User service items:", userServiceItems);
-//         console.log("Has monitor permission:", hasMonitorPermission);
-
-//         // Navigate based on monitor permission
-//         if (hasMonitorPermission) {
-//           navigate("/delegate-machinescreen1", { state: { userMobile: user.mobile } });
-//         } else {
-//           navigate("/delegate-home", { state: { userMobile: user.mobile } });
-//         }
-//       } catch (serviceError) {
-//         console.error("Error fetching service items:", serviceError);
-//         // Fallback to delegate-home if service items fetch fails
-//         navigate("/delegate-home", { state: { userMobile: user.mobile } });
-//       }
-//     } else {
-//       navigate("/machinescreen1", { state: { userMobile: user.mobile } });
-//     }
-
-//   } catch (err) {
-//     console.error("Login error:", err);
-//     setError("Invalid mobile number or password");
-//   }
-// };
 
   return (
     <>
-      {/* FULL SCREEN LOADER */}
       {isLoading && (
         <div className="fullLoaderOverlay">
           <div className="fullLoader"></div>
@@ -234,7 +153,6 @@ export default function Login() {
 
             {error && <p className="errorText">{error}</p>}
 
-            {/* Button (no spinner inside button) */}
             <button 
               type="submit" 
               className="loginButton shadow"

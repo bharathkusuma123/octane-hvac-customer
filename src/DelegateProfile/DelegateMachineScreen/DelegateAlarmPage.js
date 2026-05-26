@@ -6,11 +6,36 @@ import DelegateNavbar from "../DelegateNavbar/DelegateNavbar";
 
 const DelegateAlarmsPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation(); 
   const [errorData, setErrorData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+    const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  
+  const filteredData = errorData.filter((item) => {
+    // Priority filter
+    if (priorityFilter !== "ALL" && item.priority !== priorityFilter) {
+      return false;
+    }
+  
+    // Date filter
+    const itemDate = new Date(item.original_timestamp);
+  
+    if (fromDate && new Date(fromDate) > itemDate) {
+      return false;
+    }
+  
+    if (toDate && new Date(toDate) < itemDate) {
+      return false;
+    }
+  
+    return true;
+  });
+  
+
   // Get alarm data passed from navigation
   const alarmData = location.state?.alarmData || {
     alarmOccurred: '0',
@@ -162,6 +187,60 @@ const sendMachineAlert = async (errorItem) => {
 
       {/* Historical Errors */}
       <h3>Historical Error Logs</h3>
+
+       <div style={{
+  display: "flex",
+  gap: "10px",
+  marginBottom: "15px",
+  flexWrap: "wrap"
+}}>
+  
+  {/* Priority Filter */}
+  <select
+    value={priorityFilter}
+    onChange={(e) => setPriorityFilter(e.target.value)}
+    style={{ padding: "8px", borderRadius: "5px" }}
+  >
+    <option value="ALL">All Priority</option>
+    <option value="HIGH">High</option>
+    <option value="MEDIUM">Medium</option>
+    <option value="LOW">Low</option>
+  </select>
+
+  {/* From Date */}
+  <input
+    type="date"
+    value={fromDate}
+    onChange={(e) => setFromDate(e.target.value)}
+    style={{ padding: "8px", borderRadius: "5px" }}
+  />
+
+  {/* To Date */}
+  <input
+    type="date"
+    value={toDate}
+    onChange={(e) => setToDate(e.target.value)}
+    style={{ padding: "8px", borderRadius: "5px" }}
+  />
+
+  {/* Reset Button */}
+  <button
+    onClick={() => {
+      setPriorityFilter("ALL");
+      setFromDate("");
+      setToDate("");
+    }}
+    style={{
+      padding: "8px 12px",
+      backgroundColor: "#ccc",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer"
+    }}
+  >
+    Reset
+  </button>
+</div>
       
       {loading ? (
         <div>Loading error history...</div>
@@ -188,7 +267,7 @@ const sendMachineAlert = async (errorItem) => {
               </tr>
             </thead>
             <tbody>
-              {errorData.map((error, index) => (
+              {filteredData.map((error, index) => (
                 <tr 
                   key={index}
                   style={{ 

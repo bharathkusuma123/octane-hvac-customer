@@ -8,6 +8,10 @@ const AuthProvider = ({ children }) => {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
+  const [sessionId, setSessionId] = useState(
+    localStorage.getItem("session_id") || null
+  ); // ✅ NEW
+
   useEffect(() => {
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
@@ -16,16 +20,30 @@ const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData);
+
+    // ✅ store session_id from userData
+    if (userData?.session_id) {
+      localStorage.setItem("session_id", userData.session_id);
+      setSessionId(userData.session_id);
+    }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.clear();
-    // ❌ no navigate here, just clear auth
+    setSessionId(null);
+
+    // ❗ better than clear()
+    localStorage.removeItem("user");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userMobile");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("customerType");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("session_id"); // ✅ IMPORTANT
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, sessionId, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

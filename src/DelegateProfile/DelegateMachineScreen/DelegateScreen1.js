@@ -43,6 +43,12 @@ const MODE_MAP = {
 const PULL_THRESHOLD = 80; // Minimum pull distance to trigger refresh
 const MAX_PULL = 120; // Maximum pull distance
 
+const PROCESSING_MESSAGES = [
+  "Sending command...",
+  "Almost done, please wait...",
+  "Waiting for device response...",
+];
+
 // Helper functions
 const formatTemp = (temp) => {
   if (temp == null) return "0.0";
@@ -132,6 +138,10 @@ const DelegateScreen1 = () => {
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
+  const processingTimerRef = useRef(null);
+const processingMsgIndexRef = useRef(0);
+const hardStopTimerRef = useRef(null);
+
    const fetchIntervalRef = useRef(null);
 
   // Pull-to-refresh state
@@ -157,6 +167,8 @@ const DelegateScreen1 = () => {
     success: false, 
     message: "" 
   });
+
+  const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
   
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
@@ -266,9 +278,16 @@ useEffect(() => {
           : 0
       );
 
+      
+
       setLoading(false);
       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
       setManualRefresh(false);
+
+      // Early exit from processing if hvac responded
+if (deviceData.hvac_busy?.value == "0") {
+  clearProcessingIfDone();
+}
 
     } catch (error) {
       console.error("🔥 Fetch Error:", error);
@@ -290,9 +309,12 @@ useEffect(() => {
 
   // ⏱️ Run immediately
   fetchData();
-
+fetchAllAlarms(); // ✅ NEW
   // ⏱️ Start polling
-  fetchIntervalRef.current = setInterval(fetchData, 1000);
+  fetchIntervalRef.current = setInterval(() => {
+  fetchData();
+  fetchAllAlarms(); // ✅ NEW
+}, 1000);
 
   // 🧹 Cleanup
   return () => {
@@ -305,6 +327,33 @@ useEffect(() => {
 
 }, [selectedService?.pcb_serial_number, userId, company_id]);
 
+
+const fetchAllAlarms = async () => {
+  try {
+    const response = await fetch(
+      `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch alarms");
+
+    const data = await response.json();
+
+    if (data.status !== "success" || !data.data) return;
+
+    const alarmCount = data.data.reduce((count, item) => {
+      const val = item.alarm_occurred?.value;
+
+      if (val && val !== "0") {
+        return count + Number(val);
+      }
+      return count;
+    }, 0);
+
+    setDropdownAlarmCount(alarmCount);
+  } catch (err) {
+    console.error("Alarm fetch error:", err);
+  }
+};
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e) => {
@@ -527,57 +576,104 @@ const sendRefreshToController = async () => {
     });
   };
 
-  const handlePowerToggle = async () => {
-    if (!selectedService?.pcb_serial_number) {
-      console.error("No PCB serial number available");
-      return;
+  const startProcessingCycle = () => {
+  processingMsgIndexRef.current = 0;
+  setProcessing({ status: true, message: PROCESSING_MESSAGES[0] });
+
+  processingTimerRef.current = setInterval(() => {
+    processingMsgIndexRef.current += 1;
+    const nextMsg = PROCESSING_MESSAGES[processingMsgIndexRef.current];
+    if (nextMsg) {
+      setProcessing({ status: true, message: nextMsg });
     }
+  }, 10000);
 
-    if (processing.status || sensorData.hvacBusy == "1") {
-      setProcessing({ 
-        status: true, 
-        message: sensorData.hvacBusy == "1" 
-          ? "System is busy, please wait..." 
-          : "Please wait..." 
-      });
-      return;
-    }
+  // Hard fallback stop after 25s
+  hardStopTimerRef.current = setTimeout(() => {
+    stopProcessing();
+  }, 25000);
+};
 
-    setProcessing({ status: true, message: "Sending command, please wait..." });
+const stopProcessing = () => {
+  if (processingTimerRef.current) {
+    clearInterval(processingTimerRef.current);
+    processingTimerRef.current = null;
+  }
+  if (hardStopTimerRef.current) {
+    clearTimeout(hardStopTimerRef.current);
+    hardStopTimerRef.current = null;
+  }
+  setProcessing({ status: false, message: "" });
+};
 
-    const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-
-    const isShutdown = sensorData?.fanSpeed === 3 || sensorData?.mode === 0;
-    const payload = {
-      Header: "0xAA",
-      DI: selectedService.pcb_serial_number,
-      MD: isShutdown ? "3" : sensorData.mode,
-      FS: isShutdown ? "0" : sensorData.fanSpeed,
-      SRT: sensorData.temperature,
-      HVAC: newHvacValue,
-      Footer: "0xZX",
-    };
-
-    console.log("Sending payload:", payload);
-
-    try {
-      const response = await fetch("https://mdata.air2o.net/controllers/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to send command");
-
-      setTimeout(() => {
-        setProcessing({ status: false, message: "" });
-      }, 25000);
-
-    } catch (error) {
-      console.error("Error sending command:", error);
-      setProcessing({ status: false, message: "Failed to send command" });
-    }
+useEffect(() => {
+  return () => {
+    if (processingTimerRef.current) clearInterval(processingTimerRef.current);
+    if (hardStopTimerRef.current) clearTimeout(hardStopTimerRef.current);
   };
+}, []);
+
+
+ const handlePowerToggle = async () => {
+  if (!selectedService?.pcb_serial_number) {
+    console.error("No PCB serial number available");
+    return;
+  }
+
+  if (processing.status || sensorData.hvacBusy == "1") {
+    const msg =
+      sensorData.hvacBusy == "1"
+        ? "System is busy, please wait..."
+        : "Please wait...";
+    setProcessing({ status: true, message: msg });
+    return;
+  }
+
+  // ✅ Start progressive message cycling
+  startProcessingCycle();
+
+  const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+  const isShutdown = sensorData?.fanSpeed === 3 || sensorData?.mode === 0;
+
+  const payload = {
+    Header: "0xAA",
+    DI: selectedService.pcb_serial_number,
+    MD: isShutdown ? "3" : sensorData.mode,
+    FS: isShutdown ? "0" : sensorData.fanSpeed,
+    SRT: sensorData.temperature,
+    HVAC: newHvacValue,
+    Footer: "0xZX",
+  };
+
+  console.log("Sending payload:", payload);
+
+  try {
+    const response = await fetch("https://mdata.air2o.net/controllers/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error("❌ API error:", response.status);
+      stopProcessing();
+      throw new Error("Failed to send command");
+    }
+
+    const result = await response.text();
+    console.log("✅ Command sent:", result);
+    // Don't stop here — polling will detect hvac_busy=0 and stop automatically
+  } catch (error) {
+    console.error("Error sending command:", error);
+    stopProcessing();
+  }
+};
+
+const clearProcessingIfDone = () => {
+  if (processingTimerRef.current || hardStopTimerRef.current) {
+    stopProcessing();
+  }
+};
 
   // Get service item name for display
   const getServiceItemName = (serviceItemId) => {
@@ -874,6 +970,28 @@ const sendRefreshToController = async () => {
                   );
                 })}
               </select>
+                {/* 🔴 GLOBAL ALARM BADGE */}
+  {dropdownAlarmCount > 0 && (
+    <span
+      style={{
+        position: "absolute",
+        top: "-6px",
+        right: "-6px",
+        backgroundColor: "red",
+        color: "white",
+        borderRadius: "50%",
+        width: "18px",
+        height: "18px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "10px",
+        fontWeight: "bold",
+      }}
+    >
+      {dropdownAlarmCount}
+    </span>
+  )}
             </div>
           ) : (
             // Show simple display when user has only one service item
@@ -946,6 +1064,31 @@ const sendRefreshToController = async () => {
           </div>
         </div>
 
+<div style={{ position: "relative", marginTop: "30px" }}>
+ {/* ✅ FIX 2: Offline banner positioned BETWEEN header and temperature dial */}
+        {!sensorData.isOnline && (
+          <div
+            style={{
+              backgroundColor: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              textAlign: "center",
+              padding: "10px 20px",
+              borderRadius: "10px",
+              margin: "12px 20px 4px 20px",
+              fontSize: "14px",
+              fontWeight: "bold",
+              letterSpacing: "0.5px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <span>📴</span>
+            <span>System is Offline</span>
+          </div>
+        )}
+        </div>
         {/* Status Messages */}
         {processing.status && (
           <div className="screen1-processing-message  del-screen1-processing-message">{processing.message}</div>
@@ -970,7 +1113,7 @@ const sendRefreshToController = async () => {
         )}
 
         {/* Temperature Dial */}
-        <div style={{ pointerEvents: 'none', opacity: 0.7 }}>
+       <div style={{ pointerEvents: 'none', opacity: sensorData.isOnline ? 1 : 0.35 }}>
         <TemperatureDial
           sensorData={sensorData}
           onTempChange={handleTempChange}
@@ -983,17 +1126,17 @@ const sendRefreshToController = async () => {
         <div className="env-info del-env-info">
           <div className="env-item">
             <FiSun className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.outsideTemp)}°C</div>
+            <div className="env-value">{sensorData.isOnline ? `${formatTemp(sensorData.outsideTemp)}°C` : "—"}</div>
             <div className="env-label">Outside Temp</div>
           </div>
           <div className="env-item">
             <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.roomTemp)}°C</div>
+            <div className="env-value">{sensorData.isOnline ? `${formatTemp(sensorData.roomTemp)}°C` : "—"}</div>
             <div className="env-label">Room Temp</div>
           </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.humidity)}%</div>
+            <div className="env-value">{sensorData.isOnline ? `${formatTemp(sensorData.humidity)}%` : "—"}</div>
             <div className="env-label">Humidity</div>
           </div>
         </div>

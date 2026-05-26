@@ -1,0 +1,107 @@
+.static-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8f5e9 100%);
+  padding: 20px;
+}
+
+.static-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 32px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+  text-align: center;
+}
+
+.static-icon {
+  margin-bottom: 20px;
+}
+
+.static-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.static-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 32px;
+}
+
+.static-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.static-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 14px;
+  padding: 18px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.static-btn:active {
+  transform: scale(0.97);
+}
+
+.static-btn.primary {
+  background: linear-gradient(135deg, #4CAF50, #2e7d32);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(76, 175, 80, 0.35);
+}
+
+.static-btn.primary:hover {
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.45);
+}
+
+.static-btn.secondary {
+  background: linear-gradient(135deg, #1565C0, #0d47a1);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(21, 101, 192, 0.35);
+}
+
+.static-btn.secondary:hover {
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.45);
+}
+
+.btn-icon {
+  font-size: 24px;
+}
+
+.btn-sub {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.static-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.static-divider::before,
+.static-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}

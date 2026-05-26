@@ -1,7 +1,6 @@
-// Screen1.js (Updated with HVAC=3 on refresh)
+// Screen1.js — ALL FIXES (Fix1 + Fix2 repositioned banner + Fix3)
 import React, { useState, useEffect, useContext, useRef } from "react";
 import {
-  FiArrowLeft,
   FiPower,
   FiWind,
   FiClock,
@@ -12,10 +11,7 @@ import {
   FiSun,
   FiDroplet,
   FiThermometer,
-  FiNavigation,
-  FiLayers,
   FiRefreshCw,
-  FiCornerUpRight,
   FiChevronDown,
 } from "react-icons/fi";
 import { FaFan } from "react-icons/fa";
@@ -38,14 +34,19 @@ const MODE_MAP = {
   5: "Direct",
 };
 
-// Pull-to-refresh configuration
-const PULL_THRESHOLD = 80; // Minimum pull distance to trigger refresh
-const MAX_PULL = 120; // Maximum pull distance
+const PULL_THRESHOLD = 80;
+const MAX_PULL = 120;
 
-// Helper functions
+// ✅ FIX 3: Progressive messages every 10s
+const PROCESSING_MESSAGES = [
+  "Sending command...",
+  "Almost done, please wait...",
+  "Waiting for device response...",
+];
+
 const getStoredService = () => {
   try {
-    const stored = localStorage.getItem('selectedService');
+    const stored = localStorage.getItem("selectedService");
     return stored ? JSON.parse(stored) : null;
   } catch (e) {
     return null;
@@ -58,7 +59,6 @@ const formatTemp = (temp) => {
   return isNaN(num) ? "0.0" : num.toFixed(1);
 };
 
-// Function to send HVAC=3 command
 const sendRefreshCommand = async (pcbSerialNumber, sensorData) => {
   const payload = {
     Header: "0xAA",
@@ -66,65 +66,36 @@ const sendRefreshCommand = async (pcbSerialNumber, sensorData) => {
     MD: sensorData.mode || "3",
     FS: sensorData.fanSpeed || "0",
     SRT: sensorData.temperature || 25,
-    HVAC: "3", // Always send 3 on refresh
+    HVAC: "3",
     Footer: "0xZX",
   };
-
   console.group("🔁 REFRESH COMMAND");
   console.log("📦 Payload:", payload);
   console.groupEnd();
-
   try {
     const response = await fetch("https://mdata.air2o.net/controllers/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     let responseBody;
-
-    // 👇 IMPORTANT: parse response even on 400
     try {
       responseBody = await response.json();
     } catch {
       responseBody = await response.text();
     }
-
-    // ❌ Backend rejected command (device offline, etc.)
     if (!response.ok) {
-      console.group("❌ BACKEND REJECTED COMMAND");
-      console.error("Status:", response.status);
-      console.error("Response:", responseBody);
-      console.groupEnd();
-
       return {
         success: false,
-        error:
-          responseBody?.error ||
-          responseBody?.message ||
-          "Command rejected by server",
+        error: responseBody?.error || responseBody?.message || "Command rejected by server",
         status: response.status,
       };
     }
-
-    // ✅ Success
-    console.group("✅ REFRESH SUCCESS");
-    console.log("Response:", responseBody);
-    console.groupEnd();
-
     return { success: true, data: responseBody };
   } catch (error) {
-    console.group("🚨 NETWORK ERROR");
-    console.error(error);
-    console.groupEnd();
-
-    return {
-      success: false,
-      error: "Network error or server unreachable",
-    };
+    return { success: false, error: "Network error or server unreachable" };
   }
 };
-
 
 const Screen1 = () => {
   const { user, logout } = useContext(AuthContext);
@@ -132,18 +103,24 @@ const Screen1 = () => {
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
-  // Pull-to-refresh state
   const [pullToRefresh, setPullToRefresh] = useState({
     isPulling: false,
     pullDistance: 0,
     isRefreshing: false,
   });
-  
-  // Touch start position
+
   const touchStartY = useRef(0);
   const containerRef = useRef(null);
-  
-  // State management
+
+  // ✅ FIX 1: Single interval, PCB switching via ref
+  const activePCBRef = useRef(null);
+  const fetchIntervalRef = useRef(null);
+
+  // ✅ FIX 3: Processing message cycling refs
+  const processingTimerRef = useRef(null);
+  const processingMsgIndexRef = useRef(0);
+  const hardStopTimerRef = useRef(null);
+
   const [serviceItems, setServiceItems] = useState([]);
   const [selectedService, setSelectedService] = useState(getStoredService());
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
@@ -151,15 +128,17 @@ const Screen1 = () => {
   const [errorCount, setErrorCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [manualRefresh, setManualRefresh] = useState(false);
-  const [refreshStatus, setRefreshStatus] = useState({ 
-    sending: false, 
-    success: false, 
-    message: "" 
+  const [refreshStatus, setRefreshStatus] = useState({
+    sending: false,
+    success: false,
+    message: "",
   });
+  const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
 
-  const fetchIntervalRef = useRef(null);
+  // Add this alongside your other refs
+const processingStartTimeRef = useRef(null);
+const MIN_PROCESSING_TIME = 5000; // 5 seconds minimum before poll can clear it
 
-  
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
     humidity: 0,
@@ -172,110 +151,88 @@ const Screen1 = () => {
     hvacBusy: "0",
     deviceId: "",
     alarmOccurred: "0",
-    isOnline: true, // ✅ ADD THIS
+    isOnline: true,
   });
 
-  // Store selected service in localStorage
   useEffect(() => {
     if (selectedService) {
-      localStorage.setItem('selectedService', JSON.stringify(selectedService));
+      localStorage.setItem("selectedService", JSON.stringify(selectedService));
     }
   }, [selectedService]);
 
-  // Function to send refresh command with HVAC=3
-  const sendRefreshToController = async () => {
-  if (!selectedService || !selectedService.pcb_serial_number) {
-    console.warn("No PCB serial number available for refresh command");
+  // ✅ FIX 3: Start progressive message cycle
+ const startProcessingCycle = () => {
+  processingMsgIndexRef.current = 0;
+  processingStartTimeRef.current = Date.now(); // ← ADD THIS LINE
+  setProcessing({ status: true, message: PROCESSING_MESSAGES[0] });
 
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: "No device selected",
-    });
-
-    return { success: false, message: "No device selected" };
-  }
-
-  // setRefreshStatus({
-  //   sending: true,
-  //   success: false,
-  //   message: "Sending refresh command...",
-  // });
-
-  try {
-    const result = await sendRefreshCommand(
-      selectedService.pcb_serial_number,
-      sensorData
-    );
-
-    if (result.success) {
-      setRefreshStatus({
-        sending: false,
-        success: true,
-        message: "Refresh command sent successfully",
-      });
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setRefreshStatus({ sending: false, success: false, message: "" });
-      }, 3000);
-
-      return result;
+  processingTimerRef.current = setInterval(() => {
+    processingMsgIndexRef.current += 1;
+    const nextMsg = PROCESSING_MESSAGES[processingMsgIndexRef.current];
+    if (nextMsg) {
+      setProcessing({ status: true, message: nextMsg });
     }
+  }, 10000);
 
-    /* ===============================
-       HANDLE BACKEND ERROR MESSAGE
-    ================================ */
-    const backendMessage =
-      result?.error ||
-      result?.message ||
-      "Failed to send refresh command";
+  hardStopTimerRef.current = setTimeout(() => {
+    stopProcessing();
+  }, 25000);
+};
 
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: backendMessage, // 👈 SHOW REAL BACKEND MESSAGE
-    });
-    setTimeout(() => {
-  setRefreshStatus({ sending: false, success: false, message: "" });
-}, 2000);
+  const stopProcessing = () => {
+    if (processingTimerRef.current) {
+      clearInterval(processingTimerRef.current);
+      processingTimerRef.current = null;
+    }
+    if (hardStopTimerRef.current) {
+      clearTimeout(hardStopTimerRef.current);
+      hardStopTimerRef.current = null;
+    }
+    setProcessing({ status: false, message: "" });
+  };
 
-    return result;
-  } catch (error) {
-    setRefreshStatus({
-      sending: false,
-      success: false,
-      message: error.message || "Unexpected error occurred",
-    });
-
-    return { success: false, error: error.message };
+  // Called when polling detects hvac_busy flipped to 0
+ const clearProcessingIfDone = () => {
+  if (processingTimerRef.current || hardStopTimerRef.current) {
+    const elapsed = Date.now() - (processingStartTimeRef.current || 0);
+    if (elapsed >= MIN_PROCESSING_TIME) {  // ← GUARD: only clear after 5s
+      stopProcessing();
+    }
+    // else: too soon, keep showing messages — next poll will check again
   }
 };
 
-
-  // Fetch service items on component mount
   useEffect(() => {
+    return () => {
+      if (processingTimerRef.current) clearInterval(processingTimerRef.current);
+      if (hardStopTimerRef.current) clearTimeout(hardStopTimerRef.current);
+    };
+  }, []);
+
+   useEffect(() => {
     const fetchServiceItems = async () => {
       try {
         const response = await fetch(
           `${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`
         );
         if (!response.ok) throw new Error("Failed to fetch service items");
-        
+
         const data = await response.json();
         setServiceItems(data.data || []);
-        
+
         if (data.data?.length > 0 && !selectedService) {
-          setSelectedService(data.data[0]);
+          const first = data.data[0];
+          setSelectedService(first);
+          activePCBRef.current = first.pcb_serial_number;
         }
-        
+
         setLoading(false);
-        setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+        setPullToRefresh((prev) => ({ ...prev, isRefreshing: false }));
         setManualRefresh(false);
       } catch (error) {
         console.error("Error fetching service items:", error);
         setLoading(false);
-        setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+        setPullToRefresh((prev) => ({ ...prev, isRefreshing: false }));
         setManualRefresh(false);
       }
     };
@@ -283,264 +240,240 @@ const Screen1 = () => {
     fetchServiceItems();
   }, [manualRefresh]);
 
-  // Fetch sensor data when selectedService changes
- useEffect(() => {
-  if (!selectedService?.pcb_serial_number) return;
+  // ✅ FIX 1: Single polling interval started once on mount
+ 
+    const fetchData = async () => {
+      const pcbSerialNumber = activePCBRef.current;
+      if (!pcbSerialNumber) return;
 
-  const pcbSerialNumber = selectedService.pcb_serial_number;
-  console.log("🟢 Selected PCB:", pcbSerialNumber);
+      try {
+        const response = await fetch(
+          `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
+        );
+        if (!response.ok) throw new Error("Network response was not ok");
 
-  const fetchData = async () => {
-    try {
-      console.log("📡 Fetching data for PCB:", pcbSerialNumber);
+        const data = await response.json();
+        if (data.status !== "success" || !data.data) return;
 
-      const response = await fetch(
-        `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
-      );
+        // Guard: ignore stale responses from a previous PCB
+        if (activePCBRef.current !== pcbSerialNumber) return;
 
-      if (!response.ok) throw new Error("Network response was not ok");
+        const deviceData = data.data;
+        const isOnline = deviceData.is_online;
 
-      const data = await response.json();
-      if (data.status !== "success" || !data.data) return;
+        setSensorData({
+          // ✅ FIX 2: Null out values when offline so UI shows "—"
+          outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+          humidity: isOnline ? deviceData.room_humidity?.value : null,
+          roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+          fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+          temperature: isOnline ? deviceData.set_temperature?.value : 25,
+          powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+          mode: deviceData.mode?.value,
+          errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+          hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+          deviceId: pcbSerialNumber,
+          alarmOccurred: deviceData.alarm_occurred?.value,
+          isOnline: isOnline,
+        });
 
-      const deviceData = data.data;
+        const alarmValue = deviceData.alarm_occurred?.value;
+        setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
 
-      setSensorData({
-        outsideTemp: deviceData.outdoor_temperature?.value,
-        humidity: deviceData.room_humidity?.value,
-        roomTemp: deviceData.room_temperature?.value,
-        fanSpeed: deviceData.fan_speed?.value,
-        temperature: deviceData.set_temperature?.value,
-        powerStatus: deviceData.hvac_on?.value == "1" ? "on" : "off",
-        mode: deviceData.mode?.value,
-        errorFlag: deviceData.error_flag?.value,
-        hvacBusy: deviceData.hvac_busy?.value,
-        deviceId: pcbSerialNumber,
-        alarmOccurred: deviceData.alarm_occurred?.value,
-        isOnline: deviceData.is_online, // ✅ ADD THIS
-      });
+        // ✅ FIX 3: Early exit from processing if hvac responded
+        if (deviceData.hvac_busy?.value == "0") {
+          clearProcessingIfDone();
+        }
+      } catch (err) {
+        console.error("❌ Fetch error:", err);
+      }
+    };
 
-      const alarmValue = deviceData.alarm_occurred?.value;
-      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+    const fetchAllAlarms = async () => {
+  try {
+    const response = await fetch(
+      `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+    );
 
-    } catch (err) {
-      console.error("❌ Fetch error:", err);
-    }
-  };
+    if (!response.ok) throw new Error("Failed to fetch all alarms");
 
-  // 🔥 CLEAR OLD INTERVAL FIRST
-  if (fetchIntervalRef.current) {
-    clearInterval(fetchIntervalRef.current);
+    const data = await response.json();
+
+    if (data.status !== "success" || !data.data) return;
+
+    // 🔴 Count alarms across ALL devices
+    const alarmCount = data.data.reduce((count, item) => {
+      const val = item.alarm_occurred?.value;
+
+      if (val && val !== "0") {
+        return count + Number(val);
+      }
+      return count;
+    }, 0);
+
+    setDropdownAlarmCount(alarmCount);
+  } catch (err) {
+    console.error("Dropdown alarm fetch error:", err);
   }
+};
 
-  // ⏱️ Run immediately + start interval
+ useEffect(() => {
   fetchData();
-  fetchIntervalRef.current = setInterval(fetchData, 1000);
+  fetchAllAlarms(); // 🔴 NEW
 
-  // 🧹 Cleanup
+  fetchIntervalRef.current = setInterval(() => {
+    fetchData(); 
+    fetchAllAlarms(); // 🔴 keep updating badge
+  }, 1000);
+
   return () => {
     if (fetchIntervalRef.current) {
       clearInterval(fetchIntervalRef.current);
       fetchIntervalRef.current = null;
     }
   };
-}, [selectedService?.pcb_serial_number]);
+}, []);
 
-  // Pull-to-refresh handlers
+  // ✅ FIX 1: Just update the ref, no interval restart
+  useEffect(() => {
+    if (selectedService?.pcb_serial_number) {
+      console.log("🔄 Switching active PCB to:", selectedService.pcb_serial_number);
+      activePCBRef.current = selectedService.pcb_serial_number;
+    }
+  }, [selectedService?.pcb_serial_number]);
+
+ 
+
+  const sendRefreshToController = async () => {
+    if (!selectedService?.pcb_serial_number) {
+      setRefreshStatus({ sending: false, success: false, message: "No device selected" });
+      return { success: false };
+    }
+    try {
+      const result = await sendRefreshCommand(selectedService.pcb_serial_number, sensorData);
+      if (result.success) {
+        setRefreshStatus({ sending: false, success: true, message: "Refresh sent successfully" });
+        setTimeout(() => setRefreshStatus({ sending: false, success: false, message: "" }), 3000);
+        return result;
+      }
+      const msg = result?.error || result?.message || "Failed to send refresh command";
+      setRefreshStatus({ sending: false, success: false, message: msg });
+      setTimeout(() => setRefreshStatus({ sending: false, success: false, message: "" }), 2000);
+      return result;
+    } catch (error) {
+      setRefreshStatus({ sending: false, success: false, message: error.message || "Unexpected error" });
+      return { success: false };
+    }
+  };
+
   const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    touchStartY.current = touch.clientY;
+    touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e) => {
-    // Only trigger pull-to-refresh if at the top of the container
-    if (containerRef.current && containerRef.current.scrollTop > 0) {
-      return;
-    }
-
-    const touch = e.touches[0];
-    const pullDistance = touch.clientY - touchStartY.current;
-
-    // Only trigger for downward pull
+    if (containerRef.current && containerRef.current.scrollTop > 0) return;
+    const pullDistance = e.touches[0].clientY - touchStartY.current;
     if (pullDistance > 0) {
       e.preventDefault();
-      
-      const limitedPull = Math.min(pullDistance, MAX_PULL);
-      setPullToRefresh({
-        isPulling: true,
-        pullDistance: limitedPull,
-        isRefreshing: false,
-      });
+      setPullToRefresh({ isPulling: true, pullDistance: Math.min(pullDistance, MAX_PULL), isRefreshing: false });
     }
   };
 
   const handleTouchEnd = async () => {
     if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-      // Trigger refresh
-      setPullToRefresh({
-        isPulling: false,
-        pullDistance: 0,
-        isRefreshing: true,
-      });
-      
-      // Send HVAC=3 command to controller
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
       await sendRefreshToController();
-      
-      // Trigger data refresh after sending command
       setManualRefresh(true);
     } else {
-      // Reset pull state
-      setPullToRefresh({
-        isPulling: false,
-        pullDistance: 0,
-        isRefreshing: false,
-      });
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
     }
   };
 
-  // Mouse events for desktop testing
   const handleMouseDown = (e) => {
     touchStartY.current = e.clientY;
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   const handleMouseMove = (e) => {
-    if (containerRef.current && containerRef.current.scrollTop > 0) {
-      return;
-    }
-
+    if (containerRef.current && containerRef.current.scrollTop > 0) return;
     const pullDistance = e.clientY - touchStartY.current;
-    
     if (pullDistance > 0) {
       e.preventDefault();
-      
-      const limitedPull = Math.min(pullDistance, MAX_PULL);
-      setPullToRefresh({
-        isPulling: true,
-        pullDistance: limitedPull,
-        isRefreshing: false,
-      });
+      setPullToRefresh({ isPulling: true, pullDistance: Math.min(pullDistance, MAX_PULL), isRefreshing: false });
     }
   };
 
   const handleMouseUp = async () => {
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
     if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-      setPullToRefresh({
-        isPulling: false,
-        pullDistance: 0,
-        isRefreshing: true,
-      });
-      
-      // Send HVAC=3 command to controller
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
       await sendRefreshToController();
-      
       setManualRefresh(true);
     } else {
-      setPullToRefresh({
-        isPulling: false,
-        pullDistance: 0,
-        isRefreshing: false,
-      });
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
     }
   };
 
-  // Event handlers
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
- const handlePowerToggle = async () => {
-  try {
-    // 🚫 Prevent action if already processing or HVAC busy
-    if (processing.status || sensorData.hvacBusy == "1") {
-      const msg =
-        sensorData.hvacBusy == "1"
-          ? "System is busy, please wait..."
-          : "Please wait...";
+  const handlePowerToggle = async () => {
+    try {
+      if (processing.status || sensorData.hvacBusy == "1") {
+        const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
+        setProcessing({ status: true, message: msg });
+        return;
+      }
 
-      console.warn("Power toggle blocked:", {
-        processing: processing.status,
-        hvacBusy: sensorData.hvacBusy,
+      // ✅ FIX 3: Start cycling messages
+      startProcessingCycle();
+
+      const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+      const isShutdown = sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
+
+      const payload = {
+        Header: "0xAA",
+        DI: selectedService?.pcb_serial_number || "2411GM-0102",
+        MD: isShutdown ? "3" : sensorData.mode,
+        FS: isShutdown ? "0" : sensorData.fanSpeed,
+        SRT: sensorData.temperature,
+        HVAC: newHvacValue,
+        Footer: "0xZX",
+      };
+
+      const response = await fetch("https://mdata.air2o.net/controllers/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      setProcessing({ status: true, message: msg });
-      return;
-    }
+      if (!response.ok) {
+        console.error("❌ API error:", response.status);
+        stopProcessing();
+        throw new Error("Failed to send command");
+      }
 
-    setProcessing({
-      status: true,
-      message: "Sending command, please wait...",
-    });
-
-    const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-    const isShutdown =
-      sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
-
-    const payload = {
-      Header: "0xAA",
-      DI: selectedService?.pcb_serial_number || "2411GM-0102",
-      MD: isShutdown ? "3" : sensorData.mode,
-      FS: isShutdown ? "0" : sensorData.fanSpeed,
-      SRT: sensorData.temperature,
-      HVAC: newHvacValue,
-      Footer: "0xZX",
-    };
-
-    console.log("✅ Sending power toggle payload:", JSON.stringify(payload, null, 2));
-
-    const response = await fetch("https://mdata.air2o.net/controllers/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      console.error("❌ API responded with error:", {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      throw new Error("Failed to send command");
-    }
-
-    const result = await response.text();
-    console.log("✅ Command sent successfully. API response:", result);
-
-    // ⏳ Reset processing after 15 seconds
-    setTimeout(() => {
-      console.log("ℹ️ Resetting processing state after timeout");
-      setProcessing({ status: false, message: "" });
-    }, 25000);
-  } catch (error) {
-    console.error("🔥 Error sending power toggle command:", {
-      message: error.message,
-      stack: error.stack,
-      sensorData,
-      selectedService,
-    });
-
-    setProcessing({
-      status: false,
-      message: "Failed to send command",
-    });
-  }
-};
-
-
-  const handleNavigation = (path) => {
-    if (!processing.status) {
-      navigate(path);
+      const result = await response.text();
+      console.log("✅ Command sent:", result);
+      // Don't stop here — polling will detect hvac_busy=0 and stop automatically
+    } catch (error) {
+      console.error("🔥 Power toggle error:", error.message);
+      stopProcessing();
     }
   };
 
+  const handleNavigation = (path) => {
+    if (!processing.status) navigate(path);
+  };
+
+  // ✅ FIX 1: Update ref instantly on service change
   const handleServiceSelect = (item) => {
     setSelectedService(item);
+    activePCBRef.current = item.pcb_serial_number;
     setShowServiceDropdown(false);
   };
 
@@ -548,52 +481,32 @@ const Screen1 = () => {
     console.log("Temperature changed:", newTemp);
   };
 
-  // Manual refresh function - sends HVAC=3 command
   const handleManualRefresh = async () => {
     if (!pullToRefresh.isRefreshing && !processing.status && !refreshStatus.sending) {
-      setPullToRefresh(prev => ({ ...prev, isRefreshing: true }));
-      
-      // Send HVAC=3 command to controller
+      setPullToRefresh((prev) => ({ ...prev, isRefreshing: true }));
       await sendRefreshToController();
-      
-      // Refresh the data
       setManualRefresh(true);
     }
   };
 
-  // Check if selected service has PCB serial number
   const hasValidPCBSerial = selectedService && selectedService.pcb_serial_number;
-
-  // Fan position and mode description
   const fanPosition = ["0", "1", "2"].indexOf(sensorData.fanSpeed);
   const getModeDescription = (code) => MODE_MAP[code] || "Fan";
 
-  // Calculate pull indicator rotation and opacity
   const pullProgress = Math.min(pullToRefresh.pullDistance / PULL_THRESHOLD, 1);
   const indicatorRotation = pullProgress * 360;
   const indicatorOpacity = pullProgress;
 
-  // Render different states
-  if (loading && !manualRefresh) {
-    return <Loading onLogout={handleLogout} />;
-  }
+  if (loading && !manualRefresh) return <Loading onLogout={handleLogout} />;
 
   if (!loading && serviceItems.length === 0 && !manualRefresh) {
-    return (
-      <NoServiceItems 
-        onLogout={handleLogout} 
-        onNavigateHome={() => navigate("/home")} 
-      />
-    );
+    return <NoServiceItems onLogout={handleLogout} onNavigateHome={() => navigate("/home")} />;
   }
 
   return (
-    <div 
-      className="mainmain-container" 
-      style={{
-        backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
-        touchAction: "pan-y",
-      }}
+    <div
+      className="mainmain-container"
+      style={{ backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)", touchAction: "pan-y" }}
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -601,35 +514,28 @@ const Screen1 = () => {
       onMouseDown={handleMouseDown}
     >
       {/* Pull-to-refresh indicator */}
-      <div 
+      <div
         className="screen1-pull-refresh"
         style={{
           height: `${pullToRefresh.pullDistance}px`,
           opacity: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 1 : 0,
           transform: `translateY(${pullToRefresh.isPulling ? 0 : -30}px)`,
-          transition: pullToRefresh.isPulling ? 'none' : 'all 0.3s ease',
+          transition: pullToRefresh.isPulling ? "none" : "all 0.3s ease",
         }}
       >
         <div className="screen1-refresh-content">
-          {pullToRefresh.isRefreshing ? (
+          {!pullToRefresh.isRefreshing && (
             <>
-              {/* <div className="screen1-refresh-spinner"></div>
-              <span>Sending refresh command...</span> */}
-            </>
-          ) : (
-            <>
-              <FiRefreshCw 
-                size={24} 
+              <FiRefreshCw
+                size={24}
                 style={{
                   transform: `rotate(${indicatorRotation}deg)`,
-                  transition: 'transform 0.2s ease',
+                  transition: "transform 0.2s ease",
                   opacity: indicatorOpacity,
                 }}
               />
               <span>
-                {pullToRefresh.pullDistance >= PULL_THRESHOLD 
-                  ? "Release to refresh" 
-                  : "Pull down to refresh"}
+                {pullToRefresh.pullDistance >= PULL_THRESHOLD ? "Release to refresh" : "Pull down to refresh"}
               </span>
             </>
           )}
@@ -637,11 +543,9 @@ const Screen1 = () => {
       </div>
 
       <div className="main-container">
-      
-
-        {/* Refresh command status */}
+        {/* Refresh status toast */}
         {refreshStatus.message && (
-          <div className={`screen1-refresh-status ${refreshStatus.success ? 'success' : 'error'}`}>
+          <div className={`screen1-refresh-status ${refreshStatus.success ? "success" : "error"}`}>
             {refreshStatus.message}
           </div>
         )}
@@ -649,15 +553,40 @@ const Screen1 = () => {
         {/* Service Dropdown */}
         <div className="service-dropdown-wrapper">
           <div className="service-dropdown-container">
-            <div
-              className="service-dropdown-header"
-              onClick={() => setShowServiceDropdown(!showServiceDropdown)}
-            >
-              <span>
-                {selectedService ? selectedService.service_item_name : "Select Service"}
-              </span>
-              <FiChevronDown size={18} />
-            </div>
+           <div
+  className="service-dropdown-header"
+  onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+  style={{ position: "relative" }}
+>
+  <span>
+    {selectedService ? selectedService.service_item_name : "Select Service"}
+  </span>
+
+  {/* 🔴 GLOBAL ALARM BADGE */}
+  {dropdownAlarmCount > 0 && (
+    <span
+      style={{
+        position: "absolute",
+        top: "-6px",
+        right: "28px",
+        backgroundColor: "red",
+        color: "white",
+        borderRadius: "50%",
+        width: "18px",
+        height: "18px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "10px",
+        fontWeight: "bold",
+      }}
+    >
+      {dropdownAlarmCount}
+    </span>
+  )}
+
+  <FiChevronDown size={18} />
+</div>
             {showServiceDropdown && (
               <div className="service-dropdown-list">
                 {serviceItems.map((item) => (
@@ -673,14 +602,14 @@ const Screen1 = () => {
             )}
           </div>
         </div>
- 
+
         {!hasValidPCBSerial && (
           <h6 style={{ color: "black", marginTop: "10px" }}>
             no pcb serial number captured.
           </h6>
         )}
 
-        {/* Header */}
+        {/* Header: Logo + Power button */}
         <div className="header1">
           <div className="logo">
             <img
@@ -697,13 +626,11 @@ const Screen1 = () => {
               onClick={handlePowerToggle}
               disabled={processing.status || !sensorData.isOnline}
               style={{
-                backgroundColor:
-  !sensorData.isOnline
-    ? "#808080" // grey when offline
-    : sensorData.powerStatus == "on"
-    ? "#5adb5eff"
-    : "#c80000f5",
-
+                backgroundColor: !sensorData.isOnline
+                  ? "#808080"
+                  : sensorData.powerStatus == "on"
+                  ? "#5adb5eff"
+                  : "#c80000f5",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -712,45 +639,58 @@ const Screen1 = () => {
                 width: "48px",
                 borderRadius: "4px",
                 padding: "8px",
-                cursor:
-  processing.status || !sensorData.isOnline
-    ? "not-allowed"
-    : "pointer",
+                cursor: processing.status || !sensorData.isOnline ? "not-allowed" : "pointer",
                 fontWeight: "bold",
-               opacity:
-  processing.status || !sensorData.isOnline
-    ? 0.6
-    : 1,
+                opacity: processing.status || !sensorData.isOnline ? 0.6 : 1,
               }}
             >
               <FiPower size={24} color="#fff" />
               {processing.status && <span className="screen1-processing-indicator"></span>}
             </button>
 
-            {sensorData.errorFlag == "1" && (
-              <div className="error-indicator" />
-            )}
+            {sensorData.errorFlag == "1" && <div className="error-indicator" />}
           </div>
         </div>
 
-        {/* Status Messages */}
+        {/* ✅ FIX 2: Offline banner positioned BETWEEN header and temperature dial */}
+        {!sensorData.isOnline && (
+          <div
+            style={{
+              backgroundColor: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              textAlign: "center",
+              padding: "10px 20px",
+              borderRadius: "10px",
+              margin: "12px 20px 4px 20px",
+              fontSize: "14px",
+              fontWeight: "bold",
+              letterSpacing: "0.5px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <span>📴</span>
+            <span>System is Offline</span>
+          </div>
+        )}
+
+        {/* Status messages */}
         {processing.status && (
           <div className="screen1-processing-message">{processing.message}</div>
         )}
 
         {sensorData.errorFlag == "1" && (
-          <div className="screen1-error-message">
-            ⚠️ System Error Detected
-          </div>
+          <div className="screen1-error-message">⚠️ System Error Detected</div>
         )}
 
         {sensorData.hvacBusy == "1" && !processing.status && (
-          <div className="screen1-busy-message">
-            ⏳ System is currently busy
-          </div>
+          <div className="screen1-busy-message">⏳ System is currently busy</div>
         )}
 
-        <div style={{ pointerEvents: 'none', opacity: 0.7 }}>
+        {/* Temperature Dial — dimmed when offline */}
+        <div style={{ pointerEvents: "none", opacity: sensorData.isOnline ? 1 : 0.35 }}>
           <TemperatureDial
             sensorData={sensorData}
             onTempChange={handleTempChange}
@@ -763,17 +703,23 @@ const Screen1 = () => {
         <div className="env-info">
           <div className="env-item">
             <FiSun className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.outsideTemp)}°C</div>
+            <div className="env-value">
+              {sensorData.isOnline ? `${formatTemp(sensorData.outsideTemp)}°C` : "—"}
+            </div>
             <div className="env-label">Outside Temp</div>
           </div>
           <div className="env-item">
             <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.roomTemp)}°C</div>
+            <div className="env-value">
+              {sensorData.isOnline ? `${formatTemp(sensorData.roomTemp)}°C` : "—"}
+            </div>
             <div className="env-label">Room Temp</div>
           </div>
           <div className="env-item">
             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
-            <div className="env-value">{formatTemp(sensorData.humidity)}%</div>
+            <div className="env-value">
+              {sensorData.isOnline ? `${formatTemp(sensorData.humidity)}%` : "—"}
+            </div>
             <div className="env-label">Humidity</div>
           </div>
         </div>
@@ -783,11 +729,11 @@ const Screen1 = () => {
       <div className="footer-container">
         <div className="control-buttons">
           <button
-            className={`control-btn ${!hasValidPCBSerial ? 'screen1-disabled-btn' : ''}`}
+            className={`control-btn ${!hasValidPCBSerial ? "screen1-disabled-btn" : ""}`}
             onClick={() => {
               if (hasValidPCBSerial) {
-                navigate("/machinescreen2", { 
-                  state: { sensorData, selectedService, userId, company_id}
+                navigate("/machinescreen2", {
+                  state: { sensorData, selectedService, userId, company_id },
                 });
               }
             }}
@@ -798,20 +744,22 @@ const Screen1 = () => {
             <span>Modes</span>
             <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
           </button>
-          
+
           <button
             className="control-btn"
-            onClick={() => navigate("/alarms", {
-              state: {
-                alarmData: {
-                  alarmOccurred: sensorData.alarmOccurred,
-                  errorCount: errorCount,
-                  deviceId: sensorData.deviceId,
+            onClick={() =>
+              navigate("/alarms", {
+                state: {
+                  alarmData: {
+                    alarmOccurred: sensorData.alarmOccurred,
+                    errorCount: errorCount,
+                    deviceId: sensorData.deviceId,
+                  },
+                  userId: userId,
+                  company_id: company_id,
                 },
-                userId: userId,
-                company_id: company_id,
-              },
-            })}
+              })
+            }
           >
             <div style={{ position: "relative" }}>
               <FiClock size={20} />
@@ -839,42 +787,30 @@ const Screen1 = () => {
             </div>
             <span>Alarms</span>
           </button>
-          
-          <button
-            className="control-btn"
-            onClick={() => handleNavigation("/timers")}
-          >
+
+          <button className="control-btn" onClick={() => handleNavigation("/timers")}>
             <FiWatch size={20} />
             <span>Timers</span>
           </button>
-          
-          <button
-            className="control-btn"
-            onClick={() => handleNavigation("/settings")}
-          >
+
+          <button className="control-btn" onClick={() => handleNavigation("/settings")}>
             <FiSettings size={20} />
             <span>Settings</span>
           </button>
-          
-          <button
-            className="control-btn"
-            onClick={() => handleNavigation("/machine")}
-          >
+
+          <button className="control-btn" onClick={() => handleNavigation("/machine")}>
             <FiZap size={20} />
             <span>Services</span>
           </button>
-          
-          <button
-            className="control-btn"
-            onClick={handleLogout}
-          >
+
+          <button className="control-btn" onClick={handleLogout}>
             <FiLogOut size={20} />
             <span>Logout</span>
           </button>
         </div>
-        
+
         <div className="footer-logo">
-          <img src={greenAire} alt="GreenAire Logo" className="logo-image" style={{marginTop:"-12px"}} />
+          <img src={greenAire} alt="GreenAire Logo" className="logo-image" style={{ marginTop: "-12px" }} />
         </div>
       </div>
     </div>

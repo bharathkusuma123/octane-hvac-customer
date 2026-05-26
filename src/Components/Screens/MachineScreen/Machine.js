@@ -20,24 +20,52 @@ const MachineScreen = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [expandedCards, setExpandedCards] = useState({});
+
+  // PM badge counts keyed by service_item_id
+  const [pmBadgeCounts, setPmBadgeCounts] = useState({});
+
   const navigate = useNavigate(); 
 
-  // Function to convert date to Indian format (DD-MM-YYYY)
   const formatToIndianDate = (dateString) => {
     if (!dateString) return 'N/A';
-    
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Invalid Date';
-      
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
-      
       return `${day}-${month}-${year}`;
     } catch (error) {
       console.error('Error formatting date:', error);
-      return dateString; // Return original if formatting fails
+      return dateString;
+    }
+  };
+
+  // ─── Fetch PM badge counts for all service items ──────────────────────────
+  const fetchPmBadgeCounts = async () => {
+    if (!userId || !companyId) return;
+    try {
+      const response = await fetch(
+        `${baseURL}/service-item-pm-schedules/?user_id=${userId}&company_id=${companyId}`
+      );
+      const data = await response.json();
+      if (data.status === 'success') {
+        // Group counts by service_item, only Customer + Pending + is_alert_sent
+        const counts = {};
+        data.data.forEach((schedule) => {
+          if (
+            schedule.responsible?.toLowerCase() === 'customer' &&
+            schedule.status === 'Pending' &&
+            schedule.is_alert_sent === true
+          ) {
+            const itemId = schedule.service_item;
+            counts[itemId] = (counts[itemId] || 0) + 1;
+          }
+        });
+        setPmBadgeCounts(counts);
+      }
+    } catch (err) {
+      console.error('Failed to fetch PM badge counts:', err);
     }
   };
 
@@ -45,15 +73,11 @@ const MachineScreen = () => {
     if (userId && companyId) {
       // Fetch service items
       axios.get(`${baseURL}/service-items/`, {
-        params: {
-          user_id: userId,
-          company_id: companyId
-        }
+        params: { user_id: userId, company_id: companyId }
       })
       .then(response => {
         if (response.data.status === "success") {
           setServiceItems(response.data.data);
-          // Initialize all cards as collapsed
           const initialExpandedState = {};
           response.data.data.forEach((item, index) => {
             initialExpandedState[index] = false;
@@ -61,36 +85,27 @@ const MachineScreen = () => {
           setExpandedCards(initialExpandedState);
         }
       })
-      .catch(error => {
-        console.error("Error fetching service items:", error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      .catch(error => console.error("Error fetching service items:", error))
+      .finally(() => setLoading(false));
 
       // Fetch service item components
       setComponentsLoading(true);
       axios.get(`${baseURL}/service-item-components/`, {
-        params: {
-          user_id: userId,
-          company_id: companyId
-        }
+        params: { user_id: userId, company_id: companyId }
       })
       .then(response => {
         if (response.data.status === "success") {
           setServiceComponents(response.data.data);
         }
       })
-      .catch(error => {
-        console.error("Error fetching service components:", error);
-      })
-      .finally(() => {
-        setComponentsLoading(false);
-      });
+      .catch(error => console.error("Error fetching service components:", error))
+      .finally(() => setComponentsLoading(false));
+
+      // Fetch PM badge counts
+      fetchPmBadgeCounts();
     }
   }, [userId, companyId]);
 
-  // Function to get components for a specific service item
   const getComponentsForItem = (serviceItemId) => {
     return serviceComponents.filter(component => 
       component.service_item === serviceItemId
@@ -117,19 +132,39 @@ const MachineScreen = () => {
     }));
   };
 
- return (
+  // ─── Badge pill ───────────────────────────────────────────────────────────
+  const PmBadge = ({ count }) => {
+    if (!count || count === 0) return null;
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#dc3545',
+          color: 'white',
+          borderRadius: '50%',
+          minWidth: '20px',
+          height: '20px',
+          fontSize: '11px',
+          fontWeight: '700',
+          marginLeft: '8px',
+          padding: '0 4px',
+          lineHeight: 1,
+          verticalAlign: 'middle',
+          flexShrink: 0,
+        }}
+      >
+        {count > 99 ? '99+' : count}
+      </span>
+    );
+  };
+
+  return (
     <div className="machine-screen-wrapper">
       <div className="machine-screen-header">
         <div className="machine-header-content">
           <h2 className="machine-screen-title">Your Machines</h2>
-          {/* <button 
-              className="btn btn-primary machine-monitor-btn"
-              onClick={() => navigate('/machine-data')}  // Changed from '/machinescreen1'
-              title="View Complete Machine Data"
-            >
-              <FaTachometerAlt className="me-2" />
-              Show Complete Machine Data
-            </button> */}
         </div>
       </div>
 
@@ -141,23 +176,29 @@ const MachineScreen = () => {
         <div className="machine-cards-container">
           {serviceItems.map((item, index) => {
             const itemComponents = getComponentsForItem(item.service_item_id);
-            
+            const badgeCount = pmBadgeCounts[item.service_item_id] || 0;
+
             return (
               <div key={index} className="machine-card">
-                <div className="machine-card-header" onClick={() => toggleCardExpand(index)}>
+                <div
+                  className="machine-card-header"
+                  onClick={() => toggleCardExpand(index)}
+                >
                   <span className="machine-card-sno">{index + 1}</span>
-                  <h3 
+
+                  {/* Service item name + PM badge */}
+                  <h3
                     className="machine-card-id"
+                    style={{ display: 'flex', alignItems: 'center' }}
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/machines/${item.service_item_id}`);
                     }}
                   >
-                    {/* {item.service_item_id} */}
-                     {/* instead of displaying service item id - we are displaying service item name  */}
-                     {item.service_item_name}  
-
+                    {item.service_item_name}
+                    <PmBadge count={badgeCount} />
                   </h3>
+
                   <div className="machine-card-toggle">
                     {expandedCards[index] ? <FaChevronUp /> : <FaChevronDown />}
                   </div>
@@ -207,7 +248,20 @@ const MachineScreen = () => {
                       </span>
                     </div>
 
-                    {/* Display components for this service item */}
+                    {/* PM Schedule pending badge info row */}
+                    {badgeCount > 0 && (
+                      <div className="machine-card-row">
+                        <span className="machine-card-label">PM Actions Pending:</span>
+                        <span
+                          className="machine-card-value"
+                          style={{ color: '#dc3545', fontWeight: '600' }}
+                        >
+                          {badgeCount} task{badgeCount !== 1 ? 's' : ''} require{badgeCount === 1 ? 's' : ''} attention
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Components */}
                     {componentsLoading ? (
                       <div className="machine-card-row">
                         <span className="machine-loading-text">Loading components...</span>

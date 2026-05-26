@@ -3,22 +3,16 @@ import React, { useEffect, useState } from "react";
 import Navbar from "../../Screens/Navbar/Navbar";
 import "./Connect.css";
 
-// const deviceBase = "http://192.168.178.86"; // ESP32 IP
-// const deviceBase = "https://crm.funstay.in/";
-const deviceBase = "http://69.62.76.211:3000/" ;
+const deviceBase = "/device"; // nginx proxy path
 
 const Connect = () => {
-  const [status, setStatus] = useState("idle"); // idle | connecting | connected
+  const [status, setStatus] = useState("idle");
   const [pcb, setPcb] = useState(null);
   const [showIframe, setShowIframe] = useState(false);
-
-  // 🔄 used to force iframe reload
   const [iframeKey, setIframeKey] = useState(Date.now());
 
   useEffect(() => {
     const handler = (event) => {
-      // Optional security check
-      // if (event.origin !== deviceBase) return;
 
       if (event?.data?.type === "ESP_PCB" && event.data.pcb) {
         setPcb(event.data.pcb);
@@ -34,15 +28,13 @@ const Connect = () => {
   const handleConnect = () => {
     setStatus("connecting");
     setShowIframe(true);
-    reloadDevicePage(); // initial attempt
+    reloadDevicePage();
   };
 
-  // 🔄 Reload ESP32 page (mobile-safe)
   const reloadDevicePage = () => {
     setIframeKey(Date.now());
   };
 
-  // ⏳ Auto-reload once after opening iframe
   useEffect(() => {
     if (showIframe) {
       const timer = setTimeout(() => {
@@ -60,7 +52,6 @@ const Connect = () => {
       <div className="connect-content" style={{ padding: 20 }}>
         <h2>🔗 Connect Device</h2>
 
-        {/* CONNECT BUTTON */}
         {status !== "connected" && !showIframe && (
           <button
             onClick={handleConnect}
@@ -74,7 +65,6 @@ const Connect = () => {
           </button>
         )}
 
-        {/* ESP32 SETUP IFRAME */}
         {showIframe && (
           <div style={{ marginTop: 20 }}>
             <p>Enter WiFi credentials below:</p>
@@ -91,7 +81,6 @@ const Connect = () => {
               }}
             />
 
-            {/* RELOAD BUTTON */}
             <button
               onClick={reloadDevicePage}
               style={{
@@ -114,7 +103,6 @@ const Connect = () => {
           </div>
         )}
 
-        {/* CONNECTED STATE */}
         {status === "connected" && (
           <div style={{ marginTop: 20 }}>
             <h3 style={{ color: "green" }}>✅ Connected!</h3>

@@ -134,37 +134,32 @@
 
 
 
-
+// src/Customer/Navbar/Navbar.js  (your NavScreen file)
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaHome,
-  FaCogs,
-  FaEnvelope,
-  FaPlus,
-  FaBell,
-  FaUserCircle, // 👈 Profile icon
-    FaUsers,   // 👈 for Delegates
-  FaInbox,   // 👈 for Requests
+  FaHome, FaCogs, FaEnvelope, FaPlus,
+  FaBell, FaUserCircle, FaUsers, FaInbox,
 } from 'react-icons/fa';
 import './Navbar.css';
 import logo from '../../../Logos/hvac-logo-new.jpg';
-import { AuthContext } from "../../AuthContext/AuthContext";
+import { AuthContext } from '../../AuthContext/AuthContext';
+import CustomerBell from './CustomerBell'; // ← ADD THIS IMPORT
 
 const screens = [
-  { label: 'Dashboard', name: '/home', icon: <FaHome /> },
-  { label: 'Machines', name: '/machine', icon: <FaCogs /> },
-  { label: 'Requests', name: '/request', icon: <FaUsers /> },
-  { label: 'Delegates', name: '/view-delegates', icon: <FaInbox /> },
+  { label: 'Dashboard', name: '/home',           icon: <FaHome /> },
+  { label: 'Machines',  name: '/machine',         icon: <FaCogs /> },
+  { label: 'Requests',  name: '/request',         icon: <FaUsers /> },
+  { label: 'Delegates', name: '/view-delegates',  icon: <FaInbox /> },
 ];
 
 const NavScreen = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [activeIcon, setActiveIcon] = useState(location.pathname);
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const [activeIcon, setActiveIcon]         = useState(location.pathname);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef();
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext); // ← add user here
 
   const handleLogout = () => {
     setShowProfileMenu(false);
@@ -176,7 +171,6 @@ const NavScreen = () => {
     setActiveIcon(location.pathname);
   }, [location.pathname]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -197,15 +191,19 @@ const NavScreen = () => {
       <div className="top-navbar">
         <img src={logo} alt="Logo" className="logo-img" />
         <div className="top-icons">
-            <FaHome
-      className="top-icon"
-      onClick={() => navigate("/machinescreen1")}
-      style={{ cursor: "pointer" }}
-    />
+          <FaHome
+            className="top-icon"
+            onClick={() => navigate("/machinescreen1")}
+            style={{ cursor: "pointer" }}
+          />
 
-          <FaBell className="top-icon" onClick={() => alert('Notifications Clicked!')} />
+          {/* ✅ REPLACE the old FaBell line with this */}
+          {user?.customer_id
+            ? <CustomerBell />
+            : <FaBell className="top-icon" />
+          }
 
-          {/* Profile Dropdown */}
+          {/* Profile Dropdown — unchanged */}
           <div className="profile-dropdown" ref={profileRef}>
             <FaUserCircle
               className="top-icon"
@@ -229,17 +227,15 @@ const NavScreen = () => {
         </div>
       </div>
 
-      {/* Bottom Navbar */}
+      {/* Bottom Navbar — completely unchanged */}
       <div className="navbar-container">
         {screens.map((item, index) => {
           if (index === 2) {
             return (
               <React.Fragment key={item.name}>
-                {/* Floating center button */}
                 <div className="center-button" onClick={() => navigate('/service-form')}>
                   <FaPlus />
                 </div>
-
                 <button
                   className={`nav-item ${activeIcon === item.name ? 'active' : ''}`}
                   onClick={() => handleIconClick(item.name)}
@@ -250,7 +246,6 @@ const NavScreen = () => {
               </React.Fragment>
             );
           }
-
           return (
             <button
               key={item.name}
