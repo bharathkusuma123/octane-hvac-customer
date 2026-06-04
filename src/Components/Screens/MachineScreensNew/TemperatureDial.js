@@ -151,9 +151,9 @@ const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTempe
           {/* 🔧 Changed: display without decimal */}
           <div className="temp-display">
   <div className="temp-temperature">{Math.round(temperature)}°C</div>
-  <button className="apply-temp-btn" onClick={() => onTempChangeEnd(temperature)}>
+  {/* <button className="apply-temp-btn" onClick={() => onTempChangeEnd(temperature)}>
     ➡️
-  </button>
+  </button> */}
 </div>
 
           <div className="temp-fan-container">
@@ -161,6 +161,8 @@ const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTempe
               <div className="temp-fan-bar1" />
               <div className="temp-fan-bar2" />
               <div className="temp-fan-bar3" />
+              <div className="temp-fan-bar3" />
+
             </div>
             <span className="temp-fan-speed">{getFanSpeedDescription(fanSpeed)}</span>
           </div>

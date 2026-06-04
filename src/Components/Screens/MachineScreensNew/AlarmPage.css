@@ -1,0 +1,16 @@
+
+
+@media (max-width: 768px) {
+
+.delegate-card-container {
+    padding: 80px 2px ;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+
+.history-classname{
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+}
+}

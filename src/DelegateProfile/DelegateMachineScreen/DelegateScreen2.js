@@ -59,6 +59,9 @@ const formatTemp = (temp) => {
 };
 
 const DelegateScreen2 = () => {
+
+
+  
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
