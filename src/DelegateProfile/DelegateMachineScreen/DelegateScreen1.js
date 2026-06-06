@@ -3418,8 +3418,10 @@ const DelegateScreen1 = () => {
         {!sensorData.isOnline && (
           <div
             style={{
-              backgroundColor: "rgba(0,0,0,0.55)",
-              color: "#fff",
+              // backgroundColor: "rgba(0,0,0,0.55)",
+              // color: "#fff",
+                   color: "rgba(0,0,0,0.55)",
+              backgroundColor: "#fff",
               textAlign: "center",
               padding: "10px 20px",
               borderRadius: "10px",

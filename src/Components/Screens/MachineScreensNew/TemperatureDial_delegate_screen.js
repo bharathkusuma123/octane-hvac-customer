@@ -120,15 +120,30 @@ const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTempe
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           style={{ position: "absolute", inset: 0 }}
         >
+
+            {/* ONLY ADDED THIS CIRCLE - BACKGROUND FULL CIRCLE */}
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={110}
+            fill="none"
+            stroke="#ffffff"
+            strokeOpacity="0.4"
+            strokeWidth="10"
+          />
           <path
             d="M 142.5 32 A 110 110 0 0 1 252 142.5"
             fill="none"
             stroke="#ffffff"
-            strokeOpacity="0.7"
-            strokeWidth="6"
+            strokeOpacity="1"
+            strokeWidth="10"
             strokeLinecap="round"
           />
         </svg>
+
+
+
+
 
         <div
           className="temp-inner-circle"
@@ -195,9 +210,9 @@ const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTempe
               position: "absolute",
               left: "50%",
               top: "50%",
-              width: 2,
-              height: 8,
-              background: "rgba(255,255,255,0.3)",
+               width: 4,
+              height: 12,
+              background: "rgba(255, 255, 255, 0.47)",
               borderRadius: 2,
               transform: `translate(-50%, -50%) rotate(${i * 7.5}deg) translate(0, -135px)`,
             }}

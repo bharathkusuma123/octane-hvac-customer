@@ -6,7 +6,8 @@ import {
   FaEnvelope,
   FaCommentDots,
   FaBell,
-  FaUserCircle
+  FaUserCircle,
+  FaAngleLeft
 } from 'react-icons/fa';
 import './DelegateNavbar.css';
 import logo from '../../Logos/hvac-logo-new.jpg';
@@ -14,6 +15,9 @@ import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateSe
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import axios from 'axios';
 import baseURL from '../../Components/ApiUrl/Apiurl';
+import logo9 from "../../Components/Screens/MachineScreensNew/Images/AIRO.png"
+
+
 
 const screens = [
   { label: 'Dashboard', name: '/delegate-home', icon: <FaHome />, key: 'dashboard' },
@@ -137,6 +141,9 @@ const NavScreen = () => {
       setIsLoggingOut(false);
     }
   };
+   const handleGoBack = () => {
+    navigate(-1); // Go back to previous page
+  };
 
   if (loading) {
     return (
@@ -164,6 +171,15 @@ const NavScreen = () => {
       {/* Top Navbar */}
       <div className="top-navbar">
         <img src={logo} alt="Logo" className="logo-img" />
+        <div className="back-arrow" onClick={handleGoBack} style={{ cursor: "pointer" }}>
+                  {/* <FaArrowLeft size={24} color="#fff" /> */}
+                  <FaAngleLeft 
+          size={24} 
+          color="#fff" 
+          style={{ marginTop: "30px", cursor: "pointer" }} 
+          onClick={handleGoBack}
+        />
+                </div>
         <div className="top-icons">
           <div className="service-dropdown">
             <select

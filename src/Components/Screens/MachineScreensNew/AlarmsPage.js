@@ -350,7 +350,7 @@ import { FiArrowLeft, FiClock } from 'react-icons/fi';
 import baseURL from '../../ApiUrl/Apiurl';
 import NavScreen from '../../../Components/Screens/Navbar/Navbar';
 import FullScreenLoader from '../../../Common/FullScreenLoader';
-import  './AlarmPage.css';
+import './AlarmPage.css';
 
 const AlarmsPage = () => {
   const navigate = useNavigate();
@@ -489,7 +489,8 @@ const AlarmsPage = () => {
   };
 
   return (
-    <div style={{ background: "#2d86e6", height: "100vh" }}>
+    // <div style={{ background: "#2d86e6", height: "100vh" }}>
+    <div style={{ background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)", height: "100vh" }}>
       <div className="delegate-card-container">
         {loading && <FullScreenLoader />}
 
@@ -529,7 +530,7 @@ const AlarmsPage = () => {
             </div>
           </div> */}
           {/* Current Alarm Status */}
-          <div style={{ margin: '20px 0' }}>
+          <div style={{ margin: '20px 10px' }}>
             {alarmData.alarmOccurred !== '0' ? (
               <div style={{
                 padding: '2px',
@@ -549,13 +550,22 @@ const AlarmsPage = () => {
                 borderRadius: '12px',
                 marginBottom: '20px'
               }}>
-                <h3 style={{ color: 'blue', marginTop: 0, marginBottom: 2 }}>Current Alarm Status</h3>
+                {/* <h3 style={{ color: 'blue', marginTop: 0, marginBottom: 2 }}>Current Alarm Status</h3> */}
+                <h3 style={{
+                  background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  marginTop: 0,
+                  marginBottom: 2
+                }}>
+                  Current Alarm Status
+                </h3>
                 <p style={{ marginBottom: 0 }}><strong>Device ID:&nbsp;{alarmData.deviceId}</strong> </p>
                 <p>No active alarms - System is operating normally</p>
               </div>
             )}
           </div>
-          <div className="history-classname" style={{backgroundColor: "white"}}>
+          <div className="history-classname" style={{ backgroundColor: "white" }}>
 
             {/* Historical Errors */}
             <h3>Historical Error Logs</h3>
@@ -644,7 +654,9 @@ const AlarmsPage = () => {
                       <th style={{
                         padding: '12px',
                         textAlign: 'left',
-                        color: "blue",
+                        background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         fontWeight: "600",
                         whiteSpace: 'nowrap',
                         borderBottom: '2px solid #e0e0e0'
@@ -652,7 +664,9 @@ const AlarmsPage = () => {
                       <th style={{
                         padding: '12px',
                         textAlign: 'left',
-                        color: "blue",
+                        background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         fontWeight: "600",
                         whiteSpace: 'nowrap',
                         borderBottom: '2px solid #e0e0e0'
@@ -660,7 +674,9 @@ const AlarmsPage = () => {
                       <th style={{
                         padding: '12px',
                         textAlign: 'left',
-                        color: "blue",
+                        background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         fontWeight: "600",
                         whiteSpace: 'nowrap',
                         borderBottom: '2px solid #e0e0e0'
@@ -668,7 +684,9 @@ const AlarmsPage = () => {
                       <th style={{
                         padding: '12px',
                         textAlign: 'left',
-                        color: "blue",
+                        background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         fontWeight: "600",
                         whiteSpace: 'nowrap',
                         borderBottom: '2px solid #e0e0e0'
@@ -676,7 +694,9 @@ const AlarmsPage = () => {
                       <th style={{
                         padding: '12px',
                         textAlign: 'left',
-                        color: "blue",
+                        background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         fontWeight: "600",
                         whiteSpace: 'nowrap',
                         borderBottom: '2px solid #e0e0e0'
@@ -684,14 +704,15 @@ const AlarmsPage = () => {
                       <th style={{
                         padding: '12px',
                         textAlign: 'left',
-                        color: "blue",
+                        background: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
                         fontWeight: "600",
                         whiteSpace: 'nowrap',
                         borderBottom: '2px solid #e0e0e0'
                       }}>Machine Alert</th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {filteredData.map((error, index) => (
                       <tr
@@ -714,13 +735,13 @@ const AlarmsPage = () => {
                         <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
                           <span style={{
                             padding: '6px 14px',
-                            borderRadius: '20px',
+                            borderRadius: '6px',
                             fontSize: '12px',
                             fontWeight: '600',
                             letterSpacing: '0.5px',
                             display: 'inline-block',
                             whiteSpace: 'nowrap',
-                            textTransform: 'uppercase',
+                            // textTransform: 'uppercase',
                             ...getPriorityStyle(error.priority)
                           }}>
                             {error.priority}
