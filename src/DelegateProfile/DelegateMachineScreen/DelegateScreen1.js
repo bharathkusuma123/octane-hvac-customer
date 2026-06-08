@@ -2408,6 +2408,2634 @@
 
 
 // DelegateScreen1.js — Complete with all functionalities (Modes + Fan Speed in footer)
+// import React, { useState, useEffect, useContext, useRef } from "react";
+// import axios from "axios";
+// import {
+//   FiArrowLeft,
+//   FiPower,
+//   FiWind,
+//   FiClock,
+//   FiWatch,
+//   FiSettings,
+//   FiZap,
+//   FiLogOut,
+//   FiSun,
+//   FiDroplet,
+//   FiThermometer,
+//   FiRefreshCw,
+//   FiChevronDown,
+// } from "react-icons/fi";
+// import { FaFan } from "react-icons/fa";
+// import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png";
+// import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
+// import { useNavigate } from "react-router-dom"; 
+// import { AuthContext } from "../../Components/AuthContext/AuthContext";
+// import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial_delegate_screen";
+// import baseURL from "../../Components/ApiUrl/Apiurl";
+// import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
+// import './DelegateMachineScreens.css'
+
+// // Constants
+// const MODE_MAP = {
+//   1: "IDEC",
+//   2: "Auto",
+//   3: "Fan",
+//   4: "Indirect",
+//   5: "Direct",
+// };
+
+// const MODE_CODE_MAP = {
+//   IDEC: 1,
+//   Auto: 2,
+//   Fan: 3,
+//   Indirect: 4,
+//   Direct: 5,
+// };
+
+// const FAN_SPEEDS = ["0", "1", "2"]; // 0=High, 1=Medium, 2=Low
+// const FAN_LABELS = ["High", "Medium", "Low"];
+
+// // Pull-to-refresh configuration
+// const PULL_THRESHOLD = 80;
+// const MAX_PULL = 120;
+
+// // Progressive messages every 10s
+// const PROCESSING_MESSAGES = [
+//   "Sending command...",
+//   "Almost done, please wait...",
+//   "Waiting for device response...",
+// ];
+
+// // Helper functions
+// const formatTemp = (temp) => {
+//   if (temp == null) return "0.0";
+//   const num = parseFloat(temp);
+//   return isNaN(num) ? "0.0" : num.toFixed(1);
+// };
+
+// // Function to send HVAC=3 command
+// const sendRefreshCommand = async (pcbSerialNumber, sensorData) => {
+//   const payload = {
+//     Header: "0xAA",
+//     DI: pcbSerialNumber || "2411GM-0102",
+//     MD: sensorData.mode || "3",
+//     FS: sensorData.fanSpeed || "0",
+//     SRT: sensorData.temperature || 25,
+//     HVAC: "3",
+//     Footer: "0xZX",
+//   };
+
+//   console.group("🔁 REFRESH COMMAND");
+//   console.log("📦 Payload:", payload);
+//   console.groupEnd();
+
+//   try {
+//     const response = await fetch("https://mdata.air2o.net/controllers/", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(payload),
+//     });
+
+//     let responseBody;
+//     try {
+//       responseBody = await response.json();
+//     } catch {
+//       responseBody = await response.text();
+//     }
+
+//     if (!response.ok) {
+//       return {
+//         success: false,
+//         error: responseBody?.error || responseBody?.message || "Command rejected by server",
+//         status: response.status,
+//       };
+//     }
+
+//     return { success: true, data: responseBody };
+//   } catch (error) {
+//     return { success: false, error: "Network error or server unreachable" };
+//   }
+// };
+
+// const DelegateScreen1 = () => {
+//   const { user, logout } = useContext(AuthContext);
+//   const { 
+//     selectedServiceItem,
+//     getSelectedServiceDetails,
+//     serviceItemPermissions,
+//     serviceItems,
+//     updateSelectedServiceItem,
+//     loading: serviceItemsLoading 
+//   } = useDelegateServiceItems();
+  
+//   const userId = user?.delegate_id;
+//   const company_id = user?.company_id;
+//   const navigate = useNavigate();
+
+//   // Refs
+//   const activePCBRef = useRef(null);
+//   const fetchIntervalRef = useRef(null);
+//   const processingTimerRef = useRef(null);
+//   const processingMsgIndexRef = useRef(0);
+//   const hardStopTimerRef = useRef(null);
+//   const processingStartTimeRef = useRef(null);
+//   const touchStartY = useRef(0);
+//   const containerRef = useRef(null);
+
+//   // Pull-to-refresh state
+//   const [pullToRefresh, setPullToRefresh] = useState({
+//     isPulling: false,
+//     pullDistance: 0,
+//     isRefreshing: false,
+//   });
+  
+//   // State management
+//   const [selectedService, setSelectedService] = useState(null);
+//   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+//   const [processing, setProcessing] = useState({ status: false, message: "" });
+//   const [errorCount, setErrorCount] = useState(0);
+//   const [loading, setLoading] = useState(true);
+//   const [serviceItemsList, setServiceItemsList] = useState([]);
+//   const [manualRefresh, setManualRefresh] = useState(false);
+//   const [refreshStatus, setRefreshStatus] = useState({ 
+//     sending: false, 
+//     success: false, 
+//     message: "" 
+//   });
+//   const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
+  
+//   const [sensorData, setSensorData] = useState({
+//     outsideTemp: 0,
+//     humidity: 0,
+//     roomTemp: 0,
+//     fanSpeed: "0",
+//     temperature: 25,
+//     powerStatus: "off",
+//     mode: "3",
+//     errorFlag: "0",
+//     hvacBusy: "0",
+//     deviceId: "",
+//     alarmOccurred: "0",
+//     isOnline: true,
+//   });
+
+//   // Display data for local changes
+//   const [displayData, setDisplayData] = useState({
+//     fanSpeed: "0",
+//     temperature: 25,
+//     mode: "3",
+//     powerStatus: "off",
+//   });
+
+//   // Sync displayData with sensorData
+//   useEffect(() => {
+//     setDisplayData({
+//       fanSpeed: sensorData.fanSpeed,
+//       temperature: sensorData.temperature,
+//       mode: sensorData.mode,
+//       powerStatus: sensorData.powerStatus,
+//     });
+//   }, [sensorData]);
+
+//   // Check if selected service has PCB serial number
+//   const hasValidPCBSerial = selectedService && selectedService.pcb_serial_number;
+  
+//   // Get current mode description
+//   const currentModeDescription = MODE_MAP[displayData.mode] || "Fan";
+  
+//   // Get fan position
+//   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
+
+//   // Fetch service items with names from API
+//   useEffect(() => {
+//     if (user?.company_id && user?.delegate_id) {
+//       axios.get(`${baseURL}/service-items/?user_id=${user.delegate_id}&company_id=${user.company_id}`)
+//         .then((response) => {
+//           try {
+//             const data = Array.isArray(response.data) ? response.data : 
+//                         (response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
+//             setServiceItemsList(data);
+//           } catch (error) {
+//             console.error('Error processing service items data:', error);
+//             setServiceItemsList([]);
+//           }
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching service items:', error);
+//           setServiceItemsList([]);
+//         });
+//     }
+//   }, [user?.company_id, user?.delegate_id]);
+
+//   // Get the complete service details when selectedServiceItem changes
+//   useEffect(() => {
+//     if (!serviceItemsLoading && selectedServiceItem) {
+//       const serviceDetails = getSelectedServiceDetails();
+//       console.log("Selected Service Details:", serviceDetails);
+//       setSelectedService(serviceDetails);
+//       if (serviceDetails?.pcb_serial_number) {
+//         activePCBRef.current = serviceDetails.pcb_serial_number;
+//       }
+//     }
+//   }, [selectedServiceItem, serviceItemsLoading, getSelectedServiceDetails]);
+
+//   // Fetch all alarms for dropdown badge
+//   const fetchAllAlarms = async () => {
+//     try {
+//       const response = await fetch(
+//         `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+//       );
+
+//       if (!response.ok) throw new Error("Failed to fetch alarms");
+
+//       const data = await response.json();
+
+//       if (data.status !== "success" || !data.data) return;
+
+//       const alarmCount = data.data.reduce((count, item) => {
+//         const val = item.alarm_occurred?.value;
+//         if (val && val !== "0") {
+//           return count + Number(val);
+//         }
+//         return count;
+//       }, 0);
+
+//       setDropdownAlarmCount(alarmCount);
+//     } catch (err) {
+//       console.error("Alarm fetch error:", err);
+//     }
+//   };
+
+//   // Fetch sensor data
+//   const fetchData = async () => {
+//     const pcbSerialNumber = activePCBRef.current;
+//     if (!pcbSerialNumber) return;
+
+//     try {
+//       const response = await fetch(
+//         `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
+//       );
+
+//       if (!response.ok) throw new Error("Network response was not ok");
+
+//       const data = await response.json();
+
+//       if (data?.status !== "success" || !data?.data) return;
+//       if (activePCBRef.current !== pcbSerialNumber) return;
+
+//       const deviceData = data.data;
+//       const isOnline = deviceData.is_online;
+
+//       setSensorData({
+//         outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+//         humidity: isOnline ? deviceData.room_humidity?.value : null,
+//         roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+//         fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+//         temperature: isOnline ? deviceData.set_temperature?.value : 25,
+//         powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+//         mode: deviceData.mode?.value || "3",
+//         errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+//         hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+//         deviceId: pcbSerialNumber,
+//         alarmOccurred: deviceData.alarm_occurred?.value,
+//         isOnline: isOnline,
+//       });
+
+//       const alarmValue = deviceData.alarm_occurred?.value;
+//       setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+//       setLoading(false);
+//       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+//       setManualRefresh(false);
+
+//       if (deviceData.hvac_busy?.value == "0") {
+//         clearProcessingIfDone();
+//       }
+//     } catch (error) {
+//       console.error("🔥 Fetch Error:", error);
+//       setLoading(false);
+//       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+//       setManualRefresh(false);
+//     }
+//   };
+
+//   // Start polling
+//   useEffect(() => {
+//     if (!activePCBRef.current) return;
+
+//     if (fetchIntervalRef.current) {
+//       clearInterval(fetchIntervalRef.current);
+//       fetchIntervalRef.current = null;
+//     }
+
+//     fetchData();
+//     fetchAllAlarms();
+
+//     fetchIntervalRef.current = setInterval(() => {
+//       fetchData();
+//       fetchAllAlarms();
+//     }, 1000);
+
+//     return () => {
+//       if (fetchIntervalRef.current) {
+//         clearInterval(fetchIntervalRef.current);
+//         fetchIntervalRef.current = null;
+//       }
+//     };
+//   }, [activePCBRef.current]);
+
+//   // Update active PCB ref when selected service changes
+//   useEffect(() => {
+//     if (selectedService?.pcb_serial_number) {
+//       console.log("🔄 Switching active PCB to:", selectedService.pcb_serial_number);
+//       activePCBRef.current = selectedService.pcb_serial_number;
+//     }
+//   }, [selectedService?.pcb_serial_number]);
+
+//   // Processing message cycle functions
+//   const MIN_PROCESSING_TIME = 5000;
+  
+//   const startProcessingCycle = () => {
+//     processingMsgIndexRef.current = 0;
+//     processingStartTimeRef.current = Date.now();
+//     setProcessing({ status: true, message: PROCESSING_MESSAGES[0] });
+
+//     processingTimerRef.current = setInterval(() => {
+//       processingMsgIndexRef.current += 1;
+//       const nextMsg = PROCESSING_MESSAGES[processingMsgIndexRef.current];
+//       if (nextMsg) {
+//         setProcessing({ status: true, message: nextMsg });
+//       }
+//     }, 10000);
+
+//     hardStopTimerRef.current = setTimeout(() => {
+//       stopProcessing();
+//     }, 25000);
+//   };
+
+//   const stopProcessing = () => {
+//     if (processingTimerRef.current) {
+//       clearInterval(processingTimerRef.current);
+//       processingTimerRef.current = null;
+//     }
+//     if (hardStopTimerRef.current) {
+//       clearTimeout(hardStopTimerRef.current);
+//       hardStopTimerRef.current = null;
+//     }
+//     setProcessing({ status: false, message: "" });
+//   };
+
+//   const clearProcessingIfDone = () => {
+//     if (processingTimerRef.current || hardStopTimerRef.current) {
+//       const elapsed = Date.now() - (processingStartTimeRef.current || 0);
+//       if (elapsed >= MIN_PROCESSING_TIME) {
+//         stopProcessing();
+//       }
+//     }
+//   };
+
+//   // Cleanup timers
+//   useEffect(() => {
+//     return () => {
+//       if (processingTimerRef.current) clearInterval(processingTimerRef.current);
+//       if (hardStopTimerRef.current) clearTimeout(hardStopTimerRef.current);
+//     };
+//   }, []);
+
+//   // Send mode command
+//   const sendModeCommand = async (modeCode, modeName) => {
+//     console.group("🎛️ MODE COMMAND SENT");
+//     console.log("📱 Mode clicked:", modeName);
+//     console.log("🔢 Mode code:", modeCode);
+//     console.log("💻 Current display data:", {
+//       mode: displayData.mode,
+//       fanSpeed: displayData.fanSpeed,
+//       temperature: displayData.temperature,
+//       powerStatus: displayData.powerStatus
+//     });
+    
+//     try {
+//       startProcessingCycle();
+      
+//       const payload = {
+//         Header: "0xAA",
+//         DI: selectedService?.pcb_serial_number || "2411GM-0102",
+//         MD: parseInt(modeCode) || 3,
+//         FS: parseInt(displayData.fanSpeed) || 0,
+//         SRT: parseInt(displayData.temperature) || 25,
+//         HVAC: displayData.powerStatus === "on" ? "1" : "0",
+//         Footer: "0xZX",
+//       };
+      
+//       console.log("📦 Mode command payload:", payload);
+      
+//       const response = await fetch("https://mdata.air2o.net/controllers/", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(payload),
+//       });
+      
+//       if (!response.ok) {
+//         console.error("❌ Mode command failed with status:", response.status);
+//         stopProcessing();
+//         throw new Error("Failed to send command");
+//       }
+      
+//       console.log("✅ Mode command sent successfully:", modeName);
+//       console.groupEnd();
+//     } catch (error) {
+//       console.error("❌ Error sending mode command:", error);
+//       console.groupEnd();
+//       stopProcessing();
+//     }
+//   };
+
+//   // Send fan command
+//   const sendFanCommand = async (fanSpeed) => {
+//     const fanSpeedLabel = FAN_LABELS[parseInt(fanSpeed)] || fanSpeed;
+//     console.group("🌀 FAN SPEED COMMAND SENT");
+//     console.log("📱 Fan speed clicked:", fanSpeedLabel);
+//     console.log("🔢 Fan speed code:", fanSpeed);
+//     console.log("💻 Current display data:", {
+//       mode: displayData.mode,
+//       fanSpeed: displayData.fanSpeed,
+//       temperature: displayData.temperature,
+//       powerStatus: displayData.powerStatus
+//     });
+    
+//     try {
+//       startProcessingCycle();
+      
+//       const payload = {
+//         Header: "0xAA",
+//         DI: selectedService?.pcb_serial_number || "2411GM-0102",
+//         MD: parseInt(displayData.mode) || 3,
+//         FS: parseInt(fanSpeed) || 0,
+//         SRT: parseInt(displayData.temperature) || 25,
+//         HVAC: displayData.powerStatus === "on" ? "1" : "0",
+//         Footer: "0xZX",
+//       };
+      
+//       console.log("📦 Fan command payload:", payload);
+      
+//       const response = await fetch("https://mdata.air2o.net/controllers/", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(payload),
+//       });
+      
+//       if (!response.ok) {
+//         console.error("❌ Fan command failed with status:", response.status);
+//         stopProcessing();
+//         throw new Error("Failed to send command");
+//       }
+      
+//       console.log("✅ Fan command sent successfully:", fanSpeedLabel);
+//       console.groupEnd();
+//     } catch (error) {
+//       console.error("❌ Error sending fan command:", error);
+//       console.groupEnd();
+//       stopProcessing();
+//     }
+//   };
+
+//   // Handle mode change
+//   const handleModeChange = async (newMode) => {
+//     console.log("🔘 Mode button clicked:", newMode);
+//     console.log("📊 Current state before mode change:", {
+//       processing: processing.status,
+//       isOnline: sensorData.isOnline,
+//       canControl: serviceItemPermissions?.can_control_equipment,
+//       powerStatus: displayData.powerStatus
+//     });
+    
+//     if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
+//       console.log("⚠️ Mode change blocked - Conditions not met:", {
+//         processingActive: processing.status,
+//         offline: !sensorData.isOnline,
+//         noControl: !serviceItemPermissions?.can_control_equipment
+//       });
+//       return;
+//     }
+    
+//     const newModeCode = MODE_CODE_MAP[newMode] || 1;
+//     console.log("🔄 Updating display mode from", displayData.mode, "to", newModeCode);
+//     setDisplayData((prev) => ({ ...prev, mode: newModeCode.toString() }));
+    
+//     if (displayData.powerStatus === "on") {
+//       console.log("⚡ Power is ON - Sending mode command to device");
+//       await sendModeCommand(newModeCode.toString(), newMode);
+//     } else {
+//       console.log("💤 Power is OFF - Mode saved locally, will apply when power turns on");
+//     }
+//   };
+
+//   // Handle fan speed change
+//   const handleFanSpeedChange = async (newPosition) => {
+//     const newSpeed = FAN_SPEEDS[newPosition];
+//     const newSpeedLabel = FAN_LABELS[newPosition];
+    
+//     console.log("🌀 Fan speed button clicked:", newSpeedLabel);
+//     console.log("📊 Current state before fan change:", {
+//       processing: processing.status,
+//       isOnline: sensorData.isOnline,
+//       canControl: serviceItemPermissions?.can_control_equipment,
+//       powerStatus: displayData.powerStatus,
+//       currentSpeed: FAN_LABELS[fanPosition]
+//     });
+    
+//     if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
+//       console.log("⚠️ Fan change blocked - Conditions not met:", {
+//         processingActive: processing.status,
+//         offline: !sensorData.isOnline,
+//         noControl: !serviceItemPermissions?.can_control_equipment
+//       });
+//       return;
+//     }
+    
+//     console.log("🔄 Updating display fan speed from", displayData.fanSpeed, "to", newSpeed);
+//     setDisplayData((prev) => ({ ...prev, fanSpeed: newSpeed }));
+    
+//     if (displayData.powerStatus === "on") {
+//       console.log("⚡ Power is ON - Sending fan command to device");
+//       await sendFanCommand(newSpeed);
+//     } else {
+//       console.log(`💤 Power is OFF - Fan speed set to ${newSpeedLabel} (will apply when power turns on)`);
+//     }
+//   };
+
+//   // Handle fan click on button
+//   const handleFanClick = (index) => {
+//     console.log("🖱️ Fan button clicked at index:", index, "Label:", FAN_LABELS[index]);
+//     handleFanSpeedChange(index);
+//   };
+
+//   // Send refresh to controller
+//   const sendRefreshToController = async () => {
+//     if (!selectedService?.pcb_serial_number) {
+//       setRefreshStatus({ sending: false, success: false, message: "No device selected" });
+//       return { success: false };
+//     }
+
+//     if (!serviceItemPermissions?.can_control_equipment) {
+//       setRefreshStatus({ sending: false, success: false, message: "Control permissions not available" });
+//       return { success: false };
+//     }
+
+//     try {
+//       const result = await sendRefreshCommand(selectedService.pcb_serial_number, sensorData);
+      
+//       if (result?.success) {
+//         setRefreshStatus({ sending: false, success: true, message: "Refresh sent successfully" });
+//         setTimeout(() => setRefreshStatus({ sending: false, success: false, message: "" }), 3000);
+//         return result;
+//       }
+      
+//       const msg = result?.error || result?.message || "Failed to send refresh command";
+//       setRefreshStatus({ sending: false, success: false, message: msg });
+//       setTimeout(() => setRefreshStatus({ sending: false, success: false, message: "" }), 2000);
+//       return result;
+//     } catch (error) {
+//       setRefreshStatus({ sending: false, success: false, message: error.message || "Unexpected error" });
+//       return { success: false };
+//     }
+//   };
+
+//   // Handle power toggle
+//   const handlePowerToggle = async () => {
+//     console.log("🔘 Power button clicked. Current status:", sensorData.powerStatus);
+    
+//     if (!selectedService?.pcb_serial_number) {
+//       console.log("❌ No PCB serial number available");
+//       return;
+//     }
+    
+//     if (processing.status || sensorData.hvacBusy == "1" || !serviceItemPermissions?.can_control_equipment) {
+//       const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
+//       console.log("⚠️ Power toggle blocked:", msg);
+//       setProcessing({ status: true, message: msg });
+//       return;
+//     }
+
+//     startProcessingCycle();
+
+//     const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+//     const isShutdown = sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
+    
+//     console.log("⚡ Sending power command. New HVAC value:", newHvacValue);
+
+//     const payload = {
+//       Header: "0xAA",
+//       DI: selectedService.pcb_serial_number,
+//       MD: isShutdown ? "3" : sensorData.mode,
+//       FS: isShutdown ? "0" : sensorData.fanSpeed,
+//       SRT: sensorData.temperature,
+//       HVAC: newHvacValue,
+//       Footer: "0xZX",
+//     };
+
+//     try {
+//       const response = await fetch("https://mdata.air2o.net/controllers/", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(payload),
+//       });
+
+//       if (!response.ok) {
+//         console.error("❌ API error:", response.status);
+//         stopProcessing();
+//         throw new Error("Failed to send command");
+//       }
+
+//       const result = await response.text();
+//       console.log("✅ Power command sent:", result);
+//     } catch (error) {
+//       console.error("Error sending power command:", error);
+//       stopProcessing();
+//     }
+//   };
+
+//   // Handle temp change
+//   const handleTempChange = (newTemp) => {
+//     console.log("🌡️ Temperature changed to:", newTemp);
+//   };
+
+//   // Pull-to-refresh handlers
+//   const handleTouchStart = (e) => {
+//     touchStartY.current = e.touches[0].clientY;
+//   };
+
+//   const handleTouchMove = (e) => {
+//     if (containerRef.current && containerRef.current.scrollTop > 0) return;
+    
+//     const pullDistance = e.touches[0].clientY - touchStartY.current;
+//     if (pullDistance > 0) {
+//       e.preventDefault();
+//       setPullToRefresh({
+//         isPulling: true,
+//         pullDistance: Math.min(pullDistance, MAX_PULL),
+//         isRefreshing: false,
+//       });
+//     }
+//   };
+
+//   const handleTouchEnd = async () => {
+//     if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+//       await sendRefreshToController();
+//       setManualRefresh(true);
+//     } else {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+//     }
+//   };
+
+//   const handleMouseDown = (e) => {
+//     touchStartY.current = e.clientY;
+//     document.addEventListener("mousemove", handleMouseMove);
+//     document.addEventListener("mouseup", handleMouseUp);
+//   };
+
+//   const handleMouseMove = (e) => {
+//     if (containerRef.current && containerRef.current.scrollTop > 0) return;
+    
+//     const pullDistance = e.clientY - touchStartY.current;
+//     if (pullDistance > 0) {
+//       e.preventDefault();
+//       setPullToRefresh({
+//         isPulling: true,
+//         pullDistance: Math.min(pullDistance, MAX_PULL),
+//         isRefreshing: false,
+//       });
+//     }
+//   };
+
+//   const handleMouseUp = async () => {
+//     document.removeEventListener("mousemove", handleMouseMove);
+//     document.removeEventListener("mouseup", handleMouseUp);
+    
+//     if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+//       await sendRefreshToController();
+//       setManualRefresh(true);
+//     } else {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+//     }
+//   };
+
+//   const handleLogout = () => {
+//     console.log("🚪 User logging out");
+//     logout();
+//     navigate("/");
+//   };
+
+//   const handleServiceSelect = (item) => {
+//     console.log("📋 Service selected:", item.service_item_name, "PCB:", item.pcb_serial_number);
+//     setSelectedService(item);
+//     activePCBRef.current = item.pcb_serial_number;
+//     updateSelectedServiceItem(item.service_item_id);
+//     setShowServiceDropdown(false);
+//   };
+
+//   const handleNavigation = (path) => {
+//     if (!processing.status) {
+//       console.log("🧭 Navigating to:", path);
+//       navigate(path);
+//     } else {
+//       console.log("⚠️ Navigation blocked - command in progress");
+//     }
+//   };
+
+//   const getModeDescription = (code) => MODE_MAP[code] || "Fan";
+
+//   const pullProgress = Math.min(pullToRefresh.pullDistance / PULL_THRESHOLD, 1);
+//   const indicatorRotation = pullProgress * 360;
+//   const indicatorOpacity = pullProgress;
+
+//   // Loading states
+//   if (serviceItemsLoading || (loading && !manualRefresh)) {
+//     return (
+//       <div
+//         className="mainmain-container"
+//         style={{
+//           backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+//           minHeight: "100vh",
+//           display: "flex",
+//           justifyContent: "center",
+//           alignItems: "center",
+//           flexDirection: "column",
+//           color: "white",
+//         }}
+//       >
+//         <div style={{ color: "white", fontSize: "18px", marginBottom: "20px" }}>
+//           Loading...
+//         </div>
+//         <button
+//           onClick={handleLogout}
+//           style={{
+//             display: "flex",
+//             alignItems: "center",
+//             gap: "8px",
+//             backgroundColor: "rgba(255, 255, 255, 0.15)",
+//             color: "white",
+//             border: "1px solid white",
+//             borderRadius: "8px",
+//             padding: "8px 16px",
+//             cursor: "pointer",
+//             fontSize: "16px",
+//           }}
+//         >
+//           <FiLogOut size={20} />
+//           <span>Logout</span>
+//         </button>
+//       </div>
+//     );
+//   }
+
+//   // No service items case
+//   if (!serviceItemsLoading && serviceItems.length === 0) {
+//     return (
+//       <div className="mainmain-container" style={{
+//         backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+//         minHeight: "100vh",
+//         display: "flex",
+//         flexDirection: "column",
+//         justifyContent: "center",
+//         alignItems: "center",
+//         padding: "20px",
+//         textAlign: "center"
+//       }}>
+//         <div className="logo">
+//           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" style={{ marginBottom: "20px" }} />
+//         </div>
+        
+//         <div style={{
+//           backgroundColor: "rgba(255, 255, 255, 0.1)",
+//           padding: "40px",
+//           borderRadius: "12px",
+//           maxWidth: "500px",
+//           width: "100%"
+//         }}>
+//           <h2 style={{ color: "white", marginBottom: "20px", fontSize: "24px" }}>
+//             No Machines Assigned
+//           </h2>
+//           <p style={{ color: "white", marginBottom: "30px", fontSize: "16px", lineHeight: "1.5" }}>
+//             You don't have any machines assigned to your account yet.
+//           </p>
+          
+//           <button
+//             onClick={handleLogout}
+//             style={{
+//               padding: "12px 24px",
+//               backgroundColor: "rgba(255, 255, 255, 0.2)",
+//               color: "white",
+//               border: "1px solid rgba(255, 255, 255, 0.3)",
+//               borderRadius: "6px",
+//               cursor: "pointer",
+//               fontSize: "16px",
+//               display: "flex",
+//               alignItems: "center",
+//               gap: "8px",
+//               margin: "0 auto"
+//             }}
+//           >
+//             <FiLogOut size={18} />
+//             Logout
+//           </button>
+//         </div>
+        
+//         <div className="footer-logo" style={{ marginTop: "40px" }}>
+//           <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div 
+//       className="mainmain-container" 
+//       style={{
+//         backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+//         touchAction: "pan-y",
+//       }}
+//       ref={containerRef}
+//       onTouchStart={handleTouchStart}
+//       onTouchMove={handleTouchMove}
+//       onTouchEnd={handleTouchEnd}
+//       onMouseDown={handleMouseDown}
+//     >
+//       {/* Pull-to-refresh indicator */}
+//       <div 
+//         className="screen1-pull-refresh"
+//         style={{
+//           height: `${pullToRefresh.pullDistance}px`,
+//           opacity: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 1 : 0,
+//           transform: `translateY(${pullToRefresh.isPulling ? 0 : -30}px)`,
+//           transition: pullToRefresh.isPulling ? 'none' : 'all 0.3s ease',
+//         }}
+//       >
+//         <div className="screen1-refresh-content">
+//           {pullToRefresh.isRefreshing ? (
+//             <>
+//               <div className="screen1-refresh-spinner"></div>
+//               <span>Sending refresh command...</span>
+//             </>
+//           ) : (
+//             <>
+//               <FiRefreshCw 
+//                 size={24} 
+//                 style={{
+//                   transform: `rotate(${indicatorRotation}deg)`,
+//                   transition: 'transform 0.2s ease',
+//                   opacity: indicatorOpacity,
+//                 }}
+//               />
+//               <span>
+//                 {pullToRefresh.pullDistance >= PULL_THRESHOLD 
+//                   ? "Release to refresh" 
+//                   : "Pull down to refresh"}
+//               </span>
+//             </>
+//           )}
+//         </div>
+//       </div>
+
+//       <div className="main-container">
+//         {/* Refresh status toast */}
+//         {refreshStatus.message && (
+//           <div className={`screen1-refresh-status ${refreshStatus.success ? 'success' : 'error'}`}>
+//             {refreshStatus.message}
+//           </div>
+//         )}
+
+//         {/* Header: Service Dropdown + Power Button Row */}
+//         <div className="header-controls-row">
+//           {/* Service Dropdown */}
+//           <div className="service-dropdown-wrapper">
+//             <div className="service-dropdown-container" style={{ position: "relative" }}>
+//               <div
+//                 className="service-dropdown-header"
+//                 onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+//                 style={{ position: "relative", cursor: "pointer" }}
+//               >
+//                 <span>
+//                   {selectedService ? selectedService.service_item_name : "Select Service"}
+//                 </span>
+
+//                 {/* Global Alarm Badge */}
+//                 {dropdownAlarmCount > 0 && (
+//                   <span
+//                     style={{
+//                       position: "absolute",
+//                       top: "0px",
+//                       right: "28px",
+//                       backgroundColor: "red",
+//                       color: "white",
+//                       borderRadius: "50%",
+//                       width: "18px",
+//                       height: "18px",
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       fontSize: "10px",
+//                       fontWeight: "bold",
+//                     }}
+//                   >
+//                     {dropdownAlarmCount}
+//                   </span>
+//                 )}
+
+//                 <FiChevronDown size={18} />
+//               </div>
+//               {showServiceDropdown && (
+//                 <div className="service-dropdown-list">
+//                   {serviceItems.map((item) => {
+//                     const displayName = serviceItemsList.find(i => i.service_item_id === item.service_item)?.service_item_name || item.service_item;
+//                     return (
+//                       <div
+//                         key={item.service_item}
+//                         className="service-dropdown-item"
+//                         onClick={() => {
+//                           const fullItem = serviceItemsList.find(i => i.service_item_id === item.service_item);
+//                           handleServiceSelect(fullItem || { service_item_id: item.service_item, service_item_name: displayName });
+//                         }}
+//                       >
+//                         {displayName}
+//                       </div>
+//                     );
+//                   })}
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           {/* Power Button */}
+//           <div style={{ position: "relative" }}>
+//             <button
+//               className={`screen1-power-button ${processing.status ? "processing" : ""}`}
+//               onClick={handlePowerToggle}
+//               disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+//               style={{
+//                 backgroundColor: !sensorData.isOnline
+//                   ? "#808080"
+//                   : sensorData.powerStatus == "on"
+//                   ? "#5adb5eff"
+//                   : "#c80000f5",
+//                 display: "flex",
+//                 alignItems: "center",
+//                 justifyContent: "center",
+//                 border: "none",
+//                 height: "48px",
+//                 width: "48px",
+//                 borderRadius: "20px",
+//                 padding: "8px",
+//                 cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+//                 fontWeight: "bold",
+//                 opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+//               }}
+//             >
+//               <FiPower size={24} color="#fff" />
+//               {processing.status && <span className="screen1-processing-indicator"></span>}
+//             </button>
+//             {sensorData.errorFlag == "1" && <div className="error-indicator" />}
+//           </div>
+//         </div>
+
+//         {/* Logo below the row */}
+//         <div className="logo-container">
+//           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" />
+//         </div>
+
+      
+//         {/* Temperature Dial — dimmed when offline */}
+//         <div style={{ pointerEvents: "none", opacity: sensorData.isOnline ? 1 : 0.35 }}>
+//           <TemperatureDial
+//             sensorData={sensorData}
+//             onTempChange={handleTempChange}
+//             fanSpeed={fanPosition}
+//             initialTemperature={sensorData.temperature ?? 25}
+//           />
+//         </div>
+//           {/* Offline banner between header and temperature dial */}
+//         {!sensorData.isOnline && (
+//           <div
+//             style={{
+//               // backgroundColor: "rgba(0,0,0,0.55)",
+//               // color: "#fff",
+//                    color: "rgba(0,0,0,0.55)",
+//               backgroundColor: "#fff",
+//               textAlign: "center",
+//               padding: "10px 20px",
+//               borderRadius: "10px",
+//               margin: "12px 20px 4px 20px",
+//               fontSize: "14px",
+//               fontWeight: "bold",
+//               letterSpacing: "0.5px",
+//               display: "flex",
+//               alignItems: "center",
+//               justifyContent: "center",
+//               gap: "8px",
+//             }}
+//           >
+//             <span>📴</span>
+//             <span>System is Offline</span>
+//           </div>
+//         )}
+
+//         {/* Status messages */}
+//         {processing.status && (
+//           <div className="screen1-processing-message">{processing.message}</div>
+//         )}
+
+//         {sensorData.errorFlag == "1" && (
+//           <div className="screen1-error-message">⚠️ System Error Detected</div>
+//         )}
+
+//         {sensorData.hvacBusy == "1" && !processing.status && (
+//           <div className="screen1-busy-message">⏳ System is currently busy</div>
+//         )}
+
+//         {!serviceItemPermissions?.can_control_equipment && (
+//           <div className="warning-message">⚠️ Control permissions not available</div>
+//         )}
+
+
+//         {/* Environment Info */}
+//         <div className="env-info">
+//           <div className="env-item">
+//             <FiSun className="env-icon" size={20} color="#FFFFFF" />
+//             <div className="env-value">
+//               {sensorData.isOnline ? `${formatTemp(sensorData.outsideTemp)}°C` : "—"}
+//             </div>
+//             <div className="env-label">Outside Temp</div>
+//           </div>
+//           <div className="env-item">
+//             <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
+//             <div className="env-value">
+//               {sensorData.isOnline ? `${formatTemp(sensorData.roomTemp)}°C` : "—"}
+//             </div>
+//             <div className="env-label">Room Temp</div>
+//           </div>
+//           <div className="env-item">
+//             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
+//             <div className="env-value">
+//               {sensorData.isOnline ? `${formatTemp(sensorData.humidity)}%` : "—"}
+//             </div>
+//             <div className="env-label">Humidity</div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Footer */}
+//       <div className="footer-container">
+//         {/* ==================== MODES SECTION ==================== */}
+//         <div className="modes-section-in-footer">
+//           <h3 className="modes-heading">Modes</h3>
+//           <div className="modes-row">
+//             {Object.values(MODE_MAP).map((mode) => (
+//               <button
+//                 key={mode}
+//                 onClick={() => {
+//                   console.log("🖱️ Mode button clicked in footer:", mode);
+//                   handleModeChange(mode);
+//                 }}
+//                 className={`modes-button ${
+//                   currentModeDescription === mode ? "modes-button-selected" : ""
+//                 }`}
+//                 disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+//                 style={{
+//                   opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+//                   cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+//                 }}
+//               >
+//                 <span
+//                   className={`modes-text ${
+//                     currentModeDescription === mode ? "modes-text-selected" : ""
+//                   }`}
+//                 >
+//                   {mode}
+//                 </span>
+//               </button>
+//             ))}
+//           </div>
+//         </div>
+
+//         {/* ==================== FAN SPEED SECTION (BUTTONS STYLE) ==================== */}
+//         <div className="fan-speed-section-in-footer">
+//           <h3 className="fan-speed-heading">Fan Speed</h3>
+//           <div className="fan-speed-buttons-row">
+//             {FAN_LABELS.map((label, index) => (
+//               <button
+//                 key={label}
+//                 onClick={() => {
+//                   console.log(`🖱️ Fan speed button clicked in footer: ${label} (index: ${index})`);
+//                   handleFanClick(index);
+//                 }}
+//                 className={`fan-speed-button ${
+//                   fanPosition === index ? "fan-speed-button-selected" : ""
+//                 }`}
+//                 disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+//                 style={{
+//                   opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+//                   cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+//                 }}
+//               >
+//                 <span
+//                   className={`fan-speed-text ${
+//                     fanPosition === index ? "fan-speed-text-selected" : ""
+//                   }`}
+//                 >
+//                   {label}
+//                 </span>
+//               </button>
+//             ))}
+//           </div>
+//         </div>
+
+//         {/* Control Buttons */}
+//         <div className="control-buttons">
+//           <button
+//             className={`control-btn ${!hasValidPCBSerial ? 'screen1-disabled-btn' : ''}`}
+//             // onClick={() => {
+//             //   console.log("🔘 Modes control button clicked");
+//             //   if (hasValidPCBSerial && serviceItemPermissions?.can_control_equipment) {
+//             //     console.log("📱 Navigating to delegate-machinescreen2 with:", {
+//             //       sensorData,
+//             //       selectedService,
+//             //       userId,
+//             //       company_id
+//             //     });
+//             //     navigate("/delegate-machinescreen2", { 
+//             //       state: { sensorData, selectedService, userId, company_id }
+//             //     });
+//             //   } else {
+//             //     console.log("⚠️ Navigation blocked - Missing permissions or PCB:", {
+//             //       hasPCB: hasValidPCBSerial,
+//             //       canControl: serviceItemPermissions?.can_control_equipment
+//             //     });
+//             //   }
+//             // }}
+//             disabled={!hasValidPCBSerial || !serviceItemPermissions?.can_control_equipment}
+//             title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
+//           >
+//             <FiWind size={20} />
+//             <span>Modes</span>
+//             <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("🔔 Alarms button clicked. Error count:", errorCount);
+//               navigate("/Delegate-alarms", {
+//                 state: {
+//                   alarmData: {
+//                     alarmOccurred: sensorData.alarmOccurred,
+//                     errorCount: errorCount,
+//                     deviceId: sensorData.deviceId,
+//                   },
+//                   userId: userId,
+//                   company_id: company_id
+//                 },
+//               });
+//             }}
+//           >
+//             <div style={{ position: "relative" }}>
+//               <FiClock size={20} />
+//               {errorCount > 0 && (
+//                 <span
+//                   style={{
+//                     position: "absolute",
+//                     top: "-8px",
+//                     right: "-23px",
+//                     backgroundColor: "red",
+//                     color: "white",
+//                     borderRadius: "50%",
+//                     width: "18px",
+//                     height: "18px",
+//                     display: "flex",
+//                     alignItems: "center",
+//                     justifyContent: "center",
+//                     fontSize: "10px",
+//                     fontWeight: "bold",
+//                   }}
+//                 >
+//                   {errorCount}
+//                 </span>
+//               )}
+//             </div>
+//             <span>Alarms</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("⏰ Timers button clicked");
+//               handleNavigation("/timers");
+//             }}
+//             disabled={!serviceItemPermissions?.can_control_equipment}
+//           >
+//             <FiWatch size={20} />
+//             <span>Timers</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("⚙️ Settings button clicked");
+//               handleNavigation("/settings");
+//             }}
+//           >
+//             <FiSettings size={20} />
+//             <span>Settings</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("🛠️ Services button clicked - navigating to delegate-home");
+//               handleNavigation("/delegate-home");
+//             }}
+//           >
+//             <FiZap size={20} />
+//             <span>Services</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("🚪 Logout button clicked");
+//               handleLogout();
+//             }}
+//           >
+//             <FiLogOut size={20} />
+//             <span>Logout</span>
+//           </button>
+//         </div>
+
+//         <div className="footer-logo">
+//           <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default DelegateScreen1;
+
+
+
+// import React, { useState, useEffect, useContext, useRef } from "react";
+// import axios from "axios";
+// import {
+//   FiArrowLeft,
+//   FiPower,
+//   FiWind,
+//   FiClock,
+//   FiWatch,
+//   FiSettings,
+//   FiZap,
+//   FiLogOut,
+//   FiSun,
+//   FiDroplet,
+//   FiThermometer,
+//   FiRefreshCw,
+//   FiChevronDown,
+// } from "react-icons/fi";
+// import { FaFan } from "react-icons/fa";
+// import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png";
+// import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
+// import { useNavigate } from "react-router-dom"; 
+// import { AuthContext } from "../../Components/AuthContext/AuthContext";
+// import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial_delegate_screen";
+// import baseURL from "../../Components/ApiUrl/Apiurl";
+// import { useDelegateServiceItems } from "../../Components/AuthContext/DelegateServiceItemContext";
+// import './DelegateMachineScreens.css'
+
+// // Constants
+// const MODE_MAP = {
+//   1: "IDEC",
+//   2: "Auto",
+//   3: "Fan",
+//   4: "Indirect",
+//   5: "Direct",
+// };
+
+// const MODE_CODE_MAP = {
+//   IDEC: 1,
+//   Auto: 2,
+//   Fan: 3,
+//   Indirect: 4,
+//   Direct: 5,
+// };
+
+// const FAN_SPEEDS = ["0", "1", "2"]; // 0=High, 1=Medium, 2=Low
+// const FAN_LABELS = ["High", "Medium", "Low"];
+
+// // Pull-to-refresh configuration
+// const PULL_THRESHOLD = 80;
+// const MAX_PULL = 120;
+
+// // Progressive messages every 10s
+// const PROCESSING_MESSAGES = [
+//   "Sending command...",
+//   "Almost done, please wait...",
+//   "Waiting for device response...",
+// ];
+
+// // Helper functions
+// const formatTemp = (temp) => {
+//   if (temp == null) return "0.0";
+//   const num = parseFloat(temp);
+//   return isNaN(num) ? "0.0" : num.toFixed(1);
+// };
+
+// // Function to send HVAC=3 command
+// const sendRefreshCommand = async (pcbSerialNumber, sensorData) => {
+//   const payload = {
+//     Header: "0xAA",
+//     DI: pcbSerialNumber || "2411GM-0102",
+//     MD: sensorData.mode || "3",
+//     FS: sensorData.fanSpeed || "0",
+//     SRT: sensorData.temperature || 25,
+//     HVAC: "3",
+//     Footer: "0xZX",
+//   };
+
+//   console.group("🔁 REFRESH COMMAND");
+//   console.log("📦 Payload:", payload);
+//   console.groupEnd();
+
+//   try {
+//     const response = await fetch("https://mdata.air2o.net/controllers/", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(payload),
+//     });
+
+//     let responseBody;
+//     try {
+//       responseBody = await response.json();
+//     } catch {
+//       responseBody = await response.text();
+//     }
+
+//     if (!response.ok) {
+//       return {
+//         success: false,
+//         error: responseBody?.error || responseBody?.message || "Command rejected by server",
+//         status: response.status,
+//       };
+//     }
+
+//     return { success: true, data: responseBody };
+//   } catch (error) {
+//     return { success: false, error: "Network error or server unreachable" };
+//   }
+// };
+
+// const DelegateScreen1 = () => {
+//   const { user, logout } = useContext(AuthContext);
+//   const { 
+//     selectedServiceItem,
+//     getSelectedServiceDetails,
+//     serviceItemPermissions,
+//     serviceItems,
+//     updateSelectedServiceItem,
+//     loading: serviceItemsLoading 
+//   } = useDelegateServiceItems();
+  
+//   const userId = user?.delegate_id;
+//   const company_id = user?.company_id;
+//   const navigate = useNavigate();
+
+//   // Refs
+//   const activePCBRef = useRef(null);
+//   const fetchIntervalRef = useRef(null);
+//   const processingTimerRef = useRef(null);
+//   const processingMsgIndexRef = useRef(0);
+//   const hardStopTimerRef = useRef(null);
+//   const processingStartTimeRef = useRef(null);
+//   const touchStartY = useRef(0);
+//   const containerRef = useRef(null);
+
+//   // Pull-to-refresh state
+//   const [pullToRefresh, setPullToRefresh] = useState({
+//     isPulling: false,
+//     pullDistance: 0,
+//     isRefreshing: false,
+//   });
+  
+//   // State management
+//   const [selectedService, setSelectedService] = useState(null);
+//   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+//   const [processing, setProcessing] = useState({ status: false, message: "" });
+//   const [errorCount, setErrorCount] = useState(0);
+//   const [loading, setLoading] = useState(true);
+//   const [serviceItemsList, setServiceItemsList] = useState([]);
+//   const [manualRefresh, setManualRefresh] = useState(false);
+//   const [refreshStatus, setRefreshStatus] = useState({ 
+//     sending: false, 
+//     success: false, 
+//     message: "" 
+//   });
+//   const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
+  
+//   // Service switching states
+//   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+//   const [pendingService, setPendingService] = useState(null);
+//   const [switchingService, setSwitchingService] = useState(false);
+//   const [loadingMessage, setLoadingMessage] = useState("");
+//   const [switchNotification, setSwitchNotification] = useState({ show: false, message: "" });
+  
+//   const [sensorData, setSensorData] = useState({
+//     outsideTemp: 0,
+//     humidity: 0,
+//     roomTemp: 0,
+//     fanSpeed: "0",
+//     temperature: 25,
+//     powerStatus: "off",
+//     mode: "3",
+//     errorFlag: "0",
+//     hvacBusy: "0",
+//     deviceId: "",
+//     alarmOccurred: "0",
+//     isOnline: true,
+//   });
+
+//   // Display data for local changes
+//   const [displayData, setDisplayData] = useState({
+//     fanSpeed: "0",
+//     temperature: 25,
+//     mode: "3",
+//     powerStatus: "off",
+//   });
+
+//   // Sync displayData with sensorData
+//   useEffect(() => {
+//     setDisplayData({
+//       fanSpeed: sensorData.fanSpeed,
+//       temperature: sensorData.temperature,
+//       mode: sensorData.mode,
+//       powerStatus: sensorData.powerStatus,
+//     });
+//   }, [sensorData]);
+
+//   // Check if selected service has PCB serial number
+//   const hasValidPCBSerial = selectedService && selectedService.pcb_serial_number;
+  
+//   // Get current mode description
+//   const currentModeDescription = MODE_MAP[displayData.mode] || "Fan";
+  
+//   // Get fan position
+//   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
+
+//   // Fetch service items with names from API
+//   useEffect(() => {
+//     if (user?.company_id && user?.delegate_id) {
+//       axios.get(`${baseURL}/service-items/?user_id=${user.delegate_id}&company_id=${user.company_id}`)
+//         .then((response) => {
+//           try {
+//             const data = Array.isArray(response.data) ? response.data : 
+//                         (response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
+//             setServiceItemsList(data);
+//           } catch (error) {
+//             console.error('Error processing service items data:', error);
+//             setServiceItemsList([]);
+//           }
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching service items:', error);
+//           setServiceItemsList([]);
+//         });
+//     }
+//   }, [user?.company_id, user?.delegate_id]);
+
+//   // Get the complete service details when selectedServiceItem changes
+//   useEffect(() => {
+//     if (!serviceItemsLoading && selectedServiceItem) {
+//       const serviceDetails = getSelectedServiceDetails();
+//       console.log("Selected Service Details:", serviceDetails);
+//       setSelectedService(serviceDetails);
+//       if (serviceDetails?.pcb_serial_number) {
+//         activePCBRef.current = serviceDetails.pcb_serial_number;
+//       }
+//     }
+//   }, [selectedServiceItem, serviceItemsLoading, getSelectedServiceDetails]);
+
+//   // Fetch all alarms for dropdown badge
+//   const fetchAllAlarms = async () => {
+//     try {
+//       const response = await fetch(
+//         `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+//       );
+
+//       if (!response.ok) throw new Error("Failed to fetch alarms");
+
+//       const data = await response.json();
+
+//       if (data.status !== "success" || !data.data) return;
+
+//       const alarmCount = data.data.reduce((count, item) => {
+//         const val = item.alarm_occurred?.value;
+//         if (val && val !== "0") {
+//           return count + Number(val);
+//         }
+//         return count;
+//       }, 0);
+
+//       setDropdownAlarmCount(alarmCount);
+//     } catch (err) {
+//       console.error("Alarm fetch error:", err);
+//     }
+//   };
+
+//   // Fetch sensor data
+//   const fetchData = async () => {
+//     const pcbSerialNumber = activePCBRef.current;
+//     if (!pcbSerialNumber) return;
+
+//     try {
+//       const response = await fetch(
+//         `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
+//       );
+
+//       if (!response.ok) throw new Error("Network response was not ok");
+
+//       const data = await response.json();
+
+//       if (data?.status !== "success" || !data?.data) return;
+//       if (activePCBRef.current !== pcbSerialNumber) return;
+
+//       const deviceData = data.data;
+//       const isOnline = deviceData.is_online;
+
+//       setSensorData({
+//         outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+//         humidity: isOnline ? deviceData.room_humidity?.value : null,
+//         roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+//         fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+//         temperature: isOnline ? deviceData.set_temperature?.value : 25,
+//         powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+//         mode: deviceData.mode?.value || "3",
+//         errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+//         hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+//         deviceId: pcbSerialNumber,
+//         alarmOccurred: deviceData.alarm_occurred?.value,
+//         isOnline: isOnline,
+//       });
+
+//       const alarmValue = deviceData.alarm_occurred?.value;
+//       setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+//       setLoading(false);
+//       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+//       setManualRefresh(false);
+
+//       if (deviceData.hvac_busy?.value == "0") {
+//         clearProcessingIfDone();
+//       }
+//     } catch (error) {
+//       console.error("🔥 Fetch Error:", error);
+//       setLoading(false);
+//       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+//       setManualRefresh(false);
+//     }
+//   };
+
+//   // Start polling
+//   useEffect(() => {
+//     if (!activePCBRef.current) return;
+
+//     if (fetchIntervalRef.current) {
+//       clearInterval(fetchIntervalRef.current);
+//       fetchIntervalRef.current = null;
+//     }
+
+//     fetchData();
+//     fetchAllAlarms();
+
+//     fetchIntervalRef.current = setInterval(() => {
+//       fetchData();
+//       fetchAllAlarms();
+//     }, 20000);
+
+//     return () => {
+//       if (fetchIntervalRef.current) {
+//         clearInterval(fetchIntervalRef.current);
+//         fetchIntervalRef.current = null;
+//       }
+//     };
+//   }, [activePCBRef.current]);
+
+//   // Update active PCB ref when selected service changes
+//   useEffect(() => {
+//     if (selectedService?.pcb_serial_number) {
+//       console.log("🔄 Switching active PCB to:", selectedService.pcb_serial_number);
+//       activePCBRef.current = selectedService.pcb_serial_number;
+//     }
+//   }, [selectedService?.pcb_serial_number]);
+
+//   // Processing message cycle functions
+//   const MIN_PROCESSING_TIME = 5000;
+  
+//   const startProcessingCycle = () => {
+//     processingMsgIndexRef.current = 0;
+//     processingStartTimeRef.current = Date.now();
+//     setProcessing({ status: true, message: PROCESSING_MESSAGES[0] });
+
+//     processingTimerRef.current = setInterval(() => {
+//       processingMsgIndexRef.current += 1;
+//       const nextMsg = PROCESSING_MESSAGES[processingMsgIndexRef.current];
+//       if (nextMsg) {
+//         setProcessing({ status: true, message: nextMsg });
+//       }
+//     }, 10000);
+
+//     hardStopTimerRef.current = setTimeout(() => {
+//       stopProcessing();
+//     }, 25000);
+//   };
+
+//   const stopProcessing = () => {
+//     if (processingTimerRef.current) {
+//       clearInterval(processingTimerRef.current);
+//       processingTimerRef.current = null;
+//     }
+//     if (hardStopTimerRef.current) {
+//       clearTimeout(hardStopTimerRef.current);
+//       hardStopTimerRef.current = null;
+//     }
+//     setProcessing({ status: false, message: "" });
+//   };
+
+//   const clearProcessingIfDone = () => {
+//     if (processingTimerRef.current || hardStopTimerRef.current) {
+//       const elapsed = Date.now() - (processingStartTimeRef.current || 0);
+//       if (elapsed >= MIN_PROCESSING_TIME) {
+//         stopProcessing();
+//       }
+//     }
+//   };
+
+//   // Cleanup timers
+//   useEffect(() => {
+//     return () => {
+//       if (processingTimerRef.current) clearInterval(processingTimerRef.current);
+//       if (hardStopTimerRef.current) clearTimeout(hardStopTimerRef.current);
+//     };
+//   }, []);
+
+//   // Send mode command
+//   const sendModeCommand = async (modeCode, modeName) => {
+//     console.group("🎛️ MODE COMMAND SENT");
+//     console.log("📱 Mode clicked:", modeName);
+//     console.log("🔢 Mode code:", modeCode);
+//     console.log("💻 Current display data:", {
+//       mode: displayData.mode,
+//       fanSpeed: displayData.fanSpeed,
+//       temperature: displayData.temperature,
+//       powerStatus: displayData.powerStatus
+//     });
+    
+//     try {
+//       startProcessingCycle();
+      
+//       const payload = {
+//         Header: "0xAA",
+//         DI: selectedService?.pcb_serial_number || "2411GM-0102",
+//         MD: parseInt(modeCode) || 3,
+//         FS: parseInt(displayData.fanSpeed) || 0,
+//         SRT: parseInt(displayData.temperature) || 25,
+//         HVAC: displayData.powerStatus === "on" ? "1" : "0",
+//         Footer: "0xZX",
+//       };
+      
+//       console.log("📦 Mode command payload:", payload);
+      
+//       const response = await fetch("https://mdata.air2o.net/controllers/", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(payload),
+//       });
+      
+//       if (!response.ok) {
+//         console.error("❌ Mode command failed with status:", response.status);
+//         stopProcessing();
+//         throw new Error("Failed to send command");
+//       }
+      
+//       console.log("✅ Mode command sent successfully:", modeName);
+//       console.groupEnd();
+//     } catch (error) {
+//       console.error("❌ Error sending mode command:", error);
+//       console.groupEnd();
+//       stopProcessing();
+//     }
+//   };
+
+//   // Send fan command
+//   const sendFanCommand = async (fanSpeed) => {
+//     const fanSpeedLabel = FAN_LABELS[parseInt(fanSpeed)] || fanSpeed;
+//     console.group("🌀 FAN SPEED COMMAND SENT");
+//     console.log("📱 Fan speed clicked:", fanSpeedLabel);
+//     console.log("🔢 Fan speed code:", fanSpeed);
+//     console.log("💻 Current display data:", {
+//       mode: displayData.mode,
+//       fanSpeed: displayData.fanSpeed,
+//       temperature: displayData.temperature,
+//       powerStatus: displayData.powerStatus
+//     });
+    
+//     try {
+//       startProcessingCycle();
+      
+//       const payload = {
+//         Header: "0xAA",
+//         DI: selectedService?.pcb_serial_number || "2411GM-0102",
+//         MD: parseInt(displayData.mode) || 3,
+//         FS: parseInt(fanSpeed) || 0,
+//         SRT: parseInt(displayData.temperature) || 25,
+//         HVAC: displayData.powerStatus === "on" ? "1" : "0",
+//         Footer: "0xZX",
+//       };
+      
+//       console.log("📦 Fan command payload:", payload);
+      
+//       const response = await fetch("https://mdata.air2o.net/controllers/", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(payload),
+//       });
+      
+//       if (!response.ok) {
+//         console.error("❌ Fan command failed with status:", response.status);
+//         stopProcessing();
+//         throw new Error("Failed to send command");
+//       }
+      
+//       console.log("✅ Fan command sent successfully:", fanSpeedLabel);
+//       console.groupEnd();
+//     } catch (error) {
+//       console.error("❌ Error sending fan command:", error);
+//       console.groupEnd();
+//       stopProcessing();
+//     }
+//   };
+
+//   // Handle mode change
+//   const handleModeChange = async (newMode) => {
+//     console.log("🔘 Mode button clicked:", newMode);
+//     console.log("📊 Current state before mode change:", {
+//       processing: processing.status,
+//       isOnline: sensorData.isOnline,
+//       canControl: serviceItemPermissions?.can_control_equipment,
+//       powerStatus: displayData.powerStatus
+//     });
+    
+//     if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
+//       console.log("⚠️ Mode change blocked - Conditions not met:", {
+//         processingActive: processing.status,
+//         offline: !sensorData.isOnline,
+//         noControl: !serviceItemPermissions?.can_control_equipment
+//       });
+//       return;
+//     }
+    
+//     const newModeCode = MODE_CODE_MAP[newMode] || 1;
+//     console.log("🔄 Updating display mode from", displayData.mode, "to", newModeCode);
+//     setDisplayData((prev) => ({ ...prev, mode: newModeCode.toString() }));
+    
+//     if (displayData.powerStatus === "on") {
+//       console.log("⚡ Power is ON - Sending mode command to device");
+//       await sendModeCommand(newModeCode.toString(), newMode);
+//     } else {
+//       console.log("💤 Power is OFF - Mode saved locally, will apply when power turns on");
+//     }
+//   };
+
+//   // Handle fan speed change
+//   const handleFanSpeedChange = async (newPosition) => {
+//     const newSpeed = FAN_SPEEDS[newPosition];
+//     const newSpeedLabel = FAN_LABELS[newPosition];
+    
+//     console.log("🌀 Fan speed button clicked:", newSpeedLabel);
+//     console.log("📊 Current state before fan change:", {
+//       processing: processing.status,
+//       isOnline: sensorData.isOnline,
+//       canControl: serviceItemPermissions?.can_control_equipment,
+//       powerStatus: displayData.powerStatus,
+//       currentSpeed: FAN_LABELS[fanPosition]
+//     });
+    
+//     if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
+//       console.log("⚠️ Fan change blocked - Conditions not met:", {
+//         processingActive: processing.status,
+//         offline: !sensorData.isOnline,
+//         noControl: !serviceItemPermissions?.can_control_equipment
+//       });
+//       return;
+//     }
+    
+//     console.log("🔄 Updating display fan speed from", displayData.fanSpeed, "to", newSpeed);
+//     setDisplayData((prev) => ({ ...prev, fanSpeed: newSpeed }));
+    
+//     if (displayData.powerStatus === "on") {
+//       console.log("⚡ Power is ON - Sending fan command to device");
+//       await sendFanCommand(newSpeed);
+//     } else {
+//       console.log(`💤 Power is OFF - Fan speed set to ${newSpeedLabel} (will apply when power turns on)`);
+//     }
+//   };
+
+//   // Handle fan click on button
+//   const handleFanClick = (index) => {
+//     console.log("🖱️ Fan button clicked at index:", index, "Label:", FAN_LABELS[index]);
+//     handleFanSpeedChange(index);
+//   };
+
+//   // Send refresh to controller
+//   const sendRefreshToController = async () => {
+//     if (!selectedService?.pcb_serial_number) {
+//       setRefreshStatus({ sending: false, success: false, message: "No device selected" });
+//       return { success: false };
+//     }
+
+//     if (!serviceItemPermissions?.can_control_equipment) {
+//       setRefreshStatus({ sending: false, success: false, message: "Control permissions not available" });
+//       return { success: false };
+//     }
+
+//     try {
+//       const result = await sendRefreshCommand(selectedService.pcb_serial_number, sensorData);
+      
+//       if (result?.success) {
+//         setRefreshStatus({ sending: false, success: true, message: "Refresh sent successfully" });
+//         setTimeout(() => setRefreshStatus({ sending: false, success: false, message: "" }), 3000);
+//         return result;
+//       }
+      
+//       const msg = result?.error || result?.message || "Failed to send refresh command";
+//       setRefreshStatus({ sending: false, success: false, message: msg });
+//       setTimeout(() => setRefreshStatus({ sending: false, success: false, message: "" }), 2000);
+//       return result;
+//     } catch (error) {
+//       setRefreshStatus({ sending: false, success: false, message: error.message || "Unexpected error" });
+//       return { success: false };
+//     }
+//   };
+
+//   // Handle power toggle
+//   const handlePowerToggle = async () => {
+//     console.log("🔘 Power button clicked. Current status:", sensorData.powerStatus);
+    
+//     if (!selectedService?.pcb_serial_number) {
+//       console.log("❌ No PCB serial number available");
+//       return;
+//     }
+    
+//     if (processing.status || sensorData.hvacBusy == "1" || !serviceItemPermissions?.can_control_equipment) {
+//       const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
+//       console.log("⚠️ Power toggle blocked:", msg);
+//       setProcessing({ status: true, message: msg });
+//       return;
+//     }
+
+//     startProcessingCycle();
+
+//     const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+//     const isShutdown = sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
+    
+//     console.log("⚡ Sending power command. New HVAC value:", newHvacValue);
+
+//     const payload = {
+//       Header: "0xAA",
+//       DI: selectedService.pcb_serial_number,
+//       MD: isShutdown ? "3" : sensorData.mode,
+//       FS: isShutdown ? "0" : sensorData.fanSpeed,
+//       SRT: sensorData.temperature,
+//       HVAC: newHvacValue,
+//       Footer: "0xZX",
+//     };
+
+//     try {
+//       const response = await fetch("https://mdata.air2o.net/controllers/", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(payload),
+//       });
+
+//       if (!response.ok) {
+//         console.error("❌ API error:", response.status);
+//         stopProcessing();
+//         throw new Error("Failed to send command");
+//       }
+
+//       const result = await response.text();
+//       console.log("✅ Power command sent:", result);
+//     } catch (error) {
+//       console.error("Error sending power command:", error);
+//       stopProcessing();
+//     }
+//   };
+
+//   // Handle temp change
+//   const handleTempChange = (newTemp) => {
+//     console.log("🌡️ Temperature changed to:", newTemp);
+//   };
+
+//   // Pull-to-refresh handlers
+//   const handleTouchStart = (e) => {
+//     touchStartY.current = e.touches[0].clientY;
+//   };
+
+//   const handleTouchMove = (e) => {
+//     if (containerRef.current && containerRef.current.scrollTop > 0) return;
+    
+//     const pullDistance = e.touches[0].clientY - touchStartY.current;
+//     if (pullDistance > 0) {
+//       e.preventDefault();
+//       setPullToRefresh({
+//         isPulling: true,
+//         pullDistance: Math.min(pullDistance, MAX_PULL),
+//         isRefreshing: false,
+//       });
+//     }
+//   };
+
+//   const handleTouchEnd = async () => {
+//     if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+//       await sendRefreshToController();
+//       setManualRefresh(true);
+//     } else {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+//     }
+//   };
+
+//   const handleMouseDown = (e) => {
+//     touchStartY.current = e.clientY;
+//     document.addEventListener("mousemove", handleMouseMove);
+//     document.addEventListener("mouseup", handleMouseUp);
+//   };
+
+//   const handleMouseMove = (e) => {
+//     if (containerRef.current && containerRef.current.scrollTop > 0) return;
+    
+//     const pullDistance = e.clientY - touchStartY.current;
+//     if (pullDistance > 0) {
+//       e.preventDefault();
+//       setPullToRefresh({
+//         isPulling: true,
+//         pullDistance: Math.min(pullDistance, MAX_PULL),
+//         isRefreshing: false,
+//       });
+//     }
+//   };
+
+//   const handleMouseUp = async () => {
+//     document.removeEventListener("mousemove", handleMouseMove);
+//     document.removeEventListener("mouseup", handleMouseUp);
+    
+//     if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+//       await sendRefreshToController();
+//       setManualRefresh(true);
+//     } else {
+//       setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+//     }
+//   };
+
+//   const handleLogout = () => {
+//     console.log("🚪 User logging out");
+//     logout();
+//     navigate("/");
+//   };
+
+//   // Updated handleServiceSelect with confirmation
+//   const handleServiceSelect = (item) => {
+//     // Don't allow switching to the same service
+//     if (selectedService?.service_item_id === item.service_item_id) {
+//       setShowServiceDropdown(false);
+//       return;
+//     }
+    
+//     // Show confirmation dialog before switching
+//     setPendingService(item);
+//     setShowConfirmDialog(true);
+//     setShowServiceDropdown(false);
+//   };
+
+//   // Confirm service switch
+//   const confirmServiceSwitch = () => {
+//     if (!pendingService) return;
+    
+//     setShowConfirmDialog(false);
+//     setSwitchingService(true);
+//     setLoadingMessage(`Switching to ${pendingService.service_item_name}...`);
+    
+//     // Update the service after a short delay for UX
+//     setTimeout(() => {
+//       setSelectedService(pendingService);
+//       activePCBRef.current = pendingService.pcb_serial_number;
+//       updateSelectedServiceItem(pendingService.service_item_id);
+      
+//       // Show success notification
+//       setSwitchNotification({ 
+//         show: true, 
+//         message: `Successfully switched to ${pendingService.service_item_name}` 
+//       });
+      
+//       // Hide notification after 3 seconds
+//       setTimeout(() => {
+//         setSwitchNotification({ show: false, message: "" });
+//       }, 3000);
+      
+//       // Clear loading state
+//       setTimeout(() => {
+//         setSwitchingService(false);
+//         setLoadingMessage("");
+//       }, 1500);
+//     }, 500);
+//   };
+
+//   // Cancel service switch
+//   const cancelServiceSwitch = () => {
+//     setShowConfirmDialog(false);
+//     setPendingService(null);
+//   };
+
+//   const handleNavigation = (path) => {
+//     if (!processing.status) {
+//       console.log("🧭 Navigating to:", path);
+//       navigate(path);
+//     } else {
+//       console.log("⚠️ Navigation blocked - command in progress");
+//     }
+//   };
+
+//   const getModeDescription = (code) => MODE_MAP[code] || "Fan";
+
+//   const pullProgress = Math.min(pullToRefresh.pullDistance / PULL_THRESHOLD, 1);
+//   const indicatorRotation = pullProgress * 360;
+//   const indicatorOpacity = pullProgress;
+
+//   // Loading states
+//   if (serviceItemsLoading || (loading && !manualRefresh)) {
+//     return (
+//       <div
+//         className="mainmain-container"
+//         style={{
+//           backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+//           minHeight: "100vh",
+//           display: "flex",
+//           justifyContent: "center",
+//           alignItems: "center",
+//           flexDirection: "column",
+//           color: "white",
+//         }}
+//       >
+//         <div style={{ color: "white", fontSize: "18px", marginBottom: "20px" }}>
+//           Loading...
+//         </div>
+//         <button
+//           onClick={handleLogout}
+//           style={{
+//             display: "flex",
+//             alignItems: "center",
+//             gap: "8px",
+//             backgroundColor: "rgba(255, 255, 255, 0.15)",
+//             color: "white",
+//             border: "1px solid white",
+//             borderRadius: "8px",
+//             padding: "8px 16px",
+//             cursor: "pointer",
+//             fontSize: "16px",
+//           }}
+//         >
+//           <FiLogOut size={20} />
+//           <span>Logout</span>
+//         </button>
+//       </div>
+//     );
+//   }
+
+//   // No service items case
+//   if (!serviceItemsLoading && serviceItems.length === 0) {
+//     return (
+//       <div className="mainmain-container" style={{
+//         backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+//         minHeight: "100vh",
+//         display: "flex",
+//         flexDirection: "column",
+//         justifyContent: "center",
+//         alignItems: "center",
+//         padding: "20px",
+//         textAlign: "center"
+//       }}>
+//         <div className="logo">
+//           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" style={{ marginBottom: "20px" }} />
+//         </div>
+        
+//         <div style={{
+//           backgroundColor: "rgba(255, 255, 255, 0.1)",
+//           padding: "40px",
+//           borderRadius: "12px",
+//           maxWidth: "500px",
+//           width: "100%"
+//         }}>
+//           <h2 style={{ color: "white", marginBottom: "20px", fontSize: "24px" }}>
+//             No Machines Assigned
+//           </h2>
+//           <p style={{ color: "white", marginBottom: "30px", fontSize: "16px", lineHeight: "1.5" }}>
+//             You don't have any machines assigned to your account yet.
+//           </p>
+          
+//           <button
+//             onClick={handleLogout}
+//             style={{
+//               padding: "12px 24px",
+//               backgroundColor: "rgba(255, 255, 255, 0.2)",
+//               color: "white",
+//               border: "1px solid rgba(255, 255, 255, 0.3)",
+//               borderRadius: "6px",
+//               cursor: "pointer",
+//               fontSize: "16px",
+//               display: "flex",
+//               alignItems: "center",
+//               gap: "8px",
+//               margin: "0 auto"
+//             }}
+//           >
+//             <FiLogOut size={18} />
+//             Logout
+//           </button>
+//         </div>
+        
+//         <div className="footer-logo" style={{ marginTop: "40px" }}>
+//           <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div 
+//       className="mainmain-container" 
+//       style={{
+//         backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
+//         touchAction: "pan-y",
+//       }}
+//       ref={containerRef}
+//       onTouchStart={handleTouchStart}
+//       onTouchMove={handleTouchMove}
+//       onTouchEnd={handleTouchEnd}
+//       onMouseDown={handleMouseDown}
+//     >
+//       {/* Pull-to-refresh indicator */}
+//       <div 
+//         className="screen1-pull-refresh"
+//         style={{
+//           height: `${pullToRefresh.pullDistance}px`,
+//           opacity: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 1 : 0,
+//           transform: `translateY(${pullToRefresh.isPulling ? 0 : -30}px)`,
+//           transition: pullToRefresh.isPulling ? 'none' : 'all 0.3s ease',
+//         }}
+//       >
+//         <div className="screen1-refresh-content">
+//           {pullToRefresh.isRefreshing ? (
+//             <>
+//               <div className="screen1-refresh-spinner"></div>
+//               <span>Sending refresh command...</span>
+//             </>
+//           ) : (
+//             <>
+//               <FiRefreshCw 
+//                 size={24} 
+//                 style={{
+//                   transform: `rotate(${indicatorRotation}deg)`,
+//                   transition: 'transform 0.2s ease',
+//                   opacity: indicatorOpacity,
+//                 }}
+//               />
+//               <span>
+//                 {pullToRefresh.pullDistance >= PULL_THRESHOLD 
+//                   ? "Release to refresh" 
+//                   : "Pull down to refresh"}
+//               </span>
+//             </>
+//           )}
+//         </div>
+//       </div>
+
+//       <div className="main-container">
+//         {/* Refresh status toast */}
+//         {refreshStatus.message && (
+//           <div className={`screen1-refresh-status ${refreshStatus.success ? 'success' : 'error'}`}>
+//             {refreshStatus.message}
+//           </div>
+//         )}
+
+//         {/* Success Notification Toast */}
+//         {switchNotification.show && (
+//           <div className="switch-notification">
+//             <span>✅</span>
+//             <span>{switchNotification.message}</span>
+//           </div>
+//         )}
+
+//         {/* Confirmation Dialog */}
+//         {showConfirmDialog && (
+//           <div className="confirm-dialog-overlay">
+//             <div className="confirm-dialog">
+//               <div className="confirm-dialog-content">
+//                 <h3>Switch Service?</h3>
+//                 <p>Are you sure you want to switch to <strong>{pendingService?.service_item_name}</strong>?</p>
+//                 <div className="confirm-dialog-buttons">
+//                   <button 
+//                     className="confirm-dialog-btn confirm-btn-yes"
+//                     onClick={confirmServiceSwitch}
+//                   >
+//                     Yes, Switch
+//                   </button>
+//                   <button 
+//                     className="confirm-dialog-btn confirm-btn-no"
+//                     onClick={cancelServiceSwitch}
+//                   >
+//                     Cancel
+//                   </button>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Loading Overlay for Service Switching */}
+//         {switchingService && (
+//           <div className="service-switching-overlay">
+//             <div className="service-switching-content">
+//               <div className="switching-spinner"></div>
+//               <p>{loadingMessage}</p>
+//               <div className="switching-progress-bar">
+//                 <div className="switching-progress-fill"></div>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Header: Service Dropdown + Power Button Row */}
+//         <div className="header-controls-row">
+//           {/* Service Dropdown */}
+//           <div className="service-dropdown-wrapper">
+//             <div className="service-dropdown-container" style={{ position: "relative" }}>
+//               <div
+//                 className="service-dropdown-header"
+//                 onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+//                 style={{ position: "relative", cursor: "pointer" }}
+//               >
+//                 <span>
+//                   {selectedService ? selectedService.service_item_name : "Select Service"}
+//                 </span>
+
+//                 {/* Global Alarm Badge */}
+//                 {dropdownAlarmCount > 0 && (
+//                   <span
+//                     style={{
+//                       position: "absolute",
+//                       top: "0px",
+//                       right: "28px",
+//                       backgroundColor: "red",
+//                       color: "white",
+//                       borderRadius: "50%",
+//                       width: "18px",
+//                       height: "18px",
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       fontSize: "10px",
+//                       fontWeight: "bold",
+//                     }}
+//                   >
+//                     {dropdownAlarmCount}
+//                   </span>
+//                 )}
+
+//                 <FiChevronDown size={18} />
+//               </div>
+//               {showServiceDropdown && (
+//                 <div className="service-dropdown-list">
+//                   {serviceItems.map((item) => {
+//                     const displayName = serviceItemsList.find(i => i.service_item_id === item.service_item)?.service_item_name || item.service_item;
+//                     return (
+//                       <div
+//                         key={item.service_item}
+//                         className="service-dropdown-item"
+//                         onClick={() => {
+//                           const fullItem = serviceItemsList.find(i => i.service_item_id === item.service_item);
+//                           handleServiceSelect(fullItem || { service_item_id: item.service_item, service_item_name: displayName });
+//                         }}
+//                       >
+//                         {displayName}
+//                       </div>
+//                     );
+//                   })}
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           {/* Power Button */}
+//           <div style={{ position: "relative" }}>
+//             <button
+//               className={`screen1-power-button ${processing.status ? "processing" : ""}`}
+//               onClick={handlePowerToggle}
+//               disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+//               style={{
+//                 backgroundColor: !sensorData.isOnline
+//                   ? "#808080"
+//                   : sensorData.powerStatus == "on"
+//                   ? "#5adb5eff"
+//                   : "#c80000f5",
+//                 display: "flex",
+//                 alignItems: "center",
+//                 justifyContent: "center",
+//                 border: "none",
+//                 height: "48px",
+//                 width: "48px",
+//                 borderRadius: "20px",
+//                 padding: "8px",
+//                 cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+//                 fontWeight: "bold",
+//                 opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+//               }}
+//             >
+//               <FiPower size={24} color="#fff" />
+//               {processing.status && <span className="screen1-processing-indicator"></span>}
+//             </button>
+//             {sensorData.errorFlag == "1" && <div className="error-indicator" />}
+//           </div>
+//         </div>
+
+//         {/* Logo below the row */}
+//         <div className="logo-container">
+//           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" />
+//         </div>
+
+      
+//         {/* Temperature Dial — dimmed when offline */}
+//         <div style={{ pointerEvents: "none", opacity: sensorData.isOnline ? 1 : 0.35 }}>
+//           <TemperatureDial
+//             sensorData={sensorData}
+//             onTempChange={handleTempChange}
+//             fanSpeed={fanPosition}
+//             initialTemperature={sensorData.temperature ?? 25}
+//           />
+//         </div>
+//           {/* Offline banner between header and temperature dial */}
+//         {!sensorData.isOnline && (
+//           <div
+//             style={{
+//               color: "rgba(0,0,0,0.55)",
+//               backgroundColor: "#fff",
+//               textAlign: "center",
+//               padding: "10px 20px",
+//               borderRadius: "10px",
+//               margin: "12px 20px 4px 20px",
+//               fontSize: "14px",
+//               fontWeight: "bold",
+//               letterSpacing: "0.5px",
+//               display: "flex",
+//               alignItems: "center",
+//               justifyContent: "center",
+//               gap: "8px",
+//             }}
+//           >
+//             <span>📴</span>
+//             <span>System is Offline</span>
+//           </div>
+//         )}
+
+//         {/* Status messages */}
+//         {processing.status && (
+//           <div className="screen1-processing-message">{processing.message}</div>
+//         )}
+
+//         {sensorData.errorFlag == "1" && (
+//           <div className="screen1-error-message">⚠️ System Error Detected</div>
+//         )}
+
+//         {sensorData.hvacBusy == "1" && !processing.status && (
+//           <div className="screen1-busy-message">⏳ System is currently busy</div>
+//         )}
+
+//         {!serviceItemPermissions?.can_control_equipment && (
+//           <div className="warning-message">⚠️ Control permissions not available</div>
+//         )}
+
+
+//         {/* Environment Info */}
+//         <div className="env-info">
+//           <div className="env-item">
+//             <FiSun className="env-icon" size={20} color="#FFFFFF" />
+//             <div className="env-value">
+//               {sensorData.isOnline ? `${formatTemp(sensorData.outsideTemp)}°C` : "—"}
+//             </div>
+//             <div className="env-label">Outside Temp</div>
+//           </div>
+//           <div className="env-item">
+//             <FiThermometer className="env-icon" size={20} color="#FFFFFF" />
+//             <div className="env-value">
+//               {sensorData.isOnline ? `${formatTemp(sensorData.roomTemp)}°C` : "—"}
+//             </div>
+//             <div className="env-label">Room Temp</div>
+//           </div>
+//           <div className="env-item">
+//             <FiDroplet className="env-icon" size={20} color="#FFFFFF" />
+//             <div className="env-value">
+//               {sensorData.isOnline ? `${formatTemp(sensorData.humidity)}%` : "—"}
+//             </div>
+//             <div className="env-label">Humidity</div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Footer */}
+//       <div className="footer-container">
+//         {/* ==================== MODES SECTION ==================== */}
+//         <div className="modes-section-in-footer">
+//           <h3 className="modes-heading">Modes</h3>
+//           <div className="modes-row">
+//             {Object.values(MODE_MAP).map((mode) => (
+//               <button
+//                 key={mode}
+//                 onClick={() => {
+//                   console.log("🖱️ Mode button clicked in footer:", mode);
+//                   handleModeChange(mode);
+//                 }}
+//                 className={`modes-button ${
+//                   currentModeDescription === mode ? "modes-button-selected" : ""
+//                 }`}
+//                 disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+//                 style={{
+//                   opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+//                   cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+//                 }}
+//               >
+//                 <span
+//                   className={`modes-text ${
+//                     currentModeDescription === mode ? "modes-text-selected" : ""
+//                   }`}
+//                 >
+//                   {mode}
+//                 </span>
+//               </button>
+//             ))}
+//           </div>
+//         </div>
+
+//         {/* ==================== FAN SPEED SECTION (BUTTONS STYLE) ==================== */}
+//         <div className="fan-speed-section-in-footer">
+//           <h3 className="fan-speed-heading">Fan Speed</h3>
+//           <div className="fan-speed-buttons-row">
+//             {FAN_LABELS.map((label, index) => (
+//               <button
+//                 key={label}
+//                 onClick={() => {
+//                   console.log(`🖱️ Fan speed button clicked in footer: ${label} (index: ${index})`);
+//                   handleFanClick(index);
+//                 }}
+//                 className={`fan-speed-button ${
+//                   fanPosition === index ? "fan-speed-button-selected" : ""
+//                 }`}
+//                 disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+//                 style={{
+//                   opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+//                   cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+//                 }}
+//               >
+//                 <span
+//                   className={`fan-speed-text ${
+//                     fanPosition === index ? "fan-speed-text-selected" : ""
+//                   }`}
+//                 >
+//                   {label}
+//                 </span>
+//               </button>
+//             ))}
+//           </div>
+//         </div>
+
+//         {/* Control Buttons */}
+//         <div className="control-buttons">
+//           <button
+//             className={`control-btn ${!hasValidPCBSerial ? 'screen1-disabled-btn' : ''}`}
+//             disabled={!hasValidPCBSerial || !serviceItemPermissions?.can_control_equipment}
+//             title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
+//           >
+//             <FiWind size={20} />
+//             <span>Modes</span>
+//             <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("🔔 Alarms button clicked. Error count:", errorCount);
+//               navigate("/Delegate-alarms", {
+//                 state: {
+//                   alarmData: {
+//                     alarmOccurred: sensorData.alarmOccurred,
+//                     errorCount: errorCount,
+//                     deviceId: sensorData.deviceId,
+//                   },
+//                   userId: userId,
+//                   company_id: company_id
+//                 },
+//               });
+//             }}
+//           >
+//             <div style={{ position: "relative" }}>
+//               <FiClock size={20} />
+//               {errorCount > 0 && (
+//                 <span
+//                   style={{
+//                     position: "absolute",
+//                     top: "-8px",
+//                     right: "-23px",
+//                     backgroundColor: "red",
+//                     color: "white",
+//                     borderRadius: "50%",
+//                     width: "18px",
+//                     height: "18px",
+//                     display: "flex",
+//                     alignItems: "center",
+//                     justifyContent: "center",
+//                     fontSize: "10px",
+//                     fontWeight: "bold",
+//                   }}
+//                 >
+//                   {errorCount}
+//                 </span>
+//               )}
+//             </div>
+//             <span>Alarms</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("⏰ Timers button clicked");
+//               handleNavigation("/timers");
+//             }}
+//             disabled={!serviceItemPermissions?.can_control_equipment}
+//           >
+//             <FiWatch size={20} />
+//             <span>Timers</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("⚙️ Settings button clicked");
+//               handleNavigation("/settings");
+//             }}
+//           >
+//             <FiSettings size={20} />
+//             <span>Settings</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("🛠️ Services button clicked - navigating to delegate-home");
+//               handleNavigation("/delegate-home");
+//             }}
+//           >
+//             <FiZap size={20} />
+//             <span>Services</span>
+//           </button>
+
+//           <button
+//             className="control-btn"
+//             onClick={() => {
+//               console.log("🚪 Logout button clicked");
+//               handleLogout();
+//             }}
+//           >
+//             <FiLogOut size={20} />
+//             <span>Logout</span>
+//           </button>
+//         </div>
+
+//         <div className="footer-logo">
+//           <img src={greenAire} alt="GreenAire Logo" className="logo-image" />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default DelegateScreen1;
+
+
+
 import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import {
@@ -2564,6 +5192,16 @@ const DelegateScreen1 = () => {
   });
   const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
   
+  // Service switching states
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingService, setPendingService] = useState(null);
+  const [switchingService, setSwitchingService] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [switchNotification, setSwitchNotification] = useState({ show: false, message: "" });
+  
+  // ✅ Temperature dragging state
+  const [isDraggingTemp, setIsDraggingTemp] = useState(false);
+  
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
     humidity: 0,
@@ -2605,6 +5243,81 @@ const DelegateScreen1 = () => {
   
   // Get fan position
   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
+
+  // ✅ NEW: Send temperature command to device
+  const sendTemperatureCommand = async (temperature) => {
+    console.group("🌡️ TEMPERATURE COMMAND SENT");
+    console.log("📱 Temperature changed to:", temperature);
+    console.log("💻 Current display data:", {
+      mode: displayData.mode,
+      fanSpeed: displayData.fanSpeed,
+      powerStatus: displayData.powerStatus
+    });
+    
+    try {
+      startProcessingCycle();
+      
+      const payload = {
+        Header: "0xAA",
+        DI: selectedService?.pcb_serial_number || "2411GM-0102",
+        MD: parseInt(displayData.mode) || 3,
+        FS: parseInt(displayData.fanSpeed) || 0,
+        SRT: parseInt(temperature) || 25,
+        HVAC: displayData.powerStatus === "on" ? "1" : "0",
+        Footer: "0xZX",
+      };
+      
+      console.log("📦 Temperature command payload:", payload);
+      
+      const response = await fetch("https://mdata.air2o.net/controllers/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        console.error("❌ Temperature command failed with status:", response.status);
+        stopProcessing();
+        throw new Error("Failed to send temperature command");
+      }
+      
+      console.log("✅ Temperature command sent successfully:", temperature);
+      console.groupEnd();
+    } catch (error) {
+      console.error("❌ Error sending temperature command:", error);
+      console.groupEnd();
+      stopProcessing();
+    }
+  };
+
+  // ✅ UPDATED: Handle temperature change during drag
+  const handleTempChange = (newTemp) => {
+    console.log("🌡️ Temperature changing (drag):", newTemp);
+    
+    // Update display immediately for smooth UI feedback
+    setDisplayData((prev) => ({ ...prev, temperature: newTemp }));
+    setIsDraggingTemp(true);
+    
+    // If power is OFF, just store the value locally
+    if (displayData.powerStatus === "off") {
+      console.log(`Temperature set to ${newTemp}°C locally (will apply when power turns on)`);
+    }
+  };
+
+  // ✅ NEW: Handle when user finishes dragging temperature
+  const handleTempChangeEnd = async (newTemp) => {
+    console.log("🌡️ Temperature drag ended:", newTemp);
+    setIsDraggingTemp(false);
+    
+    // Only send command if power is ON and user has control permissions
+    if (displayData.powerStatus === "on" && serviceItemPermissions?.can_control_equipment) {
+      await sendTemperatureCommand(newTemp);
+    } else if (displayData.powerStatus === "off") {
+      console.log("💤 Power is OFF - Temperature saved locally");
+    } else if (!serviceItemPermissions?.can_control_equipment) {
+      console.log("⚠️ No control permissions - Temperature change not sent to device");
+    }
+  };
 
   // Fetch service items with names from API
   useEffect(() => {
@@ -2733,7 +5446,7 @@ const DelegateScreen1 = () => {
     fetchIntervalRef.current = setInterval(() => {
       fetchData();
       fetchAllAlarms();
-    }, 1000);
+    }, 20000);
 
     return () => {
       if (fetchIntervalRef.current) {
@@ -3054,11 +5767,6 @@ const DelegateScreen1 = () => {
     }
   };
 
-  // Handle temp change
-  const handleTempChange = (newTemp) => {
-    console.log("🌡️ Temperature changed to:", newTemp);
-  };
-
   // Pull-to-refresh handlers
   const handleTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
@@ -3127,12 +5835,57 @@ const DelegateScreen1 = () => {
     navigate("/");
   };
 
+  // Updated handleServiceSelect with confirmation
   const handleServiceSelect = (item) => {
-    console.log("📋 Service selected:", item.service_item_name, "PCB:", item.pcb_serial_number);
-    setSelectedService(item);
-    activePCBRef.current = item.pcb_serial_number;
-    updateSelectedServiceItem(item.service_item_id);
+    // Don't allow switching to the same service
+    if (selectedService?.service_item_id === item.service_item_id) {
+      setShowServiceDropdown(false);
+      return;
+    }
+    
+    // Show confirmation dialog before switching
+    setPendingService(item);
+    setShowConfirmDialog(true);
     setShowServiceDropdown(false);
+  };
+
+  // Confirm service switch
+  const confirmServiceSwitch = () => {
+    if (!pendingService) return;
+    
+    setShowConfirmDialog(false);
+    setSwitchingService(true);
+    setLoadingMessage(`Switching to ${pendingService.service_item_name}...`);
+    
+    // Update the service after a short delay for UX
+    setTimeout(() => {
+      setSelectedService(pendingService);
+      activePCBRef.current = pendingService.pcb_serial_number;
+      updateSelectedServiceItem(pendingService.service_item_id);
+      
+      // Show success notification
+      setSwitchNotification({ 
+        show: true, 
+        message: `Successfully switched to ${pendingService.service_item_name}` 
+      });
+      
+      // Hide notification after 3 seconds
+      setTimeout(() => {
+        setSwitchNotification({ show: false, message: "" });
+      }, 3000);
+      
+      // Clear loading state
+      setTimeout(() => {
+        setSwitchingService(false);
+        setLoadingMessage("");
+      }, 1500);
+    }, 500);
+  };
+
+  // Cancel service switch
+  const cancelServiceSwitch = () => {
+    setShowConfirmDialog(false);
+    setPendingService(null);
   };
 
   const handleNavigation = (path) => {
@@ -3306,6 +6059,53 @@ const DelegateScreen1 = () => {
           </div>
         )}
 
+        {/* Success Notification Toast */}
+        {switchNotification.show && (
+          <div className="switch-notification">
+            <span>✅</span>
+            <span>{switchNotification.message}</span>
+          </div>
+        )}
+
+        {/* Confirmation Dialog */}
+        {showConfirmDialog && (
+          <div className="confirm-dialog-overlay">
+            <div className="confirm-dialog">
+              <div className="confirm-dialog-content">
+                <h3>Switch Service?</h3>
+                <p>Are you sure you want to switch to <strong>{pendingService?.service_item_name}</strong>?</p>
+                <div className="confirm-dialog-buttons">
+                  <button 
+                    className="confirm-dialog-btn confirm-btn-yes"
+                    onClick={confirmServiceSwitch}
+                  >
+                    Yes, Switch
+                  </button>
+                  <button 
+                    className="confirm-dialog-btn confirm-btn-no"
+                    onClick={cancelServiceSwitch}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Overlay for Service Switching */}
+        {switchingService && (
+          <div className="service-switching-overlay">
+            <div className="service-switching-content">
+              <div className="switching-spinner"></div>
+              <p>{loadingMessage}</p>
+              <div className="switching-progress-bar">
+                <div className="switching-progress-fill"></div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header: Service Dropdown + Power Button Row */}
         <div className="header-controls-row">
           {/* Service Dropdown */}
@@ -3404,23 +6204,25 @@ const DelegateScreen1 = () => {
           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" />
         </div>
 
-      
-        {/* Temperature Dial — dimmed when offline */}
-        <div style={{ pointerEvents: "none", opacity: sensorData.isOnline ? 1 : 0.35 }}>
+        {/* ✅ UPDATED: Temperature Dial with full functionality */}
+        <div style={{ 
+          pointerEvents: sensorData.isOnline && !processing.status && serviceItemPermissions?.can_control_equipment ? "auto" : "none", 
+          opacity: sensorData.isOnline ? 1 : 0.35 
+        }}>
           <TemperatureDial
-            sensorData={sensorData}
             onTempChange={handleTempChange}
+            onTempChangeEnd={handleTempChangeEnd}
             fanSpeed={fanPosition}
-            initialTemperature={sensorData.temperature ?? 25}
+            initialTemperature={displayData.temperature ?? 25}
+            disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
           />
         </div>
-          {/* Offline banner between header and temperature dial */}
+        
+        {/* Offline banner between header and temperature dial */}
         {!sensorData.isOnline && (
           <div
             style={{
-              // backgroundColor: "rgba(0,0,0,0.55)",
-              // color: "#fff",
-                   color: "rgba(0,0,0,0.55)",
+              color: "rgba(0,0,0,0.55)",
               backgroundColor: "#fff",
               textAlign: "center",
               padding: "10px 20px",
@@ -3456,7 +6258,6 @@ const DelegateScreen1 = () => {
         {!serviceItemPermissions?.can_control_equipment && (
           <div className="warning-message">⚠️ Control permissions not available</div>
         )}
-
 
         {/* Environment Info */}
         <div className="env-info">
@@ -3554,25 +6355,6 @@ const DelegateScreen1 = () => {
         <div className="control-buttons">
           <button
             className={`control-btn ${!hasValidPCBSerial ? 'screen1-disabled-btn' : ''}`}
-            // onClick={() => {
-            //   console.log("🔘 Modes control button clicked");
-            //   if (hasValidPCBSerial && serviceItemPermissions?.can_control_equipment) {
-            //     console.log("📱 Navigating to delegate-machinescreen2 with:", {
-            //       sensorData,
-            //       selectedService,
-            //       userId,
-            //       company_id
-            //     });
-            //     navigate("/delegate-machinescreen2", { 
-            //       state: { sensorData, selectedService, userId, company_id }
-            //     });
-            //   } else {
-            //     console.log("⚠️ Navigation blocked - Missing permissions or PCB:", {
-            //       hasPCB: hasValidPCBSerial,
-            //       canControl: serviceItemPermissions?.can_control_equipment
-            //     });
-            //   }
-            // }}
             disabled={!hasValidPCBSerial || !serviceItemPermissions?.can_control_equipment}
             title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
           >
