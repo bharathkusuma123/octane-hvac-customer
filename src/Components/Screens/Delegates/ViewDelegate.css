@@ -182,3 +182,12 @@
 .delegate-card-recall-btn:hover {
   background-color: #ff1a1a;
 } 
+
+
+@media (max-width: 768px) {
+    .delegate-card-container {
+        padding: 80px 2px;
+        max-width: 1200px;
+        margin: 15px auto;
+    }
+}

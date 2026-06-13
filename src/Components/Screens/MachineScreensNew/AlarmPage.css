@@ -13,4 +13,9 @@
         border-top-left-radius: 16px;
         border-top-right-radius: 16px;
 }
+
+.history-classname .historical-error-logs-heading-mobile-view {
+    padding-top: 10px;
+    /* margin-bottom: 10px; */
+}
 }

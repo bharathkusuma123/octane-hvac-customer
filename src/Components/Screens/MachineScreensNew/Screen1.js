@@ -4863,9 +4863,9 @@ const Screen1 = () => {
             disabled={!hasValidPCBSerial}
             title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
           >
-            <FiWind size={20} />
-            <span>Modes</span>
-            <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
+            {/* <FiWind size={20} /> */}
+            {/* <span>Modes</span> */}
+            {/* <span><strong>{getModeDescription(sensorData.mode)}</strong></span> */}
           </button>
 
           <button

@@ -632,7 +632,7 @@ const AddDelegates = () => {
   );
 
   return (
-    <div className="delegate-card-container">
+    <div   style={{marginTop:"10px"}} className="delegate-card-container">
       <div className="delegate-card-header">
         <h2 className="delegate-card-title">My Delegates</h2>
         <button onClick={handleAddDelegate} className="delegate-card-add-btn">

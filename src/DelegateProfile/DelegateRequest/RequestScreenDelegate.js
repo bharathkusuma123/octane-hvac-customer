@@ -2173,7 +2173,7 @@ const RequestScreenDelegate = () => {
     return (
       <div className="request-screen-wrapper">
         <DelegateNavbar/>
-        <div className="text-center mt-4">
+        <div className="text-center mt-5">
           <Spinner animation="border" role="status">
             <span className="visually-hidden">Loading service items...</span>
           </Spinner>
@@ -2187,7 +2187,7 @@ const RequestScreenDelegate = () => {
     return (
       <div className="request-screen-wrapper">
         <DelegateNavbar/>
-        <div className="text-center mt-4">
+        <div className="text-center mt-5">
           <Spinner animation="border" role="status">
             <span className="visually-hidden">Loading requests...</span>
           </Spinner>
@@ -2200,7 +2200,7 @@ const RequestScreenDelegate = () => {
   return (
     <div className="request-screen-wrapper">
       <DelegateNavbar/>
-      <h2 className="text-center mb-4 mt-4">Request Screen</h2>
+      <h2 className="text-center mb-4 mt-5">Request Screen</h2>
 
       {/* Show selected service item info */}
       {selectedServiceItem && (

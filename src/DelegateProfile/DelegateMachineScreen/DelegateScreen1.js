@@ -6358,9 +6358,9 @@ const DelegateScreen1 = () => {
             disabled={!hasValidPCBSerial || !serviceItemPermissions?.can_control_equipment}
             title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
           >
-            <FiWind size={20} />
+            {/* <FiWind size={20} />
             <span>Modes</span>
-            <span><strong>{getModeDescription(sensorData.mode)}</strong></span>
+            <span><strong>{getModeDescription(sensorData.mode)}</strong></span> */}
           </button>
 
           <button

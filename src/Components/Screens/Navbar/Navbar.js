@@ -328,15 +328,15 @@ const NavScreen = () => {
       {/* Top Navbar */}
       <div className="top-navbar">
         {/* Left Arrow - Back button */}
-        <div className="back-arrow" onClick={handleGoBack} style={{ cursor: "pointer" }}>
-          {/* <FaArrowLeft size={24} color="#fff" /> */}
+        {/* <div className="back-arrow" onClick={handleGoBack} style={{ cursor: "pointer" }}>
+          <FaArrowLeft size={24} color="#fff" />
           <FaAngleLeft 
   size={24} 
   color="#fff" 
   style={{ marginTop: "30px", cursor: "pointer" }} 
   onClick={handleGoBack}
 />
-        </div>
+        </div> */}
 
         {/* Logo in the middle */}
         <img src={logo9} alt="Logo" className="logo-img" />

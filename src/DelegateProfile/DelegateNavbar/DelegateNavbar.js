@@ -171,15 +171,15 @@ const NavScreen = () => {
       {/* Top Navbar */}
       <div className="top-navbar">
         <img src={logo} alt="Logo" className="logo-img" />
-        <div className="back-arrow" onClick={handleGoBack} style={{ cursor: "pointer" }}>
-                  {/* <FaArrowLeft size={24} color="#fff" /> */}
+        {/* <div className="back-arrow" onClick={handleGoBack} style={{ cursor: "pointer" }}>
+                  <FaArrowLeft size={24} color="#fff" />
                   <FaAngleLeft 
           size={24} 
           color="#fff" 
           style={{ marginTop: "30px", cursor: "pointer" }} 
           onClick={handleGoBack}
         />
-                </div>
+                </div> */}
         <div className="top-icons">
           <div className="service-dropdown">
             <select

@@ -520,7 +520,7 @@ const DelegateAlarmsPage = () => {
 
           <div className="history-classname" style={{ backgroundColor: "white" }}>
             {/* Historical Errors */}
-            <h3>Historical Error Logs</h3>
+            <h3 className='historical-error-logs-heading-mobile-view'>Historical Error Logs</h3>
 
             <div style={{
               display: "flex",
@@ -531,7 +531,7 @@ const DelegateAlarmsPage = () => {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                style={{ padding: "8px", borderRadius: "5px", border: "1px solid #ddd" }}
+                style={{ padding: "8px", borderRadius: "5px", border: "1px solid #ddd", marginLeft: "4px",  marginRight: "4px" }}
               >
                 <option value="ALL">All Priority</option>
                 <option value="HIGH">High</option>
@@ -548,7 +548,9 @@ const DelegateAlarmsPage = () => {
                   borderRadius: "5px",
                   border: "1px solid #ddd",
                   flex: "1",
-                  minWidth: "0"
+                  minWidth: "0",
+                 marginLeft: "4px"
+
                 }}
               />
 
@@ -561,7 +563,9 @@ const DelegateAlarmsPage = () => {
                   borderRadius: "5px",
                   border: "1px solid #ddd",
                   flex: "1",
-                  minWidth: "0"
+                  minWidth: "0",
+                 marginRight: "4px"
+
                 }}
               />
 
@@ -577,7 +581,9 @@ const DelegateAlarmsPage = () => {
                   border: "1px solid #ddd",
                   borderRadius: "5px",
                   cursor: "pointer",
-                  color: "#333"
+                  color: "#333",
+                  marginRight: "4px"
+
                 }}
               >
                 Reset
