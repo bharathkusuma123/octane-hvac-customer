@@ -385,6 +385,15 @@ border-top-right-radius: 50px; */
   justify-content: center;
 }
 
+@media (max-width: 430px) {
+.temp-container {
+  display: flex;
+  justify-content: center;
+      /* margin-top: 23px; */
+          margin-left: 55px;
+}
+
+}
 /* Responsive Styles */
 @media (max-width: 480px) {
 
@@ -403,7 +412,7 @@ border-top-right-radius: 50px; */
     height: auto;
   bottom: 0;
   width: 100%;
-  max-width: 450px; /* iPhone width */
+  /* max-width: 450px;  */
   margin: 0 auto;
   left: 0;
   right: 0;
@@ -485,6 +494,13 @@ border-top-right-radius: 50px; */
 .screen1-power-button{
   margin-top: 20px;
 }
+
+.temp-container {
+  display: flex;
+  justify-content: center;
+      /* margin-top: 23px; */
+          margin-left: 55px;
+}
 }
 
 @media (max-width: 375px) {
@@ -505,6 +521,7 @@ border-top-right-radius: 50px; */
 ;
     justify-content: center;
     margin-top: -30px;
+      margin-left: 50px;
 }
 .header1 {
     display: flex
@@ -521,7 +538,7 @@ border-top-right-radius: 50px; */
     height: auto;
         bottom: 0;
         width: 100%;
-        max-width: 450px;
+        /* max-width: 450px; */
         margin: 0 auto;
         left: 0;
         right: 0;
@@ -1656,4 +1673,29 @@ border-top-right-radius: 50px; */
 @keyframes fadeOut {
   from { opacity: 1; }
   to { opacity: 0; }
+}
+
+
+/* Prevent pull-to-refresh from triggering on temperature dial */
+.temp-container {
+  touch-action: none; /* Prevents browser from interfering with touch events */
+  user-select: none; /* Prevents text selection */
+  -webkit-user-select: none;
+}
+
+.temp-control-handle {
+  touch-action: none !important; /* Ensures touch events don't trigger pull */
+  cursor: grab;
+  z-index: 10; /* Ensure it's above other elements */
+}
+
+.temp-control-handle:active {
+  cursor: grabbing;
+}
+
+/* Make sure the handle captures all pointer events */
+.temp-circle-control {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
