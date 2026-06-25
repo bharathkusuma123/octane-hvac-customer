@@ -3799,7 +3799,7 @@
 // export default Screen1;
 
 
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import {
   FiPower,
   FiWind,
@@ -3850,9 +3850,12 @@ const MAX_PULL = 120;
 
 // ✅ FIX 3: Progressive messages every 10s
 const PROCESSING_MESSAGES = [
-  "Sending command...",
-  "Almost done, please wait...",
-  "Waiting for device response...",
+  "1/6 Sending request...",
+  "2/6 Connecting to device...",
+  "3/6 Applying changes...",
+  "4/6 Syncing settings...",
+  "5/6 Confirming status...",
+  "6/6 Finalizing...",
 ];
 
 const getStoredService = () => {
@@ -3913,6 +3916,10 @@ const Screen1 = () => {
   const userId = user?.customer_id;
   const company_id = user?.company_id;
   const navigate = useNavigate();
+
+  // ✅ NEW: Temperature confirmation dialog states
+const [showTempConfirmDialog, setShowTempConfirmDialog] = useState(false);
+const [pendingTemperature, setPendingTemperature] = useState(null);
 
   const [pullToRefresh, setPullToRefresh] = useState({
     isPulling: false,
@@ -4007,39 +4014,36 @@ const Screen1 = () => {
   const fanPercentage = fanPosition * 50;
 
   // ✅ NEW: Send temperature command to device
-  const sendTemperatureCommand = async (temperature) => {
-    try {
-      startProcessingCycle();
-      
-      const payload = {
-        Header: "0xAA",
-        DI: selectedService?.pcb_serial_number || "2411GM-0102",
-        MD: parseInt(displayData.mode) || 3,
-        FS: parseInt(displayData.fanSpeed) || 0,
-        SRT: parseInt(temperature) || 25,
-        HVAC: displayData.powerStatus === "on" ? "1" : "0",
-        Footer: "0xZX",
-      };
-      
-      console.log("🌡️ Sending temperature command:", payload);
-      
-      const response = await fetch("https://mdata.air2o.net/controllers/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok) {
-        stopProcessing();
-        throw new Error("Failed to send temperature command");
-      }
-      
-      console.log("✅ Temperature command sent:", temperature);
-    } catch (error) {
-      console.error("Error sending temperature command:", error);
-      stopProcessing();
+// ✅ NEW: Send temperature command to device (no processing UI)
+const sendTemperatureCommand = async (temperature) => {
+  try {
+    const payload = {
+      Header: "0xAA",
+      DI: selectedService?.pcb_serial_number || "2411GM-0102",
+      MD: parseInt(displayData.mode) || 3,
+      FS: parseInt(displayData.fanSpeed) || 0,
+      SRT: parseInt(temperature) || 25,
+      HVAC: displayData.powerStatus === "on" ? "1" : "0",
+      Footer: "0xZX",
+    };
+
+    console.log("🌡️ Sending temperature command:", payload);
+
+    const response = await fetch("https://mdata.air2o.net/controllers/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to send temperature command");
     }
-  };
+
+    console.log("✅ Temperature command sent:", temperature);
+  } catch (error) {
+    console.error("Error sending temperature command:", error);
+  }
+};
 
   // ✅ UPDATED: Handle temperature change during drag
   const handleTempChange = (newTemp) => {
@@ -4053,15 +4057,33 @@ const Screen1 = () => {
     }
   };
 
-  // ✅ NEW: Handle when user finishes dragging temperature
-  const handleTempChangeEnd = async (newTemp) => {
-    setIsDraggingTemp(false);
-    
-    // Only send command if power is ON
-    if (displayData.powerStatus === "on") {
-      await sendTemperatureCommand(newTemp);
-    }
-  };
+ const handleTempChangeEnd = useCallback((newTemp) => {
+  setIsDraggingTemp(false);
+  if (displayData.powerStatus === "on") {
+    setPendingTemperature(newTemp);
+    setShowTempConfirmDialog(true);
+  }
+}, [displayData.powerStatus]);
+
+// ✅ NEW: Confirm temperature change
+const confirmTempChange = async () => {
+  if (pendingTemperature === null) return;
+  const tempToSend = pendingTemperature;
+
+  setShowTempConfirmDialog(false);
+  setPendingTemperature(null);
+
+  await sendTemperatureCommand(tempToSend);
+};
+
+// ✅ NEW: Cancel temperature change — revert display back to last known sensor value
+const cancelTempChange = () => {
+  setShowTempConfirmDialog(false);
+  setPendingTemperature(null);
+
+  // Revert the dial/display back to the actual device temperature
+  setDisplayData((prev) => ({ ...prev, temperature: sensorData.temperature }));
+};
 
   // Handle mode change
   const handleModeChange = async (newMode) => {
@@ -4187,7 +4209,7 @@ const Screen1 = () => {
 
     hardStopTimerRef.current = setTimeout(() => {
       stopProcessing();
-    }, 25000);
+    }, 60000);
   };
 
   const stopProcessing = () => {
@@ -4327,7 +4349,7 @@ const Screen1 = () => {
     fetchIntervalRef.current = setInterval(() => {
       fetchData();
       fetchAllAlarms();
-    }, 1000);
+    }, 60000);
 
     return () => {
       if (fetchIntervalRef.current) {
@@ -4421,48 +4443,48 @@ const Screen1 = () => {
     navigate("/");
   };
 
-  const handlePowerToggle = async () => {
-    try {
-      if (processing.status || sensorData.hvacBusy == "1") {
-        const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
-        setProcessing({ status: true, message: msg });
-        return;
-      }
-
-      startProcessingCycle();
-
-      const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-      const isShutdown = sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
-
-      const payload = {
-        Header: "0xAA",
-        DI: selectedService?.pcb_serial_number || "2411GM-0102",
-        MD: isShutdown ? "3" : sensorData.mode,
-        FS: isShutdown ? "0" : sensorData.fanSpeed,
-        SRT: sensorData.temperature,
-        HVAC: newHvacValue,
-        Footer: "0xZX",
-      };
-
-      const response = await fetch("https://mdata.air2o.net/controllers/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        console.error("❌ API error:", response.status);
-        stopProcessing();
-        throw new Error("Failed to send command");
-      }
-
-      const result = await response.text();
-      console.log("✅ Command sent:", result);
-    } catch (error) {
-      console.error("🔥 Power toggle error:", error.message);
-      stopProcessing();
+ const handlePowerToggle = async () => {
+  try {
+    if (processing.status || sensorData.hvacBusy == "1") {
+      const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
+      setProcessing({ status: true, message: msg });
+      return;
     }
-  };
+
+    startProcessingCycle();
+
+    const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+    const isShutdown = displayData?.fanSpeed == 3 || displayData?.mode == 0;
+
+    const payload = {
+      Header: "0xAA",
+      DI: selectedService?.pcb_serial_number || "2411GM-0102",
+      MD: isShutdown ? "3" : displayData.mode,
+      FS: isShutdown ? "0" : displayData.fanSpeed,
+      SRT: displayData.temperature,
+      HVAC: newHvacValue,
+      Footer: "0xZX",
+    };
+
+    const response = await fetch("https://mdata.air2o.net/controllers/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error("❌ API error:", response.status);
+      stopProcessing();
+      throw new Error("Failed to send command");
+    }
+
+    const result = await response.text();
+    console.log("✅ Command sent:", result);
+  } catch (error) {
+    console.error("🔥 Power toggle error:", error.message);
+    stopProcessing();
+  }
+};
 
   const handleNavigation = (path) => {
     if (!processing.status) navigate(path);
@@ -4613,6 +4635,34 @@ const Screen1 = () => {
             </div>
           </div>
         )}
+
+        {/* Temperature Change Confirmation Dialog */}
+{showTempConfirmDialog && (
+  <div className="confirm-dialog-overlay">
+    <div className="confirm-dialog">
+      <div className="confirm-dialog-content">
+        <h3>Change Temperature?</h3>
+        <p>
+          Set temperature to <strong>{pendingTemperature}°C</strong>?
+        </p>
+        <div className="confirm-dialog-buttons">
+          <button
+            className="confirm-dialog-btn confirm-btn-yes"
+            onClick={confirmTempChange}
+          >
+            Yes, Set
+          </button>
+          <button
+            className="confirm-dialog-btn confirm-btn-no"
+            onClick={cancelTempChange}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Loading Overlay for Service Switching */}
         {switchingService && (

@@ -75,6 +75,7 @@ import MachineLayout from './Components/Screens/MachineScreensNew/MachineLayout'
 import DelegateMachineAlert from './DelegateProfile/DelegateMachineScreen/DelegateMachineAlert';
 
 import { CustomerNotificationProvider } from './Components/AuthContext/CustomerNotificationContext';
+import WifiInstructionsScreen from './Components/Screens/WifiInstructionsScreen';
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -183,6 +184,7 @@ function App() {
 
                   <Route path="/staticscreen" element={<StaticScreen />} />
                   <Route path="/wifi-screen" element={<WifiScreen />} />
+                  <Route path="/wifi-instructions" element={<WifiInstructionsScreen />} />
 
                   <Route path="/machine-data" element={<MachineDataScreen />} />
 

@@ -5036,7 +5036,7 @@
 
 
 
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import axios from "axios";
 import {
   FiArrowLeft,
@@ -5089,9 +5089,12 @@ const MAX_PULL = 120;
 
 // Progressive messages every 10s
 const PROCESSING_MESSAGES = [
-  "Sending command...",
-  "Almost done, please wait...",
-  "Waiting for device response...",
+ "1/6 Sending request...",
+  "2/6 Connecting to device...",
+  "3/6 Applying changes...",
+  "4/6 Syncing settings...",
+  "5/6 Confirming status...",
+  "6/6 Finalizing...", 
 ];
 
 // Helper functions
@@ -5159,6 +5162,9 @@ const DelegateScreen1 = () => {
   const userId = user?.delegate_id;
   const company_id = user?.company_id;
   const navigate = useNavigate();
+
+  const [showTempConfirmDialog, setShowTempConfirmDialog] = useState(false);
+  const [pendingTemperature, setPendingTemperature] = useState(null);
 
   // Refs
   const activePCBRef = useRef(null);
@@ -5255,7 +5261,7 @@ const DelegateScreen1 = () => {
     });
     
     try {
-      startProcessingCycle();
+      // startProcessingCycle();
       
       const payload = {
         Header: "0xAA",
@@ -5286,7 +5292,7 @@ const DelegateScreen1 = () => {
     } catch (error) {
       console.error("❌ Error sending temperature command:", error);
       console.groupEnd();
-      stopProcessing();
+      // stopProcessing();
     }
   };
 
@@ -5304,20 +5310,47 @@ const DelegateScreen1 = () => {
     }
   };
 
-  // ✅ NEW: Handle when user finishes dragging temperature
-  const handleTempChangeEnd = async (newTemp) => {
-    console.log("🌡️ Temperature drag ended:", newTemp);
-    setIsDraggingTemp(false);
-    
-    // Only send command if power is ON and user has control permissions
-    if (displayData.powerStatus === "on" && serviceItemPermissions?.can_control_equipment) {
-      await sendTemperatureCommand(newTemp);
-    } else if (displayData.powerStatus === "off") {
-      console.log("💤 Power is OFF - Temperature saved locally");
-    } else if (!serviceItemPermissions?.can_control_equipment) {
-      console.log("⚠️ No control permissions - Temperature change not sent to device");
-    }
-  };
+// ✅ Handle when user finishes dragging temperature
+const handleTempChangeEnd = useCallback((newTemp) => {
+  console.log("🌡️ Temperature drag ended:", newTemp);
+  setIsDraggingTemp(false);
+
+  // Power OFF → just save locally
+  if (displayData.powerStatus === "off") {
+    console.log("💤 Power is OFF - Temperature saved locally");
+    return;
+  }
+
+  // No control permission
+  if (!serviceItemPermissions?.can_control_equipment) {
+    console.log("⚠️ No control permissions - Temperature change not sent to device");
+    return;
+  }
+
+  // Power ON + Has permission → show confirmation popup
+  setPendingTemperature(newTemp);
+  setShowTempConfirmDialog(true);
+
+}, [displayData.powerStatus, serviceItemPermissions]);
+
+const confirmTempChange = async () => {
+  if (pendingTemperature === null) return;
+  const tempToSend = pendingTemperature;
+
+  setShowTempConfirmDialog(false);
+  setPendingTemperature(null);
+
+  await sendTemperatureCommand(tempToSend);
+};
+
+// ✅ NEW: Cancel temperature change — revert display back to last known sensor value
+const cancelTempChange = () => {
+  setShowTempConfirmDialog(false);
+  setPendingTemperature(null);
+
+  // Revert the dial/display back to the actual device temperature
+  setDisplayData((prev) => ({ ...prev, temperature: sensorData.temperature }));
+};
 
   // Fetch service items with names from API
   useEffect(() => {
@@ -5446,7 +5479,7 @@ const DelegateScreen1 = () => {
     fetchIntervalRef.current = setInterval(() => {
       fetchData();
       fetchAllAlarms();
-    }, 20000);
+    }, 60000);
 
     return () => {
       if (fetchIntervalRef.current) {
@@ -5482,7 +5515,7 @@ const DelegateScreen1 = () => {
 
     hardStopTimerRef.current = setTimeout(() => {
       stopProcessing();
-    }, 25000);
+    }, 60000);
   };
 
   const stopProcessing = () => {
@@ -5732,16 +5765,16 @@ const DelegateScreen1 = () => {
     startProcessingCycle();
 
     const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-    const isShutdown = sensorData?.fanSpeed == 3 || sensorData?.mode == 0;
+    const isShutdown = displayData?.fanSpeed == 3 || displayData?.mode == 0;
     
     console.log("⚡ Sending power command. New HVAC value:", newHvacValue);
 
     const payload = {
       Header: "0xAA",
       DI: selectedService.pcb_serial_number,
-      MD: isShutdown ? "3" : sensorData.mode,
-      FS: isShutdown ? "0" : sensorData.fanSpeed,
-      SRT: sensorData.temperature,
+      MD: isShutdown ? "3" : displayData.mode,
+      FS: isShutdown ? "0" : displayData.fanSpeed,
+      SRT: displayData.temperature,
       HVAC: newHvacValue,
       Footer: "0xZX",
     };
@@ -6092,6 +6125,33 @@ const DelegateScreen1 = () => {
             </div>
           </div>
         )}
+
+        {showTempConfirmDialog && (
+  <div className="confirm-dialog-overlay">
+    <div className="confirm-dialog">
+      <div className="confirm-dialog-content">
+        <h3>Change Temperature?</h3>
+        <p>
+          Set temperature to <strong>{pendingTemperature}°C</strong>?
+        </p>
+        <div className="confirm-dialog-buttons">
+          <button
+            className="confirm-dialog-btn confirm-btn-yes"
+            onClick={confirmTempChange}
+          >
+            Yes, Set
+          </button>
+          <button
+            className="confirm-dialog-btn confirm-btn-no"
+            onClick={cancelTempChange}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Loading Overlay for Service Switching */}
         {switchingService && (

@@ -539,32 +539,56 @@ const TemperatureDial = ({ onTempChange, fanSpeed, onTempChangeEnd, initialTempe
     onTempChange?.(roundedTemp);
   };
 
-  useEffect(() => {
-    const handle = dialRef.current?.querySelector(".temp-control-handle");
+  // Keep latest temperature available without forcing effect re-runs
+const temperatureRef = useRef(temperature);
+useEffect(() => {
+  temperatureRef.current = temperature;
+}, [temperature]);
 
-    const start = () => {
-      window.addEventListener("mousemove", handleDrag);
-      window.addEventListener("mouseup", end);
-      window.addEventListener("touchmove", handleDrag, { passive: false });
-      window.addEventListener("touchend", end);
-    };
+// Keep latest onTempChangeEnd available without forcing effect re-runs
+const onTempChangeEndRef = useRef(onTempChangeEnd);
+useEffect(() => {
+  onTempChangeEndRef.current = onTempChangeEnd;
+}, [onTempChangeEnd]);
 
-    const end = () => {
-      window.removeEventListener("mousemove", handleDrag);
-      window.removeEventListener("mouseup", end);
-      window.removeEventListener("touchmove", handleDrag);
-      window.removeEventListener("touchend", end);
-    };
+useEffect(() => {
+  const handle = dialRef.current?.querySelector(".temp-control-handle");
+  let isDragging = false;
 
-    handle?.addEventListener("mousedown", start);
-    handle?.addEventListener("touchstart", start, { passive: false });
+  const start = (e) => {
+    isDragging = true;
+    window.addEventListener("mousemove", handleDrag);
+    window.addEventListener("mouseup", end);
+    window.addEventListener("touchmove", handleDrag, { passive: false });
+    window.addEventListener("touchend", end);
+  };
 
-    return () => {
-      handle?.removeEventListener("mousedown", start);
-      handle?.removeEventListener("touchstart", start);
-      end();
-    };
-  }, []);
+  const end = () => {
+    window.removeEventListener("mousemove", handleDrag);
+    window.removeEventListener("mouseup", end);
+    window.removeEventListener("touchmove", handleDrag);
+    window.removeEventListener("touchend", end);
+
+    // ✅ Only fire the callback if a real drag gesture happened
+    if (isDragging) {
+      isDragging = false;
+      onTempChangeEndRef.current?.(temperatureRef.current);
+    }
+  };
+
+  handle?.addEventListener("mousedown", start);
+  handle?.addEventListener("touchstart", start, { passive: false });
+
+  return () => {
+    handle?.removeEventListener("mousedown", start);
+    handle?.removeEventListener("touchstart", start);
+    // ⚠️ Cleanup: just remove any dangling window listeners, do NOT fire the callback
+    window.removeEventListener("mousemove", handleDrag);
+    window.removeEventListener("mouseup", end);
+    window.removeEventListener("touchmove", handleDrag);
+    window.removeEventListener("touchend", end);
+  };
+}, []); // ✅ empty deps — attach once, never re-run
 
   const getFanSpeedDescription = (speed) => {
     switch (speed) {

@@ -17,16 +17,9 @@ export default function StaticScreen() {
   };
 
    const handleWifi = () => {
-    window.location.href = 'http://192.168.178.86';  // ← direct redirect
-  };
+  navigate('/wifi-instructions');
+};
 
-//   const handleWifi = () => {
-//     window.location.href = 'http://72.60.200.39:90';  // ← direct redirect
-//   };
-
-//  const handleWifi = () => {
-//     navigate('/wifi-screen', { state: { userMobile } });
-//   };
 
   return (
     <div className="static-container">
