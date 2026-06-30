@@ -5089,12 +5089,22 @@ const MAX_PULL = 120;
 
 // Progressive messages every 10s
 const PROCESSING_MESSAGES = [
- "1/6 Sending request...",
+  "1/6 Sending request...",
   "2/6 Connecting to device...",
   "3/6 Applying changes...",
   "4/6 Syncing settings...",
   "5/6 Confirming status...",
   "6/6 Finalizing...", 
+];
+
+// Service switching loading messages
+const SWITCHING_MESSAGES = [
+  "Connecting to device...",
+  "Fetching data from PCB...",
+  "Processing device information...",
+  "Updating system status...",
+  "Finalizing connection...",
+  "Connected successfully!",
 ];
 
 // Helper functions
@@ -5204,9 +5214,13 @@ const DelegateScreen1 = () => {
   const [switchingService, setSwitchingService] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [switchNotification, setSwitchNotification] = useState({ show: false, message: "" });
+  const [switchingProgress, setSwitchingProgress] = useState(0);
   
-  // ✅ Temperature dragging state
+  // Temperature dragging state
   const [isDraggingTemp, setIsDraggingTemp] = useState(false);
+  
+  // ✅ NEW: Track initial data load
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
@@ -5250,7 +5264,33 @@ const DelegateScreen1 = () => {
   // Get fan position
   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
 
-  // ✅ NEW: Send temperature command to device
+  // ==================== API FUNCTIONS ====================
+  
+  /**
+   * Fetches data for a specific PCB serial number
+   * Endpoint: /get-latest-data/{pcb_serial_number}/
+   * Used when switching to a new service to get that device's data
+   */
+  const fetchDataForPCB = async (pcbSerialNumber) => {
+    try {
+      console.log(`📡 Fetching data for PCB: ${pcbSerialNumber}`);
+      const response = await fetch(
+        `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
+      );
+      if (!response.ok) throw new Error("Network response was not ok");
+      
+      const data = await response.json();
+      console.log(`✅ Data received for PCB ${pcbSerialNumber}:`, data);
+      
+      if (data.status !== "success" || !data.data) return null;
+      return data.data;
+    } catch (err) {
+      console.error(`❌ Error fetching PCB data for ${pcbSerialNumber}:`, err);
+      return null;
+    }
+  };
+
+  // Send temperature command to device
   const sendTemperatureCommand = async (temperature) => {
     console.group("🌡️ TEMPERATURE COMMAND SENT");
     console.log("📱 Temperature changed to:", temperature);
@@ -5261,8 +5301,6 @@ const DelegateScreen1 = () => {
     });
     
     try {
-      // startProcessingCycle();
-      
       const payload = {
         Header: "0xAA",
         DI: selectedService?.pcb_serial_number || "2411GM-0102",
@@ -5292,65 +5330,59 @@ const DelegateScreen1 = () => {
     } catch (error) {
       console.error("❌ Error sending temperature command:", error);
       console.groupEnd();
-      // stopProcessing();
     }
   };
 
-  // ✅ UPDATED: Handle temperature change during drag
+  // ==================== UI HANDLERS ====================
+
+  // Handle temperature change during drag
   const handleTempChange = (newTemp) => {
     console.log("🌡️ Temperature changing (drag):", newTemp);
     
-    // Update display immediately for smooth UI feedback
     setDisplayData((prev) => ({ ...prev, temperature: newTemp }));
     setIsDraggingTemp(true);
     
-    // If power is OFF, just store the value locally
     if (displayData.powerStatus === "off") {
       console.log(`Temperature set to ${newTemp}°C locally (will apply when power turns on)`);
     }
   };
 
-// ✅ Handle when user finishes dragging temperature
-const handleTempChangeEnd = useCallback((newTemp) => {
-  console.log("🌡️ Temperature drag ended:", newTemp);
-  setIsDraggingTemp(false);
+  // Handle when user finishes dragging temperature
+  const handleTempChangeEnd = useCallback((newTemp) => {
+    console.log("🌡️ Temperature drag ended:", newTemp);
+    setIsDraggingTemp(false);
 
-  // Power OFF → just save locally
-  if (displayData.powerStatus === "off") {
-    console.log("💤 Power is OFF - Temperature saved locally");
-    return;
-  }
+    if (displayData.powerStatus === "off") {
+      console.log("💤 Power is OFF - Temperature saved locally");
+      return;
+    }
 
-  // No control permission
-  if (!serviceItemPermissions?.can_control_equipment) {
-    console.log("⚠️ No control permissions - Temperature change not sent to device");
-    return;
-  }
+    if (!serviceItemPermissions?.can_control_equipment) {
+      console.log("⚠️ No control permissions - Temperature change not sent to device");
+      return;
+    }
 
-  // Power ON + Has permission → show confirmation popup
-  setPendingTemperature(newTemp);
-  setShowTempConfirmDialog(true);
+    setPendingTemperature(newTemp);
+    setShowTempConfirmDialog(true);
+  }, [displayData.powerStatus, serviceItemPermissions]);
 
-}, [displayData.powerStatus, serviceItemPermissions]);
+  const confirmTempChange = async () => {
+    if (pendingTemperature === null) return;
+    const tempToSend = pendingTemperature;
 
-const confirmTempChange = async () => {
-  if (pendingTemperature === null) return;
-  const tempToSend = pendingTemperature;
+    setShowTempConfirmDialog(false);
+    setPendingTemperature(null);
 
-  setShowTempConfirmDialog(false);
-  setPendingTemperature(null);
+    await sendTemperatureCommand(tempToSend);
+  };
 
-  await sendTemperatureCommand(tempToSend);
-};
+  const cancelTempChange = () => {
+    setShowTempConfirmDialog(false);
+    setPendingTemperature(null);
+    setDisplayData((prev) => ({ ...prev, temperature: sensorData.temperature }));
+  };
 
-// ✅ NEW: Cancel temperature change — revert display back to last known sensor value
-const cancelTempChange = () => {
-  setShowTempConfirmDialog(false);
-  setPendingTemperature(null);
-
-  // Revert the dial/display back to the actual device temperature
-  setDisplayData((prev) => ({ ...prev, temperature: sensorData.temperature }));
-};
+  // ==================== DATA FETCHING ====================
 
   // Fetch service items with names from API
   useEffect(() => {
@@ -5373,17 +5405,80 @@ const cancelTempChange = () => {
     }
   }, [user?.company_id, user?.delegate_id]);
 
-  // Get the complete service details when selectedServiceItem changes
+  // ✅ MODIFIED: Initialize with data fetching - only runs once on mount
   useEffect(() => {
-    if (!serviceItemsLoading && selectedServiceItem) {
-      const serviceDetails = getSelectedServiceDetails();
-      console.log("Selected Service Details:", serviceDetails);
-      setSelectedService(serviceDetails);
-      if (serviceDetails?.pcb_serial_number) {
-        activePCBRef.current = serviceDetails.pcb_serial_number;
+    const initialize = async () => {
+      try {
+        // Wait for service items to be loaded from context
+        if (serviceItemsLoading) return;
+        
+        // Get the selected service details
+        const serviceDetails = getSelectedServiceDetails();
+        console.log("Selected Service Details:", serviceDetails);
+        
+        if (serviceDetails?.pcb_serial_number) {
+          setSelectedService(serviceDetails);
+          activePCBRef.current = serviceDetails.pcb_serial_number;
+          
+          // Fetch data for the selected service
+          setLoadingMessage("Loading device data...");
+          const deviceData = await fetchDataForPCB(serviceDetails.pcb_serial_number);
+          
+          if (deviceData) {
+            // Update sensor data with real values
+            const isOnline = deviceData.is_online;
+            setSensorData({
+              outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+              humidity: isOnline ? deviceData.room_humidity?.value : null,
+              roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+              fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+              temperature: isOnline ? deviceData.set_temperature?.value : 25,
+              powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+              mode: deviceData.mode?.value || "3",
+              errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+              hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+              deviceId: serviceDetails.pcb_serial_number,
+              alarmOccurred: deviceData.alarm_occurred?.value || "0",
+              isOnline: isOnline,
+            });
+
+            // Update display data
+            setDisplayData({
+              fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+              temperature: isOnline ? deviceData.set_temperature?.value : 25,
+              mode: deviceData.mode?.value || "3",
+              powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+            });
+
+            // Update error count
+            const alarmValue = deviceData.alarm_occurred?.value;
+            setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+          }
+          
+          setInitialDataLoaded(true); // ✅ Mark initial data as loaded
+        } else {
+          // No PCB serial number, just mark as loaded
+          setInitialDataLoaded(true);
+        }
+        
+        setLoading(false);
+        setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+        setManualRefresh(false);
+        
+      } catch (error) {
+        console.error("❌ Error during initialization:", error);
+        setLoading(false);
+        setInitialDataLoaded(true);
+        setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
+        setManualRefresh(false);
       }
+    };
+
+    // Only run initialization once when the component mounts and service items are loaded
+    if (!initialDataLoaded && !serviceItemsLoading) {
+      initialize();
     }
-  }, [selectedServiceItem, serviceItemsLoading, getSelectedServiceDetails]);
+  }, [serviceItemsLoading]); // ✅ Only depend on serviceItemsLoading
 
   // Fetch all alarms for dropdown badge
   const fetchAllAlarms = async () => {
@@ -5412,7 +5507,7 @@ const cancelTempChange = () => {
     }
   };
 
-  // Fetch sensor data
+  // Fetch sensor data for active PCB
   const fetchData = async () => {
     const pcbSerialNumber = activePCBRef.current;
     if (!pcbSerialNumber) return;
@@ -5443,13 +5538,12 @@ const cancelTempChange = () => {
         errorFlag: isOnline ? deviceData.error_flag?.value : "0",
         hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
         deviceId: pcbSerialNumber,
-        alarmOccurred: deviceData.alarm_occurred?.value,
+        alarmOccurred: deviceData.alarm_occurred?.value || "0",
         isOnline: isOnline,
       });
 
       const alarmValue = deviceData.alarm_occurred?.value;
       setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
-      setLoading(false);
       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
       setManualRefresh(false);
 
@@ -5458,15 +5552,14 @@ const cancelTempChange = () => {
       }
     } catch (error) {
       console.error("🔥 Fetch Error:", error);
-      setLoading(false);
       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
       setManualRefresh(false);
     }
   };
 
-  // Start polling
+  // ✅ MODIFIED: Start polling only after initial data is loaded
   useEffect(() => {
-    if (!activePCBRef.current) return;
+    if (!initialDataLoaded || !activePCBRef.current) return;
 
     if (fetchIntervalRef.current) {
       clearInterval(fetchIntervalRef.current);
@@ -5479,7 +5572,7 @@ const cancelTempChange = () => {
     fetchIntervalRef.current = setInterval(() => {
       fetchData();
       fetchAllAlarms();
-    }, 60000);
+    }, 120000);
 
     return () => {
       if (fetchIntervalRef.current) {
@@ -5487,7 +5580,7 @@ const cancelTempChange = () => {
         fetchIntervalRef.current = null;
       }
     };
-  }, [activePCBRef.current]);
+  }, [initialDataLoaded, activePCBRef.current]);
 
   // Update active PCB ref when selected service changes
   useEffect(() => {
@@ -5496,6 +5589,8 @@ const cancelTempChange = () => {
       activePCBRef.current = selectedService.pcb_serial_number;
     }
   }, [selectedService?.pcb_serial_number]);
+
+  // ==================== COMMAND FUNCTIONS ====================
 
   // Processing message cycle functions
   const MIN_PROCESSING_TIME = 5000;
@@ -5552,12 +5647,6 @@ const cancelTempChange = () => {
     console.group("🎛️ MODE COMMAND SENT");
     console.log("📱 Mode clicked:", modeName);
     console.log("🔢 Mode code:", modeCode);
-    console.log("💻 Current display data:", {
-      mode: displayData.mode,
-      fanSpeed: displayData.fanSpeed,
-      temperature: displayData.temperature,
-      powerStatus: displayData.powerStatus
-    });
     
     try {
       startProcessingCycle();
@@ -5601,12 +5690,6 @@ const cancelTempChange = () => {
     console.group("🌀 FAN SPEED COMMAND SENT");
     console.log("📱 Fan speed clicked:", fanSpeedLabel);
     console.log("🔢 Fan speed code:", fanSpeed);
-    console.log("💻 Current display data:", {
-      mode: displayData.mode,
-      fanSpeed: displayData.fanSpeed,
-      temperature: displayData.temperature,
-      powerStatus: displayData.powerStatus
-    });
     
     try {
       startProcessingCycle();
@@ -5647,31 +5730,19 @@ const cancelTempChange = () => {
   // Handle mode change
   const handleModeChange = async (newMode) => {
     console.log("🔘 Mode button clicked:", newMode);
-    console.log("📊 Current state before mode change:", {
-      processing: processing.status,
-      isOnline: sensorData.isOnline,
-      canControl: serviceItemPermissions?.can_control_equipment,
-      powerStatus: displayData.powerStatus
-    });
     
     if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
-      console.log("⚠️ Mode change blocked - Conditions not met:", {
-        processingActive: processing.status,
-        offline: !sensorData.isOnline,
-        noControl: !serviceItemPermissions?.can_control_equipment
-      });
+      console.log("⚠️ Mode change blocked - Conditions not met");
       return;
     }
     
     const newModeCode = MODE_CODE_MAP[newMode] || 1;
-    console.log("🔄 Updating display mode from", displayData.mode, "to", newModeCode);
     setDisplayData((prev) => ({ ...prev, mode: newModeCode.toString() }));
     
     if (displayData.powerStatus === "on") {
-      console.log("⚡ Power is ON - Sending mode command to device");
       await sendModeCommand(newModeCode.toString(), newMode);
     } else {
-      console.log("💤 Power is OFF - Mode saved locally, will apply when power turns on");
+      console.log("💤 Power is OFF - Mode saved locally");
     }
   };
 
@@ -5681,28 +5752,15 @@ const cancelTempChange = () => {
     const newSpeedLabel = FAN_LABELS[newPosition];
     
     console.log("🌀 Fan speed button clicked:", newSpeedLabel);
-    console.log("📊 Current state before fan change:", {
-      processing: processing.status,
-      isOnline: sensorData.isOnline,
-      canControl: serviceItemPermissions?.can_control_equipment,
-      powerStatus: displayData.powerStatus,
-      currentSpeed: FAN_LABELS[fanPosition]
-    });
     
     if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
-      console.log("⚠️ Fan change blocked - Conditions not met:", {
-        processingActive: processing.status,
-        offline: !sensorData.isOnline,
-        noControl: !serviceItemPermissions?.can_control_equipment
-      });
+      console.log("⚠️ Fan change blocked - Conditions not met");
       return;
     }
     
-    console.log("🔄 Updating display fan speed from", displayData.fanSpeed, "to", newSpeed);
     setDisplayData((prev) => ({ ...prev, fanSpeed: newSpeed }));
     
     if (displayData.powerStatus === "on") {
-      console.log("⚡ Power is ON - Sending fan command to device");
       await sendFanCommand(newSpeed);
     } else {
       console.log(`💤 Power is OFF - Fan speed set to ${newSpeedLabel} (will apply when power turns on)`);
@@ -5800,6 +5858,172 @@ const cancelTempChange = () => {
     }
   };
 
+  // ==================== SERVICE SWITCHING ====================
+
+  // Handle service selection with confirmation
+  const handleServiceSelect = (item) => {
+    if (selectedService?.service_item_id === item.service_item_id) {
+      setShowServiceDropdown(false);
+      return;
+    }
+    
+    setPendingService(item);
+    setShowConfirmDialog(true);
+    setShowServiceDropdown(false);
+  };
+
+  // Confirm and execute service switch with data fetching
+  const confirmServiceSwitch = async () => {
+    if (!pendingService) return;
+    
+    setShowConfirmDialog(false);
+    setSwitchingService(true);
+    setSwitchingProgress(0);
+    
+    try {
+      // Message 1: Connecting
+      setLoadingMessage(SWITCHING_MESSAGES[0]);
+      setSwitchingProgress(10);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update the active PCB reference
+      activePCBRef.current = pendingService.pcb_serial_number;
+      
+      // Message 2: Fetching data from the specific PCB
+      setLoadingMessage(SWITCHING_MESSAGES[1]);
+      setSwitchingProgress(30);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Fetch data for the specific PCB using the single device endpoint
+      const deviceData = await fetchDataForPCB(pendingService.pcb_serial_number);
+      
+      if (!deviceData) {
+        setLoadingMessage("Connected but no data available");
+        setSwitchingProgress(70);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setSelectedService(pendingService);
+        activePCBRef.current = pendingService.pcb_serial_number;
+        updateSelectedServiceItem(pendingService.service_item_id);
+        setSwitchingProgress(100);
+        setSwitchingService(false);
+        setLoadingMessage("");
+        
+        setSwitchNotification({ 
+          show: true, 
+          message: `Connected to ${pendingService.service_item_name}` 
+        });
+        
+        setTimeout(() => {
+          setSwitchNotification({ show: false, message: "" });
+        }, 3000);
+        return;
+      }
+      
+      // Message 3: Processing
+      setLoadingMessage(SWITCHING_MESSAGES[2]);
+      setSwitchingProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update all state with the new device data
+      const isOnline = deviceData.is_online;
+      setSensorData({
+        outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+        humidity: isOnline ? deviceData.room_humidity?.value : null,
+        roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+        temperature: isOnline ? deviceData.set_temperature?.value : 25,
+        powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+        mode: deviceData.mode?.value || "3",
+        errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+        hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+        deviceId: pendingService.pcb_serial_number,
+        alarmOccurred: deviceData.alarm_occurred?.value || "0",
+        isOnline: isOnline,
+      });
+      
+      // Update display data
+      setDisplayData({
+        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+        temperature: isOnline ? deviceData.set_temperature?.value : 25,
+        mode: deviceData.mode?.value || "3",
+        powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+      });
+      
+      // Message 4: Updating
+      setLoadingMessage(SWITCHING_MESSAGES[3]);
+      setSwitchingProgress(70);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update error count
+      const alarmValue = deviceData.alarm_occurred?.value;
+      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+      
+      // Message 5: Finalizing
+      setLoadingMessage(SWITCHING_MESSAGES[4]);
+      setSwitchingProgress(85);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Finally update the selected service
+      setSelectedService(pendingService);
+      activePCBRef.current = pendingService.pcb_serial_number;
+      updateSelectedServiceItem(pendingService.service_item_id);
+      
+      // Message 6: Complete
+      setLoadingMessage(SWITCHING_MESSAGES[5]);
+      setSwitchingProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setSwitchingService(false);
+      setLoadingMessage("");
+      
+      // Show success notification
+      setSwitchNotification({ 
+        show: true, 
+        message: `✅ Successfully switched to ${pendingService.service_item_name}` 
+      });
+      
+      setTimeout(() => {
+        setSwitchNotification({ show: false, message: "" });
+      }, 3000);
+      
+    } catch (error) {
+      console.error("❌ Error switching service:", error);
+      setSwitchingService(false);
+      setLoadingMessage("");
+      
+      setSelectedService(pendingService);
+      activePCBRef.current = pendingService.pcb_serial_number;
+      updateSelectedServiceItem(pendingService.service_item_id);
+      
+      setSwitchNotification({ 
+        show: true, 
+        message: `⚠️ Switched to ${pendingService.service_item_name}` 
+      });
+      
+      setTimeout(() => {
+        setSwitchNotification({ show: false, message: "" });
+      }, 3000);
+    }
+  };
+
+  // Cancel service switch
+  const cancelServiceSwitch = () => {
+    setShowConfirmDialog(false);
+    setPendingService(null);
+  };
+
+  // ==================== NAVIGATION & UI HANDLERS ====================
+
+  const handleNavigation = (path) => {
+    if (!processing.status) {
+      console.log("🧭 Navigating to:", path);
+      navigate(path);
+    } else {
+      console.log("⚠️ Navigation blocked - command in progress");
+    }
+  };
+
   // Pull-to-refresh handlers
   const handleTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
@@ -5868,76 +6092,14 @@ const cancelTempChange = () => {
     navigate("/");
   };
 
-  // Updated handleServiceSelect with confirmation
-  const handleServiceSelect = (item) => {
-    // Don't allow switching to the same service
-    if (selectedService?.service_item_id === item.service_item_id) {
-      setShowServiceDropdown(false);
-      return;
-    }
-    
-    // Show confirmation dialog before switching
-    setPendingService(item);
-    setShowConfirmDialog(true);
-    setShowServiceDropdown(false);
-  };
-
-  // Confirm service switch
-  const confirmServiceSwitch = () => {
-    if (!pendingService) return;
-    
-    setShowConfirmDialog(false);
-    setSwitchingService(true);
-    setLoadingMessage(`Switching to ${pendingService.service_item_name}...`);
-    
-    // Update the service after a short delay for UX
-    setTimeout(() => {
-      setSelectedService(pendingService);
-      activePCBRef.current = pendingService.pcb_serial_number;
-      updateSelectedServiceItem(pendingService.service_item_id);
-      
-      // Show success notification
-      setSwitchNotification({ 
-        show: true, 
-        message: `Successfully switched to ${pendingService.service_item_name}` 
-      });
-      
-      // Hide notification after 3 seconds
-      setTimeout(() => {
-        setSwitchNotification({ show: false, message: "" });
-      }, 3000);
-      
-      // Clear loading state
-      setTimeout(() => {
-        setSwitchingService(false);
-        setLoadingMessage("");
-      }, 1500);
-    }, 500);
-  };
-
-  // Cancel service switch
-  const cancelServiceSwitch = () => {
-    setShowConfirmDialog(false);
-    setPendingService(null);
-  };
-
-  const handleNavigation = (path) => {
-    if (!processing.status) {
-      console.log("🧭 Navigating to:", path);
-      navigate(path);
-    } else {
-      console.log("⚠️ Navigation blocked - command in progress");
-    }
-  };
-
   const getModeDescription = (code) => MODE_MAP[code] || "Fan";
 
   const pullProgress = Math.min(pullToRefresh.pullDistance / PULL_THRESHOLD, 1);
   const indicatorRotation = pullProgress * 360;
   const indicatorOpacity = pullProgress;
 
-  // Loading states
-  if (serviceItemsLoading || (loading && !manualRefresh)) {
+  // ✅ MODIFIED: Loading states - only show initial loading if not loaded yet
+  if (serviceItemsLoading || (loading && !initialDataLoaded)) {
     return (
       <div
         className="mainmain-container"
@@ -5951,9 +6113,17 @@ const cancelTempChange = () => {
           color: "white",
         }}
       >
-        <div style={{ color: "white", fontSize: "18px", marginBottom: "20px" }}>
-          Loading...
+        <div style={{ color: "white", fontSize: "18px", marginBottom: "10px" }}>
+          {loadingMessage || "Loading..."}
         </div>
+        <div style={{ 
+          width: "40px", 
+          height: "40px", 
+          border: "4px solid rgba(255,255,255,0.3)",
+          borderTop: "4px solid white",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite"
+        }} />
         <button
           onClick={handleLogout}
           style={{
@@ -5967,17 +6137,24 @@ const cancelTempChange = () => {
             padding: "8px 16px",
             cursor: "pointer",
             fontSize: "16px",
+            marginTop: "20px",
           }}
         >
           <FiLogOut size={20} />
           <span>Logout</span>
         </button>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   // No service items case
-  if (!serviceItemsLoading && serviceItems.length === 0) {
+  if (!serviceItemsLoading && serviceItems.length === 0 && initialDataLoaded) {
     return (
       <div className="mainmain-container" style={{
         backgroundImage: "linear-gradient(to bottom, #3E99ED, #2B7ED6)",
@@ -6107,6 +6284,9 @@ const cancelTempChange = () => {
               <div className="confirm-dialog-content">
                 <h3>Switch Service?</h3>
                 <p>Are you sure you want to switch to <strong>{pendingService?.service_item_name}</strong>?</p>
+                <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
+                  PCB: {pendingService?.pcb_serial_number}
+                </p>
                 <div className="confirm-dialog-buttons">
                   <button 
                     className="confirm-dialog-btn confirm-btn-yes"
@@ -6126,42 +6306,49 @@ const cancelTempChange = () => {
           </div>
         )}
 
+        {/* Temperature Change Confirmation Dialog */}
         {showTempConfirmDialog && (
-  <div className="confirm-dialog-overlay">
-    <div className="confirm-dialog">
-      <div className="confirm-dialog-content">
-        <h3>Change Temperature?</h3>
-        <p>
-          Set temperature to <strong>{pendingTemperature}°C</strong>?
-        </p>
-        <div className="confirm-dialog-buttons">
-          <button
-            className="confirm-dialog-btn confirm-btn-yes"
-            onClick={confirmTempChange}
-          >
-            Yes, Set
-          </button>
-          <button
-            className="confirm-dialog-btn confirm-btn-no"
-            onClick={cancelTempChange}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+          <div className="confirm-dialog-overlay">
+            <div className="confirm-dialog">
+              <div className="confirm-dialog-content">
+                <h3>Change Temperature?</h3>
+                <p>
+                  Set temperature to <strong>{pendingTemperature}°C</strong>?
+                </p>
+                <div className="confirm-dialog-buttons">
+                  <button
+                    className="confirm-dialog-btn confirm-btn-yes"
+                    onClick={confirmTempChange}
+                  >
+                    Yes, Set
+                  </button>
+                  <button
+                    className="confirm-dialog-btn confirm-btn-no"
+                    onClick={cancelTempChange}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Loading Overlay for Service Switching */}
         {switchingService && (
           <div className="service-switching-overlay">
             <div className="service-switching-content">
               <div className="switching-spinner"></div>
-              <p>{loadingMessage}</p>
+              <p className="switching-message">{loadingMessage}</p>
               <div className="switching-progress-bar">
-                <div className="switching-progress-fill"></div>
+                <div 
+                  className="switching-progress-fill"
+                  style={{ width: `${switchingProgress}%` }}
+                ></div>
               </div>
+              <p className="switching-pcb-detail">
+                PCB: {pendingService?.pcb_serial_number || 'N/A'}
+              </p>
             </div>
           </div>
         )}
@@ -6209,16 +6396,25 @@ const cancelTempChange = () => {
                 <div className="service-dropdown-list">
                   {serviceItems.map((item) => {
                     const displayName = serviceItemsList.find(i => i.service_item_id === item.service_item)?.service_item_name || item.service_item;
+                    const fullItem = serviceItemsList.find(i => i.service_item_id === item.service_item);
                     return (
                       <div
                         key={item.service_item}
-                        className="service-dropdown-item"
+                        className={`service-dropdown-item ${
+                          selectedService?.service_item_id === item.service_item ? "active" : ""
+                        }`}
                         onClick={() => {
-                          const fullItem = serviceItemsList.find(i => i.service_item_id === item.service_item);
-                          handleServiceSelect(fullItem || { service_item_id: item.service_item, service_item_name: displayName });
+                          handleServiceSelect(fullItem || { 
+                            service_item_id: item.service_item, 
+                            service_item_name: displayName,
+                            pcb_serial_number: item.pcb_serial_number 
+                          });
                         }}
                       >
                         {displayName}
+                        {selectedService?.service_item_id === item.service_item && (
+                          <span style={{ marginLeft: "8px", color: "#3E99ED" }}>✓</span>
+                        )}
                       </div>
                     );
                   })}
@@ -6264,7 +6460,7 @@ const cancelTempChange = () => {
           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" />
         </div>
 
-        {/* ✅ UPDATED: Temperature Dial with full functionality */}
+        {/* Temperature Dial */}
         <div style={{ 
           pointerEvents: sensorData.isOnline && !processing.status && serviceItemPermissions?.can_control_equipment ? "auto" : "none", 
           opacity: sensorData.isOnline ? 1 : 0.35 
@@ -6347,7 +6543,7 @@ const cancelTempChange = () => {
 
       {/* Footer */}
       <div className="footer-container">
-        {/* ==================== MODES SECTION ==================== */}
+        {/* Modes Section */}
         <div className="modes-section-in-footer">
           <h3 className="modes-heading">Modes</h3>
           <div className="modes-row">
@@ -6379,7 +6575,7 @@ const cancelTempChange = () => {
           </div>
         </div>
 
-        {/* ==================== FAN SPEED SECTION (BUTTONS STYLE) ==================== */}
+        {/* Fan Speed Section */}
         <div className="fan-speed-section-in-footer">
           <h3 className="fan-speed-heading">Fan Speed</h3>
           <div className="fan-speed-buttons-row">

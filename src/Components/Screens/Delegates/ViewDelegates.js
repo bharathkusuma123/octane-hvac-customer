@@ -224,64 +224,31 @@ const AddDelegates = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Additional data for global search
-  const [customersData, setCustomersData] = useState([]);
+  // Only keep the data needed for search functionality
   const [usersData, setUsersData] = useState([]);
-  const [delegateHistoryData, setDelegateHistoryData] = useState([]);
-  const [serviceItemsData, setServiceItemsData] = useState([]);
 
-  // Fetch additional data for global search
+  // Fetch users data for search (only needed for username lookups)
   useEffect(() => {
-    const fetchAdditionalData = async () => {
+    const fetchUsersData = async () => {
       try {
-        // Fetch users data
         const usersRes = await fetch(`${baseURL}/users/`);
         if (usersRes.ok) {
           const usersData = await usersRes.json();
-          if (Array.isArray(usersData)) {
-            setUsersData(usersData);
+          if (usersData.status === "success") {
+            setUsersData(usersData.data || []);
           }
         }
-
-        // Fetch customers data
-        const customersRes = await fetch(`${baseURL}/customers/`);
-        if (customersRes.ok) {
-          const customersData = await customersRes.json();
-          if (customersData.status === "success") {
-            setCustomersData(customersData.data || []);
-          }
-        }
-
-        // Fetch delegate history data
-        const historyRes = await fetch(`${baseURL}/delegate-history/`);
-        if (historyRes.ok) {
-          const historyData = await historyRes.json();
-          if (historyData.status === "success") {
-            setDelegateHistoryData(historyData.data || []);
-          }
-        }
-
-        // Fetch service items data
-        const serviceItemsRes = await fetch(`${baseURL}/service-items/?customer=${userId}`);
-        if (serviceItemsRes.ok) {
-          const serviceItemsData = await serviceItemsRes.json();
-          if (serviceItemsData.status === "success") {
-            setServiceItemsData(serviceItemsData.data || []);
-          }
-        }
-
       } catch (error) {
-        console.error("Error fetching data for global search:", error);
+        console.error("Error fetching users data:", error);
       }
     };
 
-    fetchAdditionalData();
-  }, [userId]);
+    fetchUsersData();
+  }, []);
 
   // Function to get username from user ID
   const getUsernameById = (userId) => {
     if (!userId || usersData.length === 0) return userId;
-    
     const user = usersData.find(user => user.user_id === userId);
     return user ? user.username : userId;
   };
@@ -291,39 +258,6 @@ const AddDelegates = () => {
     if (!userId) return '';
     const user = usersData.find(user => user.user_id === userId);
     return user ? `${userId} ${user.username} ${user.email || ''}` : userId;
-  };
-
-  // Function to get customer name by customer ID
-  const getCustomerName = (customerId) => {
-    if (!customerId || customersData.length === 0) return customerId;
-    
-    const customer = customersData.find(cust => cust.customer_id === customerId);
-    return customer ? `${customer.full_name} (${customer.username})` : customerId;
-  };
-
-  // Function to get customer search data
-  const getCustomerSearchData = (customerId) => {
-    if (!customerId) return '';
-    const customer = customersData.find(cust => cust.customer_id === customerId);
-    return customer ? `${customerId} ${customer.username} ${customer.full_name} ${customer.email}` : customerId;
-  };
-
-  // Function to get service items assigned to delegate
-  const getDelegateServiceItems = (delegateId) => {
-    if (!delegateId || serviceItemsData.length === 0) return [];
-    
-    return serviceItemsData.filter(item => 
-      item.delegate_id === delegateId || item.delegate === delegateId
-    );
-  };
-
-  // Function to get delegate history data
-  const getDelegateHistory = (delegateId) => {
-    if (!delegateId || delegateHistoryData.length === 0) return [];
-    
-    return delegateHistoryData.filter(history => 
-      history.delegate === delegateId
-    );
   };
 
   // Function to format date as dd/mm/yyyy
@@ -362,9 +296,7 @@ const AddDelegates = () => {
   const formatDateForSearch = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    
     if (isNaN(date.getTime())) return '';
-    
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
@@ -372,42 +304,51 @@ const AddDelegates = () => {
     const monthShort = date.toLocaleString('en-IN', { month: 'short' });
     
     return [
-      `${day}/${month}/${year}`,                    // DD/MM/YYYY
-      `${month}/${day}/${year}`,                    // MM/DD/YYYY
-      `${year}-${month}-${day}`,                    // YYYY-MM-DD
-      `${year}${month}${day}`,                      // YYYYMMDD
-      `${day}-${month}-${year}`,                    // DD-MM-YYYY
-      monthName,                                    // January, February
-      monthShort,                                   // Jan, Feb
-      `${year}`,                                    // 2024
-      `${month}/${year}`,                           // MM/YYYY
-      `${day} ${monthName} ${year}`,               // 15 January 2024
-      `${day} ${monthShort} ${year}`,              // 15 Jan 2024
+      `${day}/${month}/${year}`,
+      `${month}/${day}/${year}`,
+      `${year}-${month}-${day}`,
+      `${year}${month}${day}`,
+      `${day}-${month}-${year}`,
+      monthName,
+      monthShort,
+      `${year}`,
+      `${month}/${year}`,
+      `${day} ${monthName} ${year}`,
+      `${day} ${monthShort} ${year}`,
     ].join(' ');
   };
 
   const fetchDelegates = async () => {
     setIsLoading(true);
     try {
+      // Use the API with customer parameter - this returns only delegates for this customer
       const response = await fetch(`${baseURL}/delegates/?customer=${userId}`);
       if (response.ok) {
         const data = await response.json();
-        const filtered = (data.data || [])
-          .filter((d) => d.customer === userId)
-          .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
-        setDelegates(filtered);
+        // The API now returns only delegates for this customer
+        const delegatesList = data.data || [];
+        // Sort by registered_at descending
+        const sortedDelegates = delegatesList.sort((a, b) => 
+          new Date(b.registered_at) - new Date(a.registered_at)
+        );
+        setDelegates(sortedDelegates);
+        console.log(`Found ${sortedDelegates.length} delegates for user ${userId}`);
       } else {
         console.error('Failed to fetch delegates');
+        setDelegates([]);
       }
     } catch (error) {
       console.error('Error fetching delegates:', error);
+      setDelegates([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDelegates();
+    if (userId) {
+      fetchDelegates();
+    }
   }, [userId]);
 
   // Enhanced global search functionality
@@ -423,21 +364,6 @@ const AddDelegates = () => {
       const createdBySearch = getUserSearchData(delegate.created_by);
       const updatedBySearch = getUserSearchData(delegate.updated_by);
       
-      // Get other relational data for search
-      const customerSearch = getCustomerSearchData(delegate.customer);
-      
-      // Get service items for this delegate
-      const delegateServiceItems = getDelegateServiceItems(delegate.delegate_id);
-      const serviceItemsText = delegateServiceItems.map(item => 
-        `${item.service_item_id} ${item.service_item_name || ''} ${item.serial_number || ''}`
-      ).join(' ');
-      
-      // Get history for this delegate
-      const delegateHistory = getDelegateHistory(delegate.delegate_id);
-      const historyText = delegateHistory.map(history => 
-        `${history.action} ${history.created_at}`
-      ).join(' ');
-      
       // Get dates in multiple formats for search
       const registeredDateFormats = formatDateForSearch(delegate.registered_at);
       const createdDateFormats = formatDateForSearch(delegate.created_at);
@@ -450,15 +376,7 @@ const AddDelegates = () => {
         delegate.delegate_name || '',
         delegate.delegate_mobile || '',
         delegate.delegate_email || '',
-        delegate.address || '',
-        delegate.city || '',
-        delegate.state || '',
-        delegate.country || '',
-        delegate.zip_code || '',
         delegate.status || '',
-        delegate.customer || '',
-        delegate.created_by || '',
-        delegate.updated_by || '',
         delegate.registered_at || '',
         delegate.created_at || '',
         delegate.updated_at || '',
@@ -467,30 +385,24 @@ const AddDelegates = () => {
         delegate.designation || '',
         delegate.notes || '',
         delegate.permissions || '',
+        delegate.customer || '',
+        delegate.company || '',
         
         // Formatted relational data
         createdBySearch,
         updatedBySearch,
-        customerSearch,
-        
-        // Service items data
-        serviceItemsText,
-        
-        // History data
-        historyText,
         
         // Dates in multiple formats
         registeredDateFormats,
         createdDateFormats,
         updatedDateFormats,
         
-        // Display values (exactly as shown in cards)
+        // Display values
         formatDateTime(delegate.registered_at),
         formatDateTime(delegate.created_at),
         formatDateTime(delegate.updated_at),
         getUsernameById(delegate.created_by),
         getUsernameById(delegate.updated_by),
-        getCustomerName(delegate.customer),
         
         // Status variations for search
         delegate.status === 'Active' ? 'active working enabled approved' : '',
@@ -505,6 +417,13 @@ const AddDelegates = () => {
         delegate.delegate_type === 'Temporary' ? 'temporary interim provisional' : '',
         delegate.delegate_type === 'Permanent' ? 'permanent permanent regular full-time' : '',
         
+        // Phone number variations
+        delegate.delegate_mobile ? `phone mobile contact number ${delegate.delegate_mobile}` : '',
+        delegate.delegate_mobile ? delegate.delegate_mobile.replace(/\D/g, '') : '',
+        
+        // Email variations
+        delegate.delegate_email ? `email mail contact ${delegate.delegate_email}` : '',
+        
         // Department variations
         delegate.department === 'Operations' ? 'operations ops management' : '',
         delegate.department === 'Maintenance' ? 'maintenance service repair' : '',
@@ -518,20 +437,6 @@ const AddDelegates = () => {
         delegate.designation === 'Coordinator' ? 'coordinator organizer planner' : '',
         delegate.designation === 'Representative' ? 'representative agent associate' : '',
         
-        // Phone number variations
-        delegate.delegate_mobile ? `phone mobile contact number ${delegate.delegate_mobile}` : '',
-        delegate.delegate_mobile ? delegate.delegate_mobile.replace(/\D/g, '') : '',
-        
-        // Email variations
-        delegate.delegate_email ? `email mail contact ${delegate.delegate_email}` : '',
-        
-        // Address variations
-        delegate.address ? `address location place ${delegate.address}` : '',
-        delegate.city ? `city town ${delegate.city}` : '',
-        delegate.state ? `state province region ${delegate.state}` : '',
-        delegate.country ? `country nation ${delegate.country}` : '',
-        delegate.zip_code ? `zip postal code pincode ${delegate.zip_code}` : '',
-        
         // Permission variations
         delegate.permissions === 'Full Access' ? 'full access all permissions admin' : '',
         delegate.permissions === 'Limited Access' ? 'limited access restricted basic' : '',
@@ -539,34 +444,15 @@ const AddDelegates = () => {
         
         // Notes variations
         delegate.notes ? `notes comments remarks ${delegate.notes}` : '',
-        
-        // Add any other properties that might exist
-        ...Object.values(delegate).filter(val => 
-          val !== null && val !== undefined
-        ).map(val => {
-          if (typeof val === 'string' || typeof val === 'number') {
-            return String(val);
-          }
-          if (typeof val === 'boolean') {
-            return val ? 'true yes active' : 'false no inactive';
-          }
-          if (Array.isArray(val)) {
-            return val.join(' ');
-          }
-          if (typeof val === 'object' && val !== null) {
-            return JSON.stringify(val);
-          }
-          return '';
-        })
       ]
-      .join(' ')                    // Combine into one string
-      .toLowerCase()                // Make case-insensitive
-      .replace(/\s+/g, ' ')         // Normalize spaces
+      .join(' ')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
       .trim();
       
       return searchableText.includes(searchLower);
     });
-  }, [searchTerm, delegates, usersData, customersData, delegateHistoryData, serviceItemsData, userId]);
+  }, [searchTerm, delegates, usersData]);
 
   const handleAddDelegate = () => navigate('/add-delegates');
   
@@ -583,7 +469,6 @@ const AddDelegates = () => {
   // Function to handle status change
   const handleStatusChange = async (delegateId, newStatus) => {
     try {
-      // First API call: Update delegate status
       const putResponse = await fetch(`${baseURL}/delegates/${delegateId}/`, {
         method: 'PUT',
         headers: {
@@ -595,26 +480,9 @@ const AddDelegates = () => {
       });
 
       if (putResponse.ok) {
-        // Second API call: Create delegate history entry
-        const postResponse = await fetch(`${baseURL}/delegate-history/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: newStatus,
-            delegate: delegateId
-          })
-        });
-
-        if (postResponse.ok) {
-          // Refresh the delegates list to show updated status
-          fetchDelegates();
-          alert(`Delegate status updated to ${newStatus} successfully!`);
-        } else {
-          console.error('Failed to create delegate history');
-          alert('Failed to create delegate history record');
-        }
+        // Refresh the delegates list to show updated status
+        fetchDelegates();
+        alert(`Delegate status updated to ${newStatus} successfully!`);
       } else {
         console.error('Failed to update delegate status');
         alert('Failed to update delegate status');
@@ -632,7 +500,7 @@ const AddDelegates = () => {
   );
 
   return (
-    <div   style={{marginTop:"10px"}} className="delegate-card-container">
+    <div style={{ marginTop: "10px" }} className="delegate-card-container">
       <div className="delegate-card-header">
         <h2 className="delegate-card-title">My Delegates</h2>
         <button onClick={handleAddDelegate} className="delegate-card-add-btn">
@@ -680,7 +548,7 @@ const AddDelegates = () => {
                 <span 
                   className="delegate-card-id"
                   onClick={() => navigate(`/delegate-service-items/${delegate.delegate_id}`)}
-                  style={{cursor: 'pointer', textDecoration: 'underline', color: '#0d6efd'}}
+                  style={{ cursor: 'pointer', textDecoration: 'underline', color: '#0d6efd' }}
                   title={`View Service Items for Delegate: ${delegate.delegate_id}`}
                 >
                   ID: {delegate.delegate_id}
@@ -698,22 +566,12 @@ const AddDelegates = () => {
                   <span className="delegate-card-value">{delegate.delegate_mobile}</span>
                 </div>
                 
-                {/* <div className="delegate-card-field">
-                  <span className="delegate-card-label">Email:</span>
-                  <span className="delegate-card-value">{delegate.delegate_email || 'N/A'}</span>
-                </div> */}
-                
                 <div className="delegate-card-field">
                   <span className="delegate-card-label">Status:</span>
                   <span className={`delegate-card-status delegate-card-status-${delegate.status.toLowerCase()}`}>
                     {delegate.status}
                   </span>
                 </div>
-                
-                {/* <div className="delegate-card-field">
-                  <span className="delegate-card-label">Type:</span>
-                  <span className="delegate-card-value">{delegate.delegate_type || 'N/A'}</span>
-                </div> */}
                 
                 <div className="delegate-card-field">
                   <span className="delegate-card-label">Registered:</span>
@@ -736,19 +594,10 @@ const AddDelegates = () => {
                   </div>
                 )}
                 
-                {delegate.address && (
-                  <div className="delegate-card-field">
-                    <span className="delegate-card-label">Address:</span>
-                    <span className="delegate-card-value" style={{fontSize: '0.9em'}}>
-                      {delegate.address}, {delegate.city}, {delegate.state}, {delegate.country}
-                    </span>
-                  </div>
-                )}
-                
                 {delegate.notes && (
                   <div className="delegate-card-field">
                     <span className="delegate-card-label">Notes:</span>
-                    <span className="delegate-card-value" style={{fontSize: '0.9em', fontStyle: 'italic'}}>
+                    <span className="delegate-card-value" style={{ fontSize: '0.9em', fontStyle: 'italic' }}>
                       {delegate.notes}
                     </span>
                   </div>
@@ -763,8 +612,6 @@ const AddDelegates = () => {
                 >
                   <option value="Active">Active</option>
                   <option value="Recalled">Recalled</option>
-                  {/* <option value="Suspended">Suspended</option>
-                  <option value="Pending">Pending</option> */}
                 </select>
               </div>
             </div>

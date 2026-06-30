@@ -3842,13 +3842,12 @@ const MODE_CODE_MAP = {
   Direct: 5,
 };
 
-const FAN_SPEEDS = ["0", "1", "2"]; // 0=High, 1=Medium, 2=Low
+const FAN_SPEEDS = ["0", "1", "2"];
 const FAN_LABELS = ["High", "Medium", "Low"];
 
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
 
-// ✅ FIX 3: Progressive messages every 10s
 const PROCESSING_MESSAGES = [
   "1/6 Sending request...",
   "2/6 Connecting to device...",
@@ -3856,6 +3855,15 @@ const PROCESSING_MESSAGES = [
   "4/6 Syncing settings...",
   "5/6 Confirming status...",
   "6/6 Finalizing...",
+];
+
+const SWITCHING_MESSAGES = [
+  "Connecting to device...",
+  "Fetching data from PCB...",
+  "Processing device information...",
+  "Updating system status...",
+  "Finalizing connection...",
+  "Connected successfully!",
 ];
 
 const getStoredService = () => {
@@ -3917,9 +3925,8 @@ const Screen1 = () => {
   const company_id = user?.company_id;
   const navigate = useNavigate();
 
-  // ✅ NEW: Temperature confirmation dialog states
-const [showTempConfirmDialog, setShowTempConfirmDialog] = useState(false);
-const [pendingTemperature, setPendingTemperature] = useState(null);
+  const [showTempConfirmDialog, setShowTempConfirmDialog] = useState(false);
+  const [pendingTemperature, setPendingTemperature] = useState(null);
 
   const [pullToRefresh, setPullToRefresh] = useState({
     isPulling: false,
@@ -3930,11 +3937,9 @@ const [pendingTemperature, setPendingTemperature] = useState(null);
   const touchStartY = useRef(0);
   const containerRef = useRef(null);
 
-  // ✅ FIX 1: Single interval, PCB switching via ref
   const activePCBRef = useRef(null);
   const fetchIntervalRef = useRef(null);
 
-  // ✅ FIX 3: Processing message cycling refs
   const processingTimerRef = useRef(null);
   const processingMsgIndexRef = useRef(0);
   const hardStopTimerRef = useRef(null);
@@ -3952,10 +3957,10 @@ const [pendingTemperature, setPendingTemperature] = useState(null);
     message: "",
   });
   const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false); // ✅ NEW: Track initial data load
 
-  // Add this alongside your other refs
   const processingStartTimeRef = useRef(null);
-  const MIN_PROCESSING_TIME = 5000; // 5 seconds minimum before poll can clear it
+  const MIN_PROCESSING_TIME = 5000;
 
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
@@ -3972,7 +3977,6 @@ const [pendingTemperature, setPendingTemperature] = useState(null);
     isOnline: true,
   });
 
-  // Display data for local changes
   const [displayData, setDisplayData] = useState({
     fanSpeed: "0",
     temperature: 25,
@@ -3980,18 +3984,16 @@ const [pendingTemperature, setPendingTemperature] = useState(null);
     powerStatus: "off",
   });
 
-  // ✅ Temperature dragging state
   const [isDraggingTemp, setIsDraggingTemp] = useState(false);
 
-  // Service switching states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingService, setPendingService] = useState(null);
   const [switchingService, setSwitchingService] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [switchNotification, setSwitchNotification] = useState({ show: false, message: "" });
+  const [switchingProgress, setSwitchingProgress] = useState(0);
 
   useEffect(() => {
-    // Sync displayData with sensorData
     setDisplayData({
       fanSpeed: sensorData.fanSpeed,
       temperature: sensorData.temperature,
@@ -4006,84 +4008,263 @@ const [pendingTemperature, setPendingTemperature] = useState(null);
     }
   }, [selectedService]);
 
-  // Get current mode description
   const currentModeDescription = MODE_MAP[displayData.mode] || "Fan";
-  
-  // Get fan position for slider
   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
-  const fanPercentage = fanPosition * 50;
 
-  // ✅ NEW: Send temperature command to device
-// ✅ NEW: Send temperature command to device (no processing UI)
-const sendTemperatureCommand = async (temperature) => {
-  try {
-    const payload = {
-      Header: "0xAA",
-      DI: selectedService?.pcb_serial_number || "2411GM-0102",
-      MD: parseInt(displayData.mode) || 3,
-      FS: parseInt(displayData.fanSpeed) || 0,
-      SRT: parseInt(temperature) || 25,
-      HVAC: displayData.powerStatus === "on" ? "1" : "0",
-      Footer: "0xZX",
+  // Fetch data for a specific PCB
+  const fetchDataForPCB = async (pcbSerialNumber) => {
+    try {
+      console.log(`📡 Fetching data for PCB: ${pcbSerialNumber}`);
+      const response = await fetch(
+        `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
+      );
+      if (!response.ok) throw new Error("Network response was not ok");
+      
+      const data = await response.json();
+      console.log(`✅ Data received for PCB ${pcbSerialNumber}:`, data);
+      
+      if (data.status !== "success" || !data.data) return null;
+      return data.data;
+    } catch (err) {
+      console.error(`❌ Error fetching PCB data for ${pcbSerialNumber}:`, err);
+      return null;
+    }
+  };
+
+  // ✅ MODIFIED: Fetch service items and initial data
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        setLoading(true);
+        
+        // Step 1: Fetch service items
+        const response = await fetch(
+          `${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`
+        );
+        if (!response.ok) throw new Error("Failed to fetch service items");
+
+        const data = await response.json();
+        setServiceItems(data.data || []);
+
+        if (data.data?.length > 0) {
+          // Step 2: Get the first service
+          const first = data.data[0];
+          setSelectedService(first);
+          activePCBRef.current = first.pcb_serial_number;
+          
+          // Step 3: Fetch data for the first service
+          setLoadingMessage("Loading device data...");
+          const deviceData = await fetchDataForPCB(first.pcb_serial_number);
+          
+          if (deviceData) {
+            // Step 4: Update sensor data with real values
+            const isOnline = deviceData.is_online;
+            setSensorData({
+              outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+              humidity: isOnline ? deviceData.room_humidity?.value : null,
+              roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+              fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+              temperature: isOnline ? deviceData.set_temperature?.value : 25,
+              powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+              mode: deviceData.mode?.value || "3",
+              errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+              hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+              deviceId: first.pcb_serial_number,
+              alarmOccurred: deviceData.alarm_occurred?.value || "0",
+              isOnline: isOnline,
+            });
+
+            // Update display data
+            setDisplayData({
+              fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+              temperature: isOnline ? deviceData.set_temperature?.value : 25,
+              mode: deviceData.mode?.value || "3",
+              powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+            });
+
+            // Update error count
+            const alarmValue = deviceData.alarm_occurred?.value;
+            setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+          }
+          
+          setInitialDataLoaded(true); // ✅ Mark initial data as loaded
+        }
+
+        setLoading(false);
+        setPullToRefresh((prev) => ({ ...prev, isRefreshing: false }));
+        setManualRefresh(false);
+        
+      } catch (error) {
+        console.error("❌ Error during initialization:", error);
+        setLoading(false);
+        setPullToRefresh((prev) => ({ ...prev, isRefreshing: false }));
+        setManualRefresh(false);
+      }
     };
 
-    console.log("🌡️ Sending temperature command:", payload);
+    initialize();
+  }, [userId, company_id]); // Run only when userId or company_id changes
 
-    const response = await fetch("https://mdata.air2o.net/controllers/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+  // ✅ MODIFIED: Fetch data for polling (only after initial data is loaded)
+  const fetchData = async () => {
+    const pcbSerialNumber = activePCBRef.current;
+    if (!pcbSerialNumber) return;
 
-    if (!response.ok) {
-      throw new Error("Failed to send temperature command");
+    try {
+      const response = await fetch(
+        `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
+      );
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const data = await response.json();
+      if (data.status !== "success" || !data.data) return;
+
+      if (activePCBRef.current !== pcbSerialNumber) return;
+
+      const deviceData = data.data;
+      const isOnline = deviceData.is_online;
+
+      setSensorData({
+        outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+        humidity: isOnline ? deviceData.room_humidity?.value : null,
+        roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+        temperature: isOnline ? deviceData.set_temperature?.value : 25,
+        powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+        mode: deviceData.mode?.value || "3",
+        errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+        hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+        deviceId: pcbSerialNumber,
+        alarmOccurred: deviceData.alarm_occurred?.value || "0",
+        isOnline: isOnline,
+      });
+
+      const alarmValue = deviceData.alarm_occurred?.value;
+      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+
+      if (deviceData.hvac_busy?.value == "0") {
+        clearProcessingIfDone();
+      }
+    } catch (err) {
+      console.error("❌ Fetch error:", err);
+    }
+  };
+
+  // ✅ MODIFIED: Start polling only after initial data is loaded
+  useEffect(() => {
+    if (!initialDataLoaded || !activePCBRef.current) return;
+
+    fetchData();
+    fetchAllAlarms();
+
+    if (fetchIntervalRef.current) {
+      clearInterval(fetchIntervalRef.current);
     }
 
-    console.log("✅ Temperature command sent:", temperature);
-  } catch (error) {
-    console.error("Error sending temperature command:", error);
-  }
-};
+    fetchIntervalRef.current = setInterval(() => {
+      fetchData();
+      fetchAllAlarms();
+    }, 120000);
 
-  // ✅ UPDATED: Handle temperature change during drag
+    return () => {
+      if (fetchIntervalRef.current) {
+        clearInterval(fetchIntervalRef.current);
+        fetchIntervalRef.current = null;
+      }
+    };
+  }, [initialDataLoaded, activePCBRef.current]);
+
+  // Fetch all alarms for dropdown badge
+  const fetchAllAlarms = async () => {
+    try {
+      const response = await fetch(
+        `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch all alarms");
+
+      const data = await response.json();
+
+      if (data.status !== "success" || !data.data) return;
+
+      const alarmCount = data.data.reduce((count, item) => {
+        const val = item.alarm_occurred?.value;
+        if (val && val !== "0") {
+          return count + Number(val);
+        }
+        return count;
+      }, 0);
+
+      setDropdownAlarmCount(alarmCount);
+    } catch (err) {
+      console.error("Dropdown alarm fetch error:", err);
+    }
+  };
+
+  // Send temperature command to device
+  const sendTemperatureCommand = async (temperature) => {
+    try {
+      const payload = {
+        Header: "0xAA",
+        DI: selectedService?.pcb_serial_number || "2411GM-0102",
+        MD: parseInt(displayData.mode) || 3,
+        FS: parseInt(displayData.fanSpeed) || 0,
+        SRT: parseInt(temperature) || 25,
+        HVAC: displayData.powerStatus === "on" ? "1" : "0",
+        Footer: "0xZX",
+      };
+
+      console.log("🌡️ Sending temperature command:", payload);
+
+      const response = await fetch("https://mdata.air2o.net/controllers/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send temperature command");
+      }
+
+      console.log("✅ Temperature command sent:", temperature);
+    } catch (error) {
+      console.error("Error sending temperature command:", error);
+    }
+  };
+
+  // Handle temperature change during drag
   const handleTempChange = (newTemp) => {
-    // Update display immediately for smooth UI feedback
     setDisplayData((prev) => ({ ...prev, temperature: newTemp }));
     setIsDraggingTemp(true);
     
-    // If power is OFF, just store the value locally
     if (displayData.powerStatus === "off") {
       console.log(`Temperature set to ${newTemp}°C (will apply when power turns on)`);
     }
   };
 
- const handleTempChangeEnd = useCallback((newTemp) => {
-  setIsDraggingTemp(false);
-  if (displayData.powerStatus === "on") {
-    setPendingTemperature(newTemp);
-    setShowTempConfirmDialog(true);
-  }
-}, [displayData.powerStatus]);
+  const handleTempChangeEnd = useCallback((newTemp) => {
+    setIsDraggingTemp(false);
+    if (displayData.powerStatus === "on") {
+      setPendingTemperature(newTemp);
+      setShowTempConfirmDialog(true);
+    }
+  }, [displayData.powerStatus]);
 
-// ✅ NEW: Confirm temperature change
-const confirmTempChange = async () => {
-  if (pendingTemperature === null) return;
-  const tempToSend = pendingTemperature;
+  const confirmTempChange = async () => {
+    if (pendingTemperature === null) return;
+    const tempToSend = pendingTemperature;
 
-  setShowTempConfirmDialog(false);
-  setPendingTemperature(null);
+    setShowTempConfirmDialog(false);
+    setPendingTemperature(null);
 
-  await sendTemperatureCommand(tempToSend);
-};
+    await sendTemperatureCommand(tempToSend);
+  };
 
-// ✅ NEW: Cancel temperature change — revert display back to last known sensor value
-const cancelTempChange = () => {
-  setShowTempConfirmDialog(false);
-  setPendingTemperature(null);
-
-  // Revert the dial/display back to the actual device temperature
-  setDisplayData((prev) => ({ ...prev, temperature: sensorData.temperature }));
-};
+  const cancelTempChange = () => {
+    setShowTempConfirmDialog(false);
+    setPendingTemperature(null);
+    setDisplayData((prev) => ({ ...prev, temperature: sensorData.temperature }));
+  };
 
   // Handle mode change
   const handleModeChange = async (newMode) => {
@@ -4092,7 +4273,6 @@ const cancelTempChange = () => {
     const newModeCode = MODE_CODE_MAP[newMode] || 1;
     setDisplayData((prev) => ({ ...prev, mode: newModeCode.toString() }));
     
-    // Send command to device if power is on
     if (displayData.powerStatus === "on") {
       await sendModeCommand(newModeCode.toString(), newMode);
     }
@@ -4131,21 +4311,16 @@ const cancelTempChange = () => {
     }
   };
 
-  // Handle fan speed change - ALWAYS update display and send if power is on
+  // Handle fan speed change
   const handleFanSpeedChange = async (newPosition) => {
     if (processing.status || !sensorData.isOnline) return;
     
     const newSpeed = FAN_SPEEDS[newPosition];
-    
-    // Always update display immediately for UI feedback
     setDisplayData((prev) => ({ ...prev, fanSpeed: newSpeed }));
     
-    // Only send command to device if power is ON
     if (displayData.powerStatus === "on") {
       await sendFanCommand(newSpeed);
     } else {
-      // If power is OFF, just update the local state
-      // The value will be used when power turns ON
       console.log(`Fan speed set to ${newSpeed} (will apply when power turns on)`);
     }
   };
@@ -4193,7 +4368,7 @@ const cancelTempChange = () => {
     handleFanSpeedChange(newPosition);
   };
 
-  // ✅ FIX 3: Start progressive message cycle
+  // Start progressive message cycle
   const startProcessingCycle = () => {
     processingMsgIndexRef.current = 0;
     processingStartTimeRef.current = Date.now();
@@ -4224,7 +4399,6 @@ const cancelTempChange = () => {
     setProcessing({ status: false, message: "" });
   };
 
-  // Called when polling detects hvac_busy flipped to 0
   const clearProcessingIfDone = () => {
     if (processingTimerRef.current || hardStopTimerRef.current) {
       const elapsed = Date.now() - (processingStartTimeRef.current || 0);
@@ -4238,124 +4412,6 @@ const cancelTempChange = () => {
     return () => {
       if (processingTimerRef.current) clearInterval(processingTimerRef.current);
       if (hardStopTimerRef.current) clearTimeout(hardStopTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchServiceItems = async () => {
-      try {
-        const response = await fetch(
-          `${baseURL}/service-items/?user_id=${userId}&company_id=${company_id}`
-        );
-        if (!response.ok) throw new Error("Failed to fetch service items");
-
-        const data = await response.json();
-        setServiceItems(data.data || []);
-
-        if (data.data?.length > 0 && !selectedService) {
-          const first = data.data[0];
-          setSelectedService(first);
-          activePCBRef.current = first.pcb_serial_number;
-        }
-
-        setLoading(false);
-        setPullToRefresh((prev) => ({ ...prev, isRefreshing: false }));
-        setManualRefresh(false);
-      } catch (error) {
-        console.error("Error fetching service items:", error);
-        setLoading(false);
-        setPullToRefresh((prev) => ({ ...prev, isRefreshing: false }));
-        setManualRefresh(false);
-      }
-    };
-
-    fetchServiceItems();
-  }, [manualRefresh]);
-
-  const fetchData = async () => {
-    const pcbSerialNumber = activePCBRef.current;
-    if (!pcbSerialNumber) return;
-
-    try {
-      const response = await fetch(
-        `${baseURL}/get-latest-data/${pcbSerialNumber}/?user_id=${userId}&company_id=${company_id}`
-      );
-      if (!response.ok) throw new Error("Network response was not ok");
-
-      const data = await response.json();
-      if (data.status !== "success" || !data.data) return;
-
-      if (activePCBRef.current !== pcbSerialNumber) return;
-
-      const deviceData = data.data;
-      const isOnline = deviceData.is_online;
-
-      setSensorData({
-        outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
-        humidity: isOnline ? deviceData.room_humidity?.value : null,
-        roomTemp: isOnline ? deviceData.room_temperature?.value : null,
-        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
-        temperature: isOnline ? deviceData.set_temperature?.value : 25,
-        powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
-        mode: deviceData.mode?.value,
-        errorFlag: isOnline ? deviceData.error_flag?.value : "0",
-        hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
-        deviceId: pcbSerialNumber,
-        alarmOccurred: deviceData.alarm_occurred?.value,
-        isOnline: isOnline,
-      });
-
-      const alarmValue = deviceData.alarm_occurred?.value;
-      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
-
-      if (deviceData.hvac_busy?.value == "0") {
-        clearProcessingIfDone();
-      }
-    } catch (err) {
-      console.error("❌ Fetch error:", err);
-    }
-  };
-
-  const fetchAllAlarms = async () => {
-    try {
-      const response = await fetch(
-        `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
-      );
-
-      if (!response.ok) throw new Error("Failed to fetch all alarms");
-
-      const data = await response.json();
-
-      if (data.status !== "success" || !data.data) return;
-
-      const alarmCount = data.data.reduce((count, item) => {
-        const val = item.alarm_occurred?.value;
-        if (val && val !== "0") {
-          return count + Number(val);
-        }
-        return count;
-      }, 0);
-
-      setDropdownAlarmCount(alarmCount);
-    } catch (err) {
-      console.error("Dropdown alarm fetch error:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    fetchAllAlarms();
-
-    fetchIntervalRef.current = setInterval(() => {
-      fetchData();
-      fetchAllAlarms();
-    }, 60000);
-
-    return () => {
-      if (fetchIntervalRef.current) {
-        clearInterval(fetchIntervalRef.current);
-        fetchIntervalRef.current = null;
-      }
     };
   }, []);
 
@@ -4443,79 +4499,164 @@ const cancelTempChange = () => {
     navigate("/");
   };
 
- const handlePowerToggle = async () => {
-  try {
-    if (processing.status || sensorData.hvacBusy == "1") {
-      const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
-      setProcessing({ status: true, message: msg });
-      return;
-    }
+  const handlePowerToggle = async () => {
+    try {
+      if (processing.status || sensorData.hvacBusy == "1") {
+        const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
+        setProcessing({ status: true, message: msg });
+        return;
+      }
 
-    startProcessingCycle();
+      startProcessingCycle();
 
-    const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-    const isShutdown = displayData?.fanSpeed == 3 || displayData?.mode == 0;
+      const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+      const isShutdown = displayData?.fanSpeed == 3 || displayData?.mode == 0;
 
-    const payload = {
-      Header: "0xAA",
-      DI: selectedService?.pcb_serial_number || "2411GM-0102",
-      MD: isShutdown ? "3" : displayData.mode,
-      FS: isShutdown ? "0" : displayData.fanSpeed,
-      SRT: displayData.temperature,
-      HVAC: newHvacValue,
-      Footer: "0xZX",
-    };
+      const payload = {
+        Header: "0xAA",
+        DI: selectedService?.pcb_serial_number || "2411GM-0102",
+        MD: isShutdown ? "3" : displayData.mode,
+        FS: isShutdown ? "0" : displayData.fanSpeed,
+        SRT: displayData.temperature,
+        HVAC: newHvacValue,
+        Footer: "0xZX",
+      };
 
-    const response = await fetch("https://mdata.air2o.net/controllers/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const response = await fetch("https://mdata.air2o.net/controllers/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-      console.error("❌ API error:", response.status);
+      if (!response.ok) {
+        console.error("❌ API error:", response.status);
+        stopProcessing();
+        throw new Error("Failed to send command");
+      }
+
+      const result = await response.text();
+      console.log("✅ Command sent:", result);
+    } catch (error) {
+      console.error("🔥 Power toggle error:", error.message);
       stopProcessing();
-      throw new Error("Failed to send command");
     }
-
-    const result = await response.text();
-    console.log("✅ Command sent:", result);
-  } catch (error) {
-    console.error("🔥 Power toggle error:", error.message);
-    stopProcessing();
-  }
-};
+  };
 
   const handleNavigation = (path) => {
     if (!processing.status) navigate(path);
   };
 
-  // Updated handleServiceSelect with confirmation
+  // Handle service selection with confirmation
   const handleServiceSelect = (item) => {
-    // Don't allow switching to the same service
     if (selectedService?.service_item_id === item.service_item_id) {
       setShowServiceDropdown(false);
       return;
     }
     
-    // Show confirmation dialog before switching
     setPendingService(item);
     setShowConfirmDialog(true);
     setShowServiceDropdown(false);
   };
 
-  // Confirm service switch
-  const confirmServiceSwitch = () => {
+  // Confirm and execute service switch with data fetching
+  const confirmServiceSwitch = async () => {
     if (!pendingService) return;
     
     setShowConfirmDialog(false);
     setSwitchingService(true);
-    setLoadingMessage(`Switching to ${pendingService.service_item_name}...`);
+    setSwitchingProgress(0);
     
-    // Update the service after a short delay for UX
-    setTimeout(() => {
-      setSelectedService(pendingService);
+    try {
+      // Message 1: Connecting
+      setLoadingMessage(SWITCHING_MESSAGES[0]);
+      setSwitchingProgress(10);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Step 1: Update the active PCB
       activePCBRef.current = pendingService.pcb_serial_number;
+      
+      // Message 2: Fetching data
+      setLoadingMessage(SWITCHING_MESSAGES[1]);
+      setSwitchingProgress(30);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const deviceData = await fetchDataForPCB(pendingService.pcb_serial_number);
+      
+      if (!deviceData) {
+        setLoadingMessage("Connected but no data available");
+        setSwitchingProgress(70);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setSelectedService(pendingService);
+        setSwitchingProgress(100);
+        setSwitchingService(false);
+        setLoadingMessage("");
+        
+        setSwitchNotification({ 
+          show: true, 
+          message: `Connected to ${pendingService.service_item_name}` 
+        });
+        
+        setTimeout(() => {
+          setSwitchNotification({ show: false, message: "" });
+        }, 3000);
+        return;
+      }
+      
+      // Message 3: Processing
+      setLoadingMessage(SWITCHING_MESSAGES[2]);
+      setSwitchingProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update sensor data with new values
+      const isOnline = deviceData.is_online;
+      setSensorData({
+        outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
+        humidity: isOnline ? deviceData.room_humidity?.value : null,
+        roomTemp: isOnline ? deviceData.room_temperature?.value : null,
+        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+        temperature: isOnline ? deviceData.set_temperature?.value : 25,
+        powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+        mode: deviceData.mode?.value || "3",
+        errorFlag: isOnline ? deviceData.error_flag?.value : "0",
+        hvacBusy: isOnline ? deviceData.hvac_busy?.value : "0",
+        deviceId: pendingService.pcb_serial_number,
+        alarmOccurred: deviceData.alarm_occurred?.value || "0",
+        isOnline: isOnline,
+      });
+      
+      // Update display data
+      setDisplayData({
+        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
+        temperature: isOnline ? deviceData.set_temperature?.value : 25,
+        mode: deviceData.mode?.value || "3",
+        powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
+      });
+      
+      // Message 4: Updating
+      setLoadingMessage(SWITCHING_MESSAGES[3]);
+      setSwitchingProgress(70);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Update error count
+      const alarmValue = deviceData.alarm_occurred?.value;
+      setErrorCount(alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0);
+      
+      // Message 5: Finalizing
+      setLoadingMessage(SWITCHING_MESSAGES[4]);
+      setSwitchingProgress(85);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Finally update the selected service
+      setSelectedService(pendingService);
+      
+      // Message 6: Complete
+      setLoadingMessage(SWITCHING_MESSAGES[5]);
+      setSwitchingProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setSwitchingService(false);
+      setLoadingMessage("");
       
       // Show success notification
       setSwitchNotification({ 
@@ -4523,20 +4664,27 @@ const cancelTempChange = () => {
         message: `Successfully switched to ${pendingService.service_item_name}` 
       });
       
-      // Hide notification after 3 seconds
       setTimeout(() => {
         setSwitchNotification({ show: false, message: "" });
       }, 3000);
       
-      // Clear loading state
+    } catch (error) {
+      console.error("❌ Error switching service:", error);
+      setSwitchingService(false);
+      setLoadingMessage("");
+      
+      setSelectedService(pendingService);
+      setSwitchNotification({ 
+        show: true, 
+        message: `Switched to ${pendingService.service_item_name}` 
+      });
+      
       setTimeout(() => {
-        setSwitchingService(false);
-        setLoadingMessage("");
-      }, 1500);
-    }, 500);
+        setSwitchNotification({ show: false, message: "" });
+      }, 3000);
+    }
   };
 
-  // Cancel service switch
   const cancelServiceSwitch = () => {
     setShowConfirmDialog(false);
     setPendingService(null);
@@ -4549,7 +4697,11 @@ const cancelTempChange = () => {
   const indicatorRotation = pullProgress * 360;
   const indicatorOpacity = pullProgress;
 
-  if (loading && !manualRefresh) return <Loading onLogout={handleLogout} />;
+  // ✅ MODIFIED: Loading state checks
+  // Show loading if initial data is not loaded yet OR loading is true
+  if (loading || !initialDataLoaded) {
+    return <Loading onLogout={handleLogout} message="Loading device data..." />;
+  }
 
   if (!loading && serviceItems.length === 0 && !manualRefresh) {
     return <NoServiceItems onLogout={handleLogout} onNavigateHome={() => navigate("/home")} />;
@@ -4617,6 +4769,9 @@ const cancelTempChange = () => {
               <div className="confirm-dialog-content">
                 <h3>Switch Service?</h3>
                 <p>Are you sure you want to switch to <strong>{pendingService?.service_item_name}</strong>?</p>
+                <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
+                  PCB: {pendingService?.pcb_serial_number}
+                </p>
                 <div className="confirm-dialog-buttons">
                   <button 
                     className="confirm-dialog-btn confirm-btn-yes"
@@ -4637,42 +4792,48 @@ const cancelTempChange = () => {
         )}
 
         {/* Temperature Change Confirmation Dialog */}
-{showTempConfirmDialog && (
-  <div className="confirm-dialog-overlay">
-    <div className="confirm-dialog">
-      <div className="confirm-dialog-content">
-        <h3>Change Temperature?</h3>
-        <p>
-          Set temperature to <strong>{pendingTemperature}°C</strong>?
-        </p>
-        <div className="confirm-dialog-buttons">
-          <button
-            className="confirm-dialog-btn confirm-btn-yes"
-            onClick={confirmTempChange}
-          >
-            Yes, Set
-          </button>
-          <button
-            className="confirm-dialog-btn confirm-btn-no"
-            onClick={cancelTempChange}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+        {showTempConfirmDialog && (
+          <div className="confirm-dialog-overlay">
+            <div className="confirm-dialog">
+              <div className="confirm-dialog-content">
+                <h3>Change Temperature?</h3>
+                <p>
+                  Set temperature to <strong>{pendingTemperature}°C</strong>?
+                </p>
+                <div className="confirm-dialog-buttons">
+                  <button
+                    className="confirm-dialog-btn confirm-btn-yes"
+                    onClick={confirmTempChange}
+                  >
+                    Yes, Set
+                  </button>
+                  <button
+                    className="confirm-dialog-btn confirm-btn-no"
+                    onClick={cancelTempChange}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Loading Overlay for Service Switching */}
         {switchingService && (
           <div className="service-switching-overlay">
             <div className="service-switching-content">
               <div className="switching-spinner"></div>
-              <p>{loadingMessage}</p>
+              <p className="switching-message">{loadingMessage}</p>
               <div className="switching-progress-bar">
-                <div className="switching-progress-fill"></div>
+                <div 
+                  className="switching-progress-fill"
+                  style={{ width: `${switchingProgress}%` }}
+                ></div>
               </div>
+              <p className="switching-pcb-detail">
+                PCB: {pendingService?.pcb_serial_number || 'N/A'}
+              </p>
             </div>
           </div>
         )}
@@ -4691,7 +4852,7 @@ const cancelTempChange = () => {
                   {selectedService ? selectedService.service_item_name : "Select Service"}
                 </span>
 
-                {/* 🔴 GLOBAL ALARM BADGE */}
+                {/* Global Alarm Badge */}
                 {dropdownAlarmCount > 0 && (
                   <span
                     style={{
@@ -4721,10 +4882,15 @@ const cancelTempChange = () => {
                   {serviceItems.map((item) => (
                     <div
                       key={item.service_item_id}
-                      className="service-dropdown-item"
+                      className={`service-dropdown-item ${
+                        selectedService?.service_item_id === item.service_item_id ? "active" : ""
+                      }`}
                       onClick={() => handleServiceSelect(item)}
                     >
                       {item.service_item_name}
+                      {selectedService?.service_item_id === item.service_item_id && (
+                        <span style={{ marginLeft: "8px", color: "#3E99ED" }}>✓</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -4769,7 +4935,7 @@ const cancelTempChange = () => {
           <img src={AIROlogo} alt="AIRO Logo" className="logo-image" />
         </div>
 
-        {/* ✅ UPDATED: Temperature Dial with full functionality */}
+        {/* Temperature Dial */}
         <div style={{ 
           pointerEvents: sensorData.isOnline && !processing.status ? "auto" : "none", 
           opacity: sensorData.isOnline ? 1 : 0.35 
@@ -4783,7 +4949,7 @@ const cancelTempChange = () => {
           />
         </div>
 
-        {/* ✅ FIX 2: Offline banner positioned BETWEEN header and temperature dial */}
+        {/* Offline banner */}
         {!sensorData.isOnline && (
           <div
             style={{
@@ -4848,7 +5014,7 @@ const cancelTempChange = () => {
 
       {/* Footer */}
       <div className="footer-container">
-        {/* ==================== MODES SECTION ==================== */}
+        {/* Modes Section */}
         <div className="modes-section-in-footer">
           <h3 className="modes-heading">Modes</h3>
           <div className="modes-row">
@@ -4877,7 +5043,7 @@ const cancelTempChange = () => {
           </div>
         </div>
 
-        {/* ==================== FAN SPEED SECTION (BUTTONS STYLE) ==================== */}
+        {/* Fan Speed Section */}
         <div className="fan-speed-section-in-footer">
           <h3 className="fan-speed-heading">Fan Speed</h3>
           <div className="fan-speed-buttons-row">
