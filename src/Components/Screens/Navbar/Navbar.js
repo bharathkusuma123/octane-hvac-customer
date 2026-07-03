@@ -302,7 +302,7 @@ const NavScreen = () => {
   };
 
   const handleGoBack = () => {
-    navigate(-1); // Go back to previous page
+    navigate("/machinescreen1"); // Go back to previous page
   };
 
   useEffect(() => {

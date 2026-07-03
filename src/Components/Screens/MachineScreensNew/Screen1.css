@@ -1699,3 +1699,74 @@ border-top-right-radius: 50px; */
   user-select: none;
   -webkit-user-select: none;
 }
+
+
+
+
+/* ===== Popup-style Pull-to-Refresh (replaces old full-width bar) ===== */
+
+/* Blocks interaction with background content during pull-to-refresh */
+.pull-refresh-blocking-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 1499; /* just below .pull-refresh-popup (1500) */
+  touch-action: none;
+}
+.pull-refresh-popup {
+  position: fixed;
+  top: 230px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  color: #2B7ED6;
+  padding: 10px 20px;
+  border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  z-index: 1500;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+  white-space: nowrap;
+}
+
+.pull-refresh-popup .screen1-refresh-spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+/* ===== Popup-style Refresh Status Toast (replaces old inline status bar) ===== */
+.refresh-status-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  font-weight: 500;
+  font-size: 14px;
+  max-width: 90%;
+  text-align: center;
+  animation: slideDown 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+}
+
+.refresh-status-toast.success {
+  background: white;
+  color: #2e7d32;
+  border-left: 4px solid #4CAF50;
+}
+
+.refresh-status-toast.error {
+  background: white;
+  color: #c62828;
+  border-left: 4px solid #dc3545;
+}

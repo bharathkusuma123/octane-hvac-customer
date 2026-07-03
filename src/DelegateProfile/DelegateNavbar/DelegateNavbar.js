@@ -142,7 +142,7 @@ const NavScreen = () => {
     }
   };
    const handleGoBack = () => {
-    navigate(-1); // Go back to previous page
+    navigate("/delegate-machinescreen1"); // Go back to previous page
   };
 
   if (loading) {

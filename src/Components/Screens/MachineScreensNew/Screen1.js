@@ -3825,6 +3825,7 @@ import baseURL from "../../ApiUrl/Apiurl";
 import NoServiceItems from "./NoServiceItems";
 import Loading from "./Loading";
 
+
 // Constants
 const MODE_MAP = {
   1: "IDEC",
@@ -3919,6 +3920,17 @@ const sendRefreshCommand = async (pcbSerialNumber, sensorData) => {
   }
 };
 
+
+
+
+const getAlarmCountForItem = (item, allDevicesData) => {
+  if (!allDevicesData || !item) return 0;
+  const deviceData = allDevicesData.find(d => d.service_item_id === item.service_item_id);
+  if (!deviceData) return 0;
+  const alarmValue = deviceData.alarm_occurred?.value;
+  return alarmValue && alarmValue !== "0" ? Number(alarmValue) : 0;
+};
+
 const Screen1 = () => {
   const { user, logout } = useContext(AuthContext);
   const userId = user?.customer_id;
@@ -3961,7 +3973,7 @@ const Screen1 = () => {
 
   const processingStartTimeRef = useRef(null);
   const MIN_PROCESSING_TIME = 5000;
-
+const [allDevicesData, setAllDevicesData] = useState([]);
   const [sensorData, setSensorData] = useState({
     outsideTemp: 0,
     humidity: 0,
@@ -4175,31 +4187,62 @@ const Screen1 = () => {
   }, [initialDataLoaded, activePCBRef.current]);
 
   // Fetch all alarms for dropdown badge
-  const fetchAllAlarms = async () => {
-    try {
-      const response = await fetch(
-        `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
-      );
+  // const fetchAllAlarms = async () => {
+  //   try {
+  //     const response = await fetch(
+  //       `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+  //     );
 
-      if (!response.ok) throw new Error("Failed to fetch all alarms");
+  //     if (!response.ok) throw new Error("Failed to fetch all alarms");
 
-      const data = await response.json();
+  //     const data = await response.json();
 
-      if (data.status !== "success" || !data.data) return;
+  //     if (data.status !== "success" || !data.data) return;
 
-      const alarmCount = data.data.reduce((count, item) => {
-        const val = item.alarm_occurred?.value;
-        if (val && val !== "0") {
-          return count + Number(val);
-        }
-        return count;
-      }, 0);
+  //     const alarmCount = data.data.reduce((count, item) => {
+  //       const val = item.alarm_occurred?.value;
+  //       if (val && val !== "0") {
+  //         return count + Number(val);
+  //       }
+  //       return count;
+  //     }, 0);
 
-      setDropdownAlarmCount(alarmCount);
-    } catch (err) {
-      console.error("Dropdown alarm fetch error:", err);
-    }
-  };
+  //     setDropdownAlarmCount(alarmCount);
+  //   } catch (err) {
+  //     console.error("Dropdown alarm fetch error:", err);
+  //   }
+  // };
+
+const fetchAllAlarms = async () => {
+  try {
+    const response = await fetch(
+      `${baseURL}/get-latest-data/?user_id=${userId}&company_id=${company_id}`
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch all alarms");
+
+    const data = await response.json();
+
+    if (data.status !== "success" || !data.data) return;
+
+    // Store the full data for individual alarm counts
+    setAllDevicesData(data.data);
+
+    const alarmCount = data.data.reduce((count, item) => {
+      const val = item.alarm_occurred?.value;
+      if (val && val !== "0") {
+        return count + Number(val);
+      }
+      return count;
+    }, 0);
+
+    setDropdownAlarmCount(alarmCount);
+  } catch (err) {
+    console.error("Dropdown alarm fetch error:", err);
+  }
+};
+
+
 
   // Send temperature command to device
   const sendTemperatureCommand = async (temperature) => {
@@ -4444,35 +4487,64 @@ const Screen1 = () => {
     }
   };
 
+  // const handleTouchStart = (e) => {
+  //   touchStartY.current = e.touches[0].clientY;
+  // };
+
   const handleTouchStart = (e) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
+  if (e.target.closest && e.target.closest(".temp-container")) return;
+  touchStartY.current = e.touches[0].clientY;
+};
+  // const handleTouchMove = (e) => {
+  //   if (containerRef.current && containerRef.current.scrollTop > 0) return;
+  //   const pullDistance = e.touches[0].clientY - touchStartY.current;
+  //   if (pullDistance > 0) {
+  //     e.preventDefault();
+  //     setPullToRefresh({ isPulling: true, pullDistance: Math.min(pullDistance, MAX_PULL), isRefreshing: false });
+  //   }
+  // };
 
   const handleTouchMove = (e) => {
-    if (containerRef.current && containerRef.current.scrollTop > 0) return;
-    const pullDistance = e.touches[0].clientY - touchStartY.current;
-    if (pullDistance > 0) {
-      e.preventDefault();
-      setPullToRefresh({ isPulling: true, pullDistance: Math.min(pullDistance, MAX_PULL), isRefreshing: false });
-    }
-  };
+  if (e.target.closest && e.target.closest(".temp-container")) return;
+  if (containerRef.current && containerRef.current.scrollTop > 0) return;
+  const pullDistance = e.touches[0].clientY - touchStartY.current;
+  if (pullDistance > 0) {
+    e.preventDefault();
+    setPullToRefresh({ isPulling: true, pullDistance: Math.min(pullDistance, MAX_PULL), isRefreshing: false });
+  }
+};
 
-  const handleTouchEnd = async () => {
-    if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
-      await sendRefreshToController();
-      setManualRefresh(true);
-    } else {
-      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
-    }
-  };
+  // const handleTouchEnd = async () => {
+  //   if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+  //     await sendRefreshToController();
+  //     setManualRefresh(true);
+  //   } else {
+  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+  //   }
+  // };
+const handleTouchEnd = async () => {
+  if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+    await sendRefreshToController();
+    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false }); // ⬅ reset after completion
+    setManualRefresh(true);
+  } else {
+    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+  }
+};
+  // const handleMouseDown = (e) => {
+  //   touchStartY.current = e.clientY;
+  //   document.addEventListener("mousemove", handleMouseMove);
+  //   document.addEventListener("mouseup", handleMouseUp);
+  // };
 
   const handleMouseDown = (e) => {
-    touchStartY.current = e.clientY;
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  };
-
+  if (e.target.closest && e.target.closest(".temp-container")) return;
+  touchStartY.current = e.clientY;
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+};
   const handleMouseMove = (e) => {
     if (containerRef.current && containerRef.current.scrollTop > 0) return;
     const pullDistance = e.clientY - touchStartY.current;
@@ -4482,18 +4554,31 @@ const Screen1 = () => {
     }
   };
 
-  const handleMouseUp = async () => {
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
-      await sendRefreshToController();
-      setManualRefresh(true);
-    } else {
-      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
-    }
-  };
+  // const handleMouseUp = async () => {
+  //   document.removeEventListener("mousemove", handleMouseMove);
+  //   document.removeEventListener("mouseup", handleMouseUp);
+  //   if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+  //     await sendRefreshToController();
+  //     setManualRefresh(true);
+  //   } else {
+  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+  //   }
+  // };
 
+
+  const handleMouseUp = async () => {
+  document.removeEventListener("mousemove", handleMouseMove);
+  document.removeEventListener("mouseup", handleMouseUp);
+  if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+    await sendRefreshToController();
+    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false }); // ⬅ reset after completion
+    setManualRefresh(true);
+  } else {
+    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+  }
+};
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -4718,7 +4803,7 @@ const Screen1 = () => {
       onMouseDown={handleMouseDown}
     >
       {/* Pull-to-refresh indicator */}
-      <div
+      {/* <div
         className="screen1-pull-refresh"
         style={{
           height: `${pullToRefresh.pullDistance}px`,
@@ -4744,12 +4829,52 @@ const Screen1 = () => {
             </>
           )}
         </div>
-      </div>
+      </div> */}
+
+{/* Pull-to-refresh popup (floating, doesn't disturb layout) */}
+
+       {/* Blocks touches on background content while pulling/refreshing */}
+      {(pullToRefresh.isPulling || pullToRefresh.isRefreshing) && (
+        <div className="pull-refresh-blocking-overlay" />
+      )}
+
+      {/* Pull-to-refresh popup (floating, doesn't disturb layout) */}
+      {(pullToRefresh.isPulling || pullToRefresh.isRefreshing) && (
+        <div className="pull-refresh-popup">
+          {pullToRefresh.isRefreshing ? (
+            <>
+              <div className="screen1-refresh-spinner"></div>
+              <span>Sending refresh command...</span>
+            </>
+          ) : (
+            <>
+              <FiRefreshCw
+                size={18}
+                style={{
+                  transform: `rotate(${indicatorRotation}deg)`,
+                  transition: "transform 0.2s ease",
+                  opacity: indicatorOpacity,
+                }}
+              />
+              <span>
+                {pullToRefresh.pullDistance >= PULL_THRESHOLD ? "Release to refresh" : "Pull down to refresh"}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
 
       <div className="main-container">
         {/* Refresh status toast */}
-        {refreshStatus.message && (
+        {/* {refreshStatus.message && (
           <div className={`screen1-refresh-status ${refreshStatus.success ? "success" : "error"}`}>
+            {refreshStatus.message}
+          </div>
+        )} */}
+        {/* Refresh status toast (popup, floating) */}
+        {refreshStatus.message && (
+          <div className={`refresh-status-toast ${refreshStatus.success ? "success" : "error"}`}>
             {refreshStatus.message}
           </div>
         )}
@@ -4841,62 +4966,89 @@ const Screen1 = () => {
         {/* Header: Service Dropdown + Power Button Row */}
         <div className="header-controls-row">
           {/* Service Dropdown */}
-          <div className="service-dropdown-wrapper">
-            <div className="service-dropdown-container">
-              <div
-                className="service-dropdown-header"
-                onClick={() => setShowServiceDropdown(!showServiceDropdown)}
-                style={{ position: "relative" }}
-              >
-                <span>
-                  {selectedService ? selectedService.service_item_name : "Select Service"}
-                </span>
+        <div className="service-dropdown-wrapper">
+  <div className="service-dropdown-container">
+    <div
+      className="service-dropdown-header"
+      onClick={() => setShowServiceDropdown(!showServiceDropdown)}
+      style={{ position: "relative" }}
+    >
+      <span>
+        {selectedService ? selectedService.service_item_name : "Select Service"}
+      </span>
 
-                {/* Global Alarm Badge */}
-                {dropdownAlarmCount > 0 && (
+      {/* Global Alarm Badge - shows total count */}
+      {dropdownAlarmCount > 0 && (
+        <span
+          style={{
+            position: "absolute",
+            top: "0px",
+            right: "28px",
+            backgroundColor: "red",
+            color: "white",
+            borderRadius: "50%",
+            width: "18px",
+            height: "18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "10px",
+            fontWeight: "bold",
+          }}
+        >
+          {dropdownAlarmCount}
+        </span>
+      )}
+
+      <FiChevronDown size={18} />
+    </div>
+    {showServiceDropdown && (
+      <div className="service-dropdown-list">
+        {serviceItems.map((item) => {
+          // Get individual alarm count for this item
+          const itemAlarmCount = getAlarmCountForItem(item, allDevicesData);
+          
+          return (
+            <div
+              key={item.service_item_id}
+              className={`service-dropdown-item ${
+                selectedService?.service_item_id === item.service_item_id ? "active" : ""
+              }`}
+              onClick={() => handleServiceSelect(item)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <span>{item.service_item_name}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {selectedService?.service_item_id === item.service_item_id && (
+                  <span style={{ color: "#3E99ED" }}>✓</span>
+                )}
+                {itemAlarmCount > 0 && (
                   <span
                     style={{
-                      position: "absolute",
-                      top: "0px",
-                      right: "28px",
                       backgroundColor: "red",
                       color: "white",
                       borderRadius: "50%",
-                      width: "18px",
-                      height: "18px",
+                      width: "20px",
+                      height: "20px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: "10px",
                       fontWeight: "bold",
+                      minWidth: "20px",
                     }}
                   >
-                    {dropdownAlarmCount}
+                    {itemAlarmCount}
                   </span>
                 )}
-
-                <FiChevronDown size={18} />
               </div>
-              {showServiceDropdown && (
-                <div className="service-dropdown-list">
-                  {serviceItems.map((item) => (
-                    <div
-                      key={item.service_item_id}
-                      className={`service-dropdown-item ${
-                        selectedService?.service_item_id === item.service_item_id ? "active" : ""
-                      }`}
-                      onClick={() => handleServiceSelect(item)}
-                    >
-                      {item.service_item_name}
-                      {selectedService?.service_item_id === item.service_item_id && (
-                        <span style={{ marginLeft: "8px", color: "#3E99ED" }}>✓</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</div>
 
           {/* Power Button */}
           <div style={{ position: "relative" }}>
