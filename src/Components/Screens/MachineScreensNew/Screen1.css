@@ -894,7 +894,7 @@ border-top-right-radius: 50px; */
 .screen1-error-message {
   /* background: rgba(220, 53, 69, 0.9); */
    background: white !important;
-  color: white !important;
+  color: rgb(214, 0, 0) !important;
   padding: 10px 20px;
   border-radius: 10px  !important;
   margin: 10px auto;

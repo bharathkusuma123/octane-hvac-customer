@@ -299,7 +299,7 @@
 
 .error-indicator {
   position: absolute;
-  top: -5px;
+  top: 17px;
   right: -5px;
   background-color: red;
   border-radius: 50%;

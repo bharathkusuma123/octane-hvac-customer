@@ -6741,7 +6741,7 @@ import {
 import { FaFan } from "react-icons/fa";
 import AIROlogo from "../../Components/Screens/MachineScreensNew/Images/AIRO.png";
 import greenAire from "../../Components/Screens/MachineScreensNew/Images/greenAire.png";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../Components/AuthContext/AuthContext";
 import TemperatureDial from "../../Components/Screens/MachineScreensNew/TemperatureDial_delegate_screen";
 import baseURL from "../../Components/ApiUrl/Apiurl";
@@ -6772,6 +6772,10 @@ const FAN_LABELS = ["High", "Medium", "Low"];
 const PULL_THRESHOLD = 80;
 const MAX_PULL = 120;
 
+// How long (ms) we trust a locally-sent value (temperature/fan speed) over what the poll returns.
+// Gives the device time to actually apply the change before we let the poll overwrite it.
+const VALUE_LOCK_DURATION = 60000;
+
 // Progressive messages every 10s
 const PROCESSING_MESSAGES = [
   "1/6 Sending request...",
@@ -6779,13 +6783,13 @@ const PROCESSING_MESSAGES = [
   "3/6 Applying changes...",
   "4/6 Syncing settings...",
   "5/6 Confirming status...",
-  "6/6 Finalizing...", 
+  "6/6 Finalizing...",
 ];
 
 // Service switching loading messages
 const SWITCHING_MESSAGES = [
   "Connecting to device...",
-  "Fetching data from PCB...",
+  "Fetching data from Machine...",
   "Processing device information...",
   "Updating system status...",
   "Finalizing connection...",
@@ -6879,6 +6883,23 @@ const DelegateScreen1 = () => {
   const processingStartTimeRef = useRef(null);
   const touchStartY = useRef(0);
   const containerRef = useRef(null);
+  const isFetchingRef = useRef(false); // ✅ NEW: blocks overlapping fetchData calls
+  const hasStoppedRef = useRef(false); // ✅ NEW: prevents clearProcessingIfDone from firing stopProcessing more than once per cycle
+  const processingPollRef = useRef(null); // ✅ NEW: fast poll while a command is processing
+  const processingRef = useRef(false); // ✅ NEW: mirrors processing.status for use inside intervals/closures
+
+  // ✅ NEW: tracks which action started the current processing cycle ('power' | 'mode')
+  // so we only spin the power button icon for actual power on/off commands.
+  const processingKindRef = useRef(null);
+
+  // ✅ NEW: silently "lock" the temperature value we just sent so the next poll
+  // doesn't overwrite it with a stale reading before the device has caught up.
+  const pendingTempRef = useRef(null);
+  const tempLockExpiryRef = useRef(0);
+
+  // ✅ NEW: same lock treatment for fan speed
+  const pendingFanRef = useRef(null);
+  const fanLockExpiryRef = useRef(0);
 
   // Pull-to-refresh state
   const [pullToRefresh, setPullToRefresh] = useState({
@@ -6901,7 +6922,7 @@ const DelegateScreen1 = () => {
     message: "" 
   });
   const [dropdownAlarmCount, setDropdownAlarmCount] = useState(0);
-  const [allDevicesData, setAllDevicesData] = useState([]); // ✅ NEW: Store all devices data for individual alarm counts
+  const [allDevicesData, setAllDevicesData] = useState([]); // ✅ Store all devices data for individual alarm counts
   
   // Service switching states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -6914,7 +6935,7 @@ const DelegateScreen1 = () => {
   // Temperature dragging state
   const [isDraggingTemp, setIsDraggingTemp] = useState(false);
   
-  // ✅ NEW: Track initial data load
+  // ✅ Track initial data load
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   
   const [sensorData, setSensorData] = useState({
@@ -6950,6 +6971,11 @@ const DelegateScreen1 = () => {
     });
   }, [sensorData]);
 
+  // ✅ NEW: keep processingRef in sync with processing.status so interval closures see the latest value
+  useEffect(() => {
+    processingRef.current = processing.status;
+  }, [processing.status]);
+
   // Check if selected service has PCB serial number
   const hasValidPCBSerial = selectedService && selectedService.pcb_serial_number;
   
@@ -6958,6 +6984,77 @@ const DelegateScreen1 = () => {
   
   // Get fan position
   const fanPosition = FAN_SPEEDS.indexOf(displayData.fanSpeed);
+
+  // ✅ NEW: single source of truth for whether controls should be disabled
+  const isControlDisabled = () => {
+    // Disable if processing is happening
+    if (processing.status) return true;
+
+    // Disable if device is offline
+    if (!sensorData.isOnline) return true;
+
+    // Disable if error flag is 1
+    if (sensorData.errorFlag === "1") return true;
+
+    // Disable if HVAC is busy
+    if (sensorData.hvacBusy === "1") return true;
+
+    // Disable if an alarm has occurred
+    if (sensorData.alarmOccurred && sensorData.alarmOccurred !== "0") return true;
+
+    // Disable if the delegate doesn't have control permissions
+    if (!serviceItemPermissions?.can_control_equipment) return true;
+
+    return false;
+  };
+
+  const hasActiveAlarm = sensorData.alarmOccurred && sensorData.alarmOccurred !== "0";
+
+  // ==================== VALUE LOCK RESOLUTION ====================
+
+  // ✅ NEW: Resolve what temperature to trust when a poll comes back.
+  // If we recently sent a temperature change and are still inside the lock
+  // window, keep showing the value we sent instead of the (possibly stale)
+  // value the poll returned — unless the poll already confirms our value.
+  const resolveTemperature = (deviceTempValue) => {
+    const now = Date.now();
+    if (pendingTempRef.current !== null && now < tempLockExpiryRef.current) {
+      if (
+        deviceTempValue !== undefined &&
+        deviceTempValue !== null &&
+        String(deviceTempValue) === String(pendingTempRef.current)
+      ) {
+        // Device has confirmed the new value — release the lock early.
+        pendingTempRef.current = null;
+        tempLockExpiryRef.current = 0;
+        return deviceTempValue;
+      }
+      return pendingTempRef.current;
+    }
+    // Lock expired or never set — clear any stale pending value and trust the poll.
+    pendingTempRef.current = null;
+    return deviceTempValue;
+  };
+
+  // ✅ NEW: same lock-aware resolution for fan speed
+  const resolveFanSpeed = (deviceFanValue) => {
+    const now = Date.now();
+    if (pendingFanRef.current !== null && now < fanLockExpiryRef.current) {
+      if (
+        deviceFanValue !== undefined &&
+        deviceFanValue !== null &&
+        String(deviceFanValue) === String(pendingFanRef.current)
+      ) {
+        // Device has confirmed the new fan speed — release the lock early.
+        pendingFanRef.current = null;
+        fanLockExpiryRef.current = 0;
+        return deviceFanValue;
+      }
+      return pendingFanRef.current;
+    }
+    pendingFanRef.current = null;
+    return deviceFanValue;
+  };
 
   // ==================== API FUNCTIONS ====================
   
@@ -7016,7 +7113,6 @@ const DelegateScreen1 = () => {
       
       if (!response.ok) {
         console.error("❌ Temperature command failed with status:", response.status);
-        stopProcessing();
         throw new Error("Failed to send temperature command");
       }
       
@@ -7068,6 +7164,10 @@ const DelegateScreen1 = () => {
     setShowTempConfirmDialog(false);
     setPendingTemperature(null);
 
+    // ✅ NEW: lock this value in so polls for the next 60s don't revert it
+    pendingTempRef.current = tempToSend;
+    tempLockExpiryRef.current = Date.now() + VALUE_LOCK_DURATION;
+
     await sendTemperatureCommand(tempToSend);
   };
 
@@ -7100,7 +7200,7 @@ const DelegateScreen1 = () => {
     }
   }, [user?.company_id, user?.delegate_id]);
 
-  // ✅ MODIFIED: Initialize with data fetching - only runs once on mount
+  // ✅ Initialize with data fetching - only runs once on mount
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -7175,7 +7275,7 @@ const DelegateScreen1 = () => {
     }
   }, [serviceItemsLoading]); // ✅ Only depend on serviceItemsLoading
 
-  // ✅ MODIFIED: Fetch all alarms and store full devices data
+  // ✅ Fetch all alarms and store full devices data
   const fetchAllAlarms = async () => {
     try {
       const response = await fetch(
@@ -7209,6 +7309,8 @@ const DelegateScreen1 = () => {
   const fetchData = async () => {
     const pcbSerialNumber = activePCBRef.current;
     if (!pcbSerialNumber) return;
+    if (isFetchingRef.current) return; // ✅ block overlapping calls
+    isFetchingRef.current = true;
 
     try {
       const response = await fetch(
@@ -7229,8 +7331,10 @@ const DelegateScreen1 = () => {
         outsideTemp: isOnline ? deviceData.outdoor_temperature?.value : null,
         humidity: isOnline ? deviceData.room_humidity?.value : null,
         roomTemp: isOnline ? deviceData.room_temperature?.value : null,
-        fanSpeed: isOnline ? deviceData.fan_speed?.value : "0",
-        temperature: isOnline ? deviceData.set_temperature?.value : 25,
+        // ✅ use the resolved (lock-aware) fan speed instead of trusting the poll blindly
+        fanSpeed: isOnline ? resolveFanSpeed(deviceData.fan_speed?.value) : "0",
+        // ✅ use the resolved (lock-aware) temperature instead of trusting the poll blindly
+        temperature: isOnline ? resolveTemperature(deviceData.set_temperature?.value) : 25,
         powerStatus: isOnline && deviceData.hvac_on?.value == "1" ? "on" : "off",
         mode: deviceData.mode?.value || "3",
         errorFlag: isOnline ? deviceData.error_flag?.value : "0",
@@ -7252,10 +7356,12 @@ const DelegateScreen1 = () => {
       console.error("🔥 Fetch Error:", error);
       setPullToRefresh(prev => ({ ...prev, isRefreshing: false }));
       setManualRefresh(false);
+    } finally {
+      isFetchingRef.current = false; // ✅ always release the lock
     }
   };
 
-  // ✅ MODIFIED: Start polling only after initial data is loaded
+  // ✅ Start polling only after initial data is loaded
   useEffect(() => {
     if (!initialDataLoaded || !activePCBRef.current) return;
 
@@ -7268,9 +7374,13 @@ const DelegateScreen1 = () => {
     fetchAllAlarms();
 
     fetchIntervalRef.current = setInterval(() => {
+      if (processingRef.current) {
+        console.log("⏸️ Skipping poll — command processing in progress");
+        return; // don't touch fetchData/fetchAllAlarms while a command is in flight
+      }
       fetchData();
       fetchAllAlarms();
-    }, 120000);
+    }, 40000);
 
     return () => {
       if (fetchIntervalRef.current) {
@@ -7294,24 +7404,7 @@ const DelegateScreen1 = () => {
   const MIN_PROCESSING_TIME = 5000;
   
   const startProcessingCycle = () => {
-    processingMsgIndexRef.current = 0;
-    processingStartTimeRef.current = Date.now();
-    setProcessing({ status: true, message: PROCESSING_MESSAGES[0] });
-
-    processingTimerRef.current = setInterval(() => {
-      processingMsgIndexRef.current += 1;
-      const nextMsg = PROCESSING_MESSAGES[processingMsgIndexRef.current];
-      if (nextMsg) {
-        setProcessing({ status: true, message: nextMsg });
-      }
-    }, 10000);
-
-    hardStopTimerRef.current = setTimeout(() => {
-      stopProcessing();
-    }, 60000);
-  };
-
-  const stopProcessing = () => {
+    // Clear any stale timers from a previous cycle
     if (processingTimerRef.current) {
       clearInterval(processingTimerRef.current);
       processingTimerRef.current = null;
@@ -7320,10 +7413,63 @@ const DelegateScreen1 = () => {
       clearTimeout(hardStopTimerRef.current);
       hardStopTimerRef.current = null;
     }
+    if (processingPollRef.current) {
+      clearInterval(processingPollRef.current);
+      processingPollRef.current = null;
+    }
+
+    hasStoppedRef.current = false;
+    processingMsgIndexRef.current = 0;
+    processingStartTimeRef.current = Date.now();
+    setProcessing({ status: true, message: PROCESSING_MESSAGES[0] });
+
+    // Message cycle (unchanged) - purely cosmetic progress text
+    processingTimerRef.current = setInterval(() => {
+      processingMsgIndexRef.current += 1;
+      const nextMsg = PROCESSING_MESSAGES[processingMsgIndexRef.current];
+      if (nextMsg) {
+        setProcessing({ status: true, message: nextMsg });
+      }
+    }, 10000);
+
+    // ✅ NEW: actively poll the device every few seconds while processing,
+    // so we can exit as soon as hvac_busy flips back to "0"
+    processingPollRef.current = setInterval(() => {
+      fetchData(); // fetchData -> sees hvac_busy=="0" -> clearProcessingIfDone -> stopProcessing (early exit)
+    }, 40000);
+
+    // Absolute safety net — exit processing regardless, after 60s
+    hardStopTimerRef.current = setTimeout(() => {
+      stopProcessing();
+      fetchData();
+      console.log("🔄 Hard stop timer triggered (60s elapsed), fetching fresh data...");
+    }, 60000);
+  };
+
+  const stopProcessing = () => {
+    if (hasStoppedRef.current) return;
+    hasStoppedRef.current = true;
+
+    if (processingTimerRef.current) {
+      clearInterval(processingTimerRef.current);
+      processingTimerRef.current = null;
+    }
+    if (hardStopTimerRef.current) {
+      clearTimeout(hardStopTimerRef.current);
+      hardStopTimerRef.current = null;
+    }
+    if (processingPollRef.current) { // ✅ clear the fast poll too
+      clearInterval(processingPollRef.current);
+      processingPollRef.current = null;
+    }
+
     setProcessing({ status: false, message: "" });
+    processingKindRef.current = null;
+    console.log("🔄 Processing stopped.");
   };
 
   const clearProcessingIfDone = () => {
+    if (hasStoppedRef.current) return;
     if (processingTimerRef.current || hardStopTimerRef.current) {
       const elapsed = Date.now() - (processingStartTimeRef.current || 0);
       if (elapsed >= MIN_PROCESSING_TIME) {
@@ -7337,18 +7483,21 @@ const DelegateScreen1 = () => {
     return () => {
       if (processingTimerRef.current) clearInterval(processingTimerRef.current);
       if (hardStopTimerRef.current) clearTimeout(hardStopTimerRef.current);
+      if (processingPollRef.current) clearInterval(processingPollRef.current); // ✅
     };
   }, []);
 
   // Send mode command
+  // ✅ MODIFIED: mode changes now show the processing messages again
   const sendModeCommand = async (modeCode, modeName) => {
     console.group("🎛️ MODE COMMAND SENT");
     console.log("📱 Mode clicked:", modeName);
     console.log("🔢 Mode code:", modeCode);
     
     try {
+      processingKindRef.current = "mode";
       startProcessingCycle();
-      
+
       const payload = {
         Header: "0xAA",
         DI: selectedService?.pcb_serial_number || "2411GM-0102",
@@ -7383,15 +7532,18 @@ const DelegateScreen1 = () => {
   };
 
   // Send fan command
+  // ✅ MODIFIED: no processing overlay/icon for fan speed changes (only power toggle shows that)
   const sendFanCommand = async (fanSpeed) => {
     const fanSpeedLabel = FAN_LABELS[parseInt(fanSpeed)] || fanSpeed;
     console.group("🌀 FAN SPEED COMMAND SENT");
     console.log("📱 Fan speed clicked:", fanSpeedLabel);
     console.log("🔢 Fan speed code:", fanSpeed);
+
+    // ✅ NEW: lock this value in so polls for the next 60s don't revert it
+    pendingFanRef.current = fanSpeed;
+    fanLockExpiryRef.current = Date.now() + VALUE_LOCK_DURATION;
     
     try {
-      startProcessingCycle();
-      
       const payload = {
         Header: "0xAA",
         DI: selectedService?.pcb_serial_number || "2411GM-0102",
@@ -7412,7 +7564,6 @@ const DelegateScreen1 = () => {
       
       if (!response.ok) {
         console.error("❌ Fan command failed with status:", response.status);
-        stopProcessing();
         throw new Error("Failed to send command");
       }
       
@@ -7421,15 +7572,14 @@ const DelegateScreen1 = () => {
     } catch (error) {
       console.error("❌ Error sending fan command:", error);
       console.groupEnd();
-      stopProcessing();
     }
   };
 
   // Handle mode change
   const handleModeChange = async (newMode) => {
     console.log("🔘 Mode button clicked:", newMode);
-    
-    if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
+
+    if (isControlDisabled()) {
       console.log("⚠️ Mode change blocked - Conditions not met");
       return;
     }
@@ -7450,8 +7600,8 @@ const DelegateScreen1 = () => {
     const newSpeedLabel = FAN_LABELS[newPosition];
     
     console.log("🌀 Fan speed button clicked:", newSpeedLabel);
-    
-    if (processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment) {
+
+    if (isControlDisabled()) {
       console.log("⚠️ Fan change blocked - Conditions not met");
       return;
     }
@@ -7503,6 +7653,7 @@ const DelegateScreen1 = () => {
   };
 
   // Handle power toggle
+  // ✅ MODIFIED: only power toggle shows the processing icon/message
   const handlePowerToggle = async () => {
     console.log("🔘 Power button clicked. Current status:", sensorData.powerStatus);
     
@@ -7510,32 +7661,32 @@ const DelegateScreen1 = () => {
       console.log("❌ No PCB serial number available");
       return;
     }
-    
-    if (processing.status || sensorData.hvacBusy == "1" || !serviceItemPermissions?.can_control_equipment) {
+
+    if (isControlDisabled()) {
       const msg = sensorData.hvacBusy == "1" ? "System is busy, please wait..." : "Please wait...";
       console.log("⚠️ Power toggle blocked:", msg);
-      setProcessing({ status: true, message: msg });
       return;
     }
 
-    startProcessingCycle();
-
-    const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
-    const isShutdown = displayData?.fanSpeed == 3 || displayData?.mode == 0;
-    
-    console.log("⚡ Sending power command. New HVAC value:", newHvacValue);
-
-    const payload = {
-      Header: "0xAA",
-      DI: selectedService.pcb_serial_number,
-      MD: isShutdown ? "3" : displayData.mode,
-      FS: isShutdown ? "0" : displayData.fanSpeed,
-      SRT: displayData.temperature,
-      HVAC: newHvacValue,
-      Footer: "0xZX",
-    };
-
     try {
+      processingKindRef.current = "power";
+      startProcessingCycle();
+
+      const newHvacValue = sensorData.powerStatus == "on" ? "0" : "1";
+      const isShutdown = displayData?.fanSpeed == 3 || displayData?.mode == 0;
+
+      console.log("⚡ Sending power command. New HVAC value:", newHvacValue);
+
+      const payload = {
+        Header: "0xAA",
+        DI: selectedService.pcb_serial_number,
+        MD: isShutdown ? "3" : displayData.mode,
+        FS: isShutdown ? "0" : displayData.fanSpeed,
+        SRT: displayData.temperature,
+        HVAC: newHvacValue,
+        Footer: "0xZX",
+      };
+
       const response = await fetch("https://mdata.air2o.net/controllers/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -7551,7 +7702,7 @@ const DelegateScreen1 = () => {
       const result = await response.text();
       console.log("✅ Power command sent:", result);
     } catch (error) {
-      console.error("Error sending power command:", error);
+      console.error("🔥 Power toggle error:", error.message);
       stopProcessing();
     }
   };
@@ -7573,6 +7724,12 @@ const DelegateScreen1 = () => {
   // Confirm and execute service switch with data fetching
   const confirmServiceSwitch = async () => {
     if (!pendingService) return;
+
+    // ✅ NEW: reset any pending temperature/fan-speed locks from the previous device
+    pendingTempRef.current = null;
+    tempLockExpiryRef.current = 0;
+    pendingFanRef.current = null;
+    fanLockExpiryRef.current = 0;
     
     setShowConfirmDialog(false);
     setSwitchingService(true);
@@ -7723,76 +7880,43 @@ const DelegateScreen1 = () => {
   };
 
   // Pull-to-refresh handlers
-  // const handleTouchStart = (e) => {
-  //   touchStartY.current = e.touches[0].clientY;
-  // };
   const handleTouchStart = (e) => {
-  if (e.target.closest && e.target.closest(".temp-container")) return;
-  touchStartY.current = e.touches[0].clientY;
-};
-
-  // const handleTouchMove = (e) => {
-  //   if (containerRef.current && containerRef.current.scrollTop > 0) return;
-    
-  //   const pullDistance = e.touches[0].clientY - touchStartY.current;
-  //   if (pullDistance > 0) {
-  //     e.preventDefault();
-  //     setPullToRefresh({
-  //       isPulling: true,
-  //       pullDistance: Math.min(pullDistance, MAX_PULL),
-  //       isRefreshing: false,
-  //     });
-  //   }
-  // };
+    if (e.target.closest && e.target.closest(".temp-container")) return;
+    touchStartY.current = e.touches[0].clientY;
+  };
 
   const handleTouchMove = (e) => {
-  if (e.target.closest && e.target.closest(".temp-container")) return;
-  if (containerRef.current && containerRef.current.scrollTop > 0) return;
-  
-  const pullDistance = e.touches[0].clientY - touchStartY.current;
-  if (pullDistance > 0) {
-    e.preventDefault();
-    setPullToRefresh({
-      isPulling: true,
-      pullDistance: Math.min(pullDistance, MAX_PULL),
-      isRefreshing: false,
-    });
-  }
-};
+    if (e.target.closest && e.target.closest(".temp-container")) return;
+    if (containerRef.current && containerRef.current.scrollTop > 0) return;
 
-  // const handleTouchEnd = async () => {
-  //   if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
-  //     await sendRefreshToController();
-  //     setManualRefresh(true);
-  //   } else {
-  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
-  //   }
-  // };
+    const pullDistance = e.touches[0].clientY - touchStartY.current;
+    if (pullDistance > 0) {
+      e.preventDefault();
+      setPullToRefresh({
+        isPulling: true,
+        pullDistance: Math.min(pullDistance, MAX_PULL),
+        isRefreshing: false,
+      });
+    }
+  };
 
   const handleTouchEnd = async () => {
-  if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
-    await sendRefreshToController();
-    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false }); // ⬅ reset after completion
-    setManualRefresh(true);
-  } else {
-    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
-  }
-};
-
-  // const handleMouseDown = (e) => {
-  //   touchStartY.current = e.clientY;
-  //   document.addEventListener("mousemove", handleMouseMove);
-  //   document.addEventListener("mouseup", handleMouseUp);
-  // };
+    if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+      await sendRefreshToController();
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false }); // ⬅ reset after completion
+      setManualRefresh(true);
+    } else {
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+    }
+  };
 
   const handleMouseDown = (e) => {
-  if (e.target.closest && e.target.closest(".temp-container")) return;
-  touchStartY.current = e.clientY;
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-};
+    if (e.target.closest && e.target.closest(".temp-container")) return;
+    touchStartY.current = e.clientY;
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
 
   const handleMouseMove = (e) => {
     if (containerRef.current && containerRef.current.scrollTop > 0) return;
@@ -7808,32 +7932,19 @@ const DelegateScreen1 = () => {
     }
   };
 
-  // const handleMouseUp = async () => {
-  //   document.removeEventListener("mousemove", handleMouseMove);
-  //   document.removeEventListener("mouseup", handleMouseUp);
-    
-  //   if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
-  //     await sendRefreshToController();
-  //     setManualRefresh(true);
-  //   } else {
-  //     setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
-  //   }
-  // };
-
-
   const handleMouseUp = async () => {
-  document.removeEventListener("mousemove", handleMouseMove);
-  document.removeEventListener("mouseup", handleMouseUp);
-  if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
-    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
-    await sendRefreshToController();
-    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false }); // ⬅ reset after completion
-    setManualRefresh(true);
-  } else {
-    setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
-  }
-};
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    if (pullToRefresh.pullDistance >= PULL_THRESHOLD && !pullToRefresh.isRefreshing) {
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: true });
+      await sendRefreshToController();
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false }); // ⬅ reset after completion
+      setManualRefresh(true);
+    } else {
+      setPullToRefresh({ isPulling: false, pullDistance: 0, isRefreshing: false });
+    }
+  };
+
   const handleLogout = () => {
     console.log("🚪 User logging out");
     logout();
@@ -7846,7 +7957,7 @@ const DelegateScreen1 = () => {
   const indicatorRotation = pullProgress * 360;
   const indicatorOpacity = pullProgress;
 
-  // ✅ MODIFIED: Loading states - only show initial loading if not loaded yet
+  // Loading states - only show initial loading if not loaded yet
   if (serviceItemsLoading || (loading && !initialDataLoaded)) {
     return (
       <div
@@ -7973,44 +8084,6 @@ const DelegateScreen1 = () => {
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleMouseDown}
     >
-      {/* Pull-to-refresh indicator */}
-      {/* <div 
-        className="screen1-pull-refresh"
-        style={{
-          height: `${pullToRefresh.pullDistance}px`,
-          opacity: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 1 : 0,
-          transform: `translateY(${pullToRefresh.isPulling ? 0 : -30}px)`,
-          transition: pullToRefresh.isPulling ? 'none' : 'all 0.3s ease',
-        }}
-      >
-        <div className="screen1-refresh-content">
-          {pullToRefresh.isRefreshing ? (
-            <>
-              <div className="screen1-refresh-spinner"></div>
-              <span>Sending refresh command...</span>
-            </>
-          ) : (
-            <>
-              <FiRefreshCw 
-                size={24} 
-                style={{
-                  transform: `rotate(${indicatorRotation}deg)`,
-                  transition: 'transform 0.2s ease',
-                  opacity: indicatorOpacity,
-                }}
-              />
-              <span>
-                {pullToRefresh.pullDistance >= PULL_THRESHOLD 
-                  ? "Release to refresh" 
-                  : "Pull down to refresh"}
-              </span>
-            </>
-          )}
-        </div>
-      </div> */}
-{/* Pull-to-refresh popup (floating, doesn't disturb layout) */}
-
-
       {/* Blocks touches on background content while pulling/refreshing */}
       {(pullToRefresh.isPulling || pullToRefresh.isRefreshing) && (
         <div className="pull-refresh-blocking-overlay" />
@@ -8044,16 +8117,9 @@ const DelegateScreen1 = () => {
         </div>
       )}
 
-
       <div className="main-container">
         {/* Refresh status toast */}
-        {/* {refreshStatus.message && (
-          <div className={`screen1-refresh-status ${refreshStatus.success ? 'success' : 'error'}`}>
-            {refreshStatus.message}
-          </div>
-        )} */}
-
-          {refreshStatus.message && (
+        {refreshStatus.message && (
           <div className={`refresh-status-toast ${refreshStatus.success ? 'success' : 'error'}`}>
             {refreshStatus.message}
           </div>
@@ -8074,9 +8140,6 @@ const DelegateScreen1 = () => {
               <div className="confirm-dialog-content">
                 <h3>Switch Service?</h3>
                 <p>Are you sure you want to switch to <strong>{pendingService?.service_item_name}</strong>?</p>
-                <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
-                  PCB: {pendingService?.pcb_serial_number}
-                </p>
                 <div className="confirm-dialog-buttons">
                   <button 
                     className="confirm-dialog-btn confirm-btn-yes"
@@ -8136,16 +8199,13 @@ const DelegateScreen1 = () => {
                   style={{ width: `${switchingProgress}%` }}
                 ></div>
               </div>
-              <p className="switching-pcb-detail">
-                PCB: {pendingService?.pcb_serial_number || 'N/A'}
-              </p>
             </div>
           </div>
         )}
 
         {/* Header: Service Dropdown + Power Button Row */}
         <div className="header-controls-row">
-          {/* Service Dropdown - UPDATED with alarm badges */}
+          {/* Service Dropdown - with alarm badges */}
           <div className="service-dropdown-wrapper">
             <div className="service-dropdown-container" style={{ position: "relative" }}>
               <div
@@ -8245,9 +8305,9 @@ const DelegateScreen1 = () => {
           {/* Power Button */}
           <div style={{ position: "relative" }}>
             <button
-              className={`screen1-power-button ${processing.status ? "processing" : ""}`}
+              className={`screen1-power-button ${processing.status && processingKindRef.current === "power" ? "processing" : ""}`}
               onClick={handlePowerToggle}
-              disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+              disabled={isControlDisabled()}
               style={{
                 backgroundColor: !sensorData.isOnline
                   ? "#808080"
@@ -8262,13 +8322,13 @@ const DelegateScreen1 = () => {
                 width: "48px",
                 borderRadius: "20px",
                 padding: "8px",
-                cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+                cursor: isControlDisabled() ? "not-allowed" : "pointer",
                 fontWeight: "bold",
-                opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
+                opacity: isControlDisabled() ? 0.6 : 1,
               }}
             >
               <FiPower size={24} color="#fff" />
-              {processing.status && <span className="screen1-processing-indicator"></span>}
+              {processing.status && processingKindRef.current === "power" && <span className="screen1-processing-indicator"></span>}
             </button>
             {sensorData.errorFlag == "1" && <div className="error-indicator" />}
           </div>
@@ -8281,15 +8341,15 @@ const DelegateScreen1 = () => {
 
         {/* Temperature Dial */}
         <div style={{ 
-          pointerEvents: sensorData.isOnline && !processing.status && serviceItemPermissions?.can_control_equipment ? "auto" : "none", 
-          opacity: sensorData.isOnline ? 1 : 0.35 
+          pointerEvents: isControlDisabled() ? "none" : "auto", 
+          opacity: isControlDisabled() ? 0.35 : 1 
         }}>
           <TemperatureDial
             onTempChange={handleTempChange}
             onTempChangeEnd={handleTempChangeEnd}
             fanSpeed={fanPosition}
             initialTemperature={displayData.temperature ?? 25}
-            disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+            disabled={isControlDisabled()}
           />
         </div>
         
@@ -8323,11 +8383,16 @@ const DelegateScreen1 = () => {
         )}
 
         {sensorData.errorFlag == "1" && (
-          <div className="screen1-error-message">⚠️ System Error Detected</div>
+          <div className="screen1-error-message">⚠️ System Error Detected - Control Disabled</div>
+        )}
+
+        {/* ✅ NEW: Alarm banner */}
+        {hasActiveAlarm && (
+          <div className="screen1-error-message">🚨 System Alarm Occurred - Controls Disabled</div>
         )}
 
         {sensorData.hvacBusy == "1" && !processing.status && (
-          <div className="screen1-busy-message">⏳ System is currently busy</div>
+          <div className="screen1-busy-message">⏳ System is currently busy - Control Disabled</div>
         )}
 
         {!serviceItemPermissions?.can_control_equipment && (
@@ -8376,10 +8441,10 @@ const DelegateScreen1 = () => {
                 className={`modes-button ${
                   currentModeDescription === mode ? "modes-button-selected" : ""
                 }`}
-                disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+                disabled={isControlDisabled()}
                 style={{
-                  opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
-                  cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+                  opacity: isControlDisabled() ? 0.6 : 1,
+                  cursor: isControlDisabled() ? "not-allowed" : "pointer",
                 }}
               >
                 <span
@@ -8408,10 +8473,10 @@ const DelegateScreen1 = () => {
                 className={`fan-speed-button ${
                   fanPosition === index ? "fan-speed-button-selected" : ""
                 }`}
-                disabled={processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment}
+                disabled={isControlDisabled()}
                 style={{
-                  opacity: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? 0.6 : 1,
-                  cursor: processing.status || !sensorData.isOnline || !serviceItemPermissions?.can_control_equipment ? "not-allowed" : "pointer",
+                  opacity: isControlDisabled() ? 0.6 : 1,
+                  cursor: isControlDisabled() ? "not-allowed" : "pointer",
                 }}
               >
                 <span
@@ -8433,9 +8498,6 @@ const DelegateScreen1 = () => {
             disabled={!hasValidPCBSerial || !serviceItemPermissions?.can_control_equipment}
             title={!hasValidPCBSerial ? "Modes unavailable - No PCB serial number assigned to this machine" : ""}
           >
-            {/* <FiWind size={20} />
-            <span>Modes</span>
-            <span><strong>{getModeDescription(sensorData.mode)}</strong></span> */}
           </button>
 
           <button
